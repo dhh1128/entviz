@@ -75,6 +75,13 @@ Entviz = goal:
         Median uses standard ASCII sort. Quartiles use mirrored (reversed)
         ASCII sort with specific padding logic for non-multiples of 4.
 
+    Blank Cell Shifting = decision:
+      id: b1ankshf
+      why: >
+        Strategically insert up to 3 blank cells to create visual gaps
+        for balance and improved comparison. Shifts are triggered by
+        the median token and the extrema of the sorted token list.
+
     Grid Selection = decision:
       id: g7id5elc
       why: >
