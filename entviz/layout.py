@@ -125,3 +125,35 @@ class Cell(Rect):
             self._edge_rects[edge] = r
         return r
 
+
+import math
+
+Grid = namedtuple('Grid', ['cols', 'rows', 'token_count'])
+
+def choose_grid(token_count: int, target_ar: float = 1.0) -> Grid:
+    """
+    Select the grid layout that produces an overall rectangle with an aspect 
+    ratio closest to the target, without being less than the target.
+    Each cell has an aspect ratio of 2:1.
+    """
+    best_grid = None
+    min_diff = float('inf')
+
+    # Possible column counts range from 1 to token_count.
+    for cols in range(1, token_count + 1):
+        rows = math.ceil(token_count / cols)
+        
+        # Grid AR = (cols * cell_width) / (rows * cell_height)
+        # Since cell_width = 2 * cell_height:
+        # Grid AR = (cols * 2) / rows
+        current_ar = (cols * 2) / rows
+        
+        if current_ar >= target_ar:
+            diff = current_ar - target_ar
+            # We want the one closest to target_ar (smallest diff)
+            # The spec says "closest ... without being less than".
+            if diff <= min_diff:
+                min_diff = diff
+                best_grid = Grid(cols, rows, token_count)
+                
+    return best_grid

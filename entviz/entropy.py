@@ -358,3 +358,102 @@ def parse(entropy: str) -> Parsed:
         answer = func(entropy)
         if answer:
             return answer    
+
+import math
+
+Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
+
+BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+def tokenize(text: str, type_name: str, token_len: int = None) -> list[Token]:
+    """
+    Split the string into tokens and assign a 24-bit quant to each.
+    """
+    if token_len is None:
+        if "hex" in type_name.lower():
+            token_len = 6
+            bits_per_char = 4
+            alphabet = "0123456789ABCDEF"
+        else:
+            token_len = 4
+            bits_per_char = 6
+            if "58" in type_name:
+                alphabet = BASE58_ALPHABET
+            else:
+                alphabet = BASE64_ALPHABET
+    else:
+        # Fallback/Custom
+        bits_per_char = 4 if "hex" in type_name.lower() else 6
+        alphabet = "0123456789ABCDEF" if "hex" in type_name.lower() else BASE64_ALPHABET
+
+    tokens = []
+    for i in range(0, len(text), token_len):
+        chunk = text[i:i+token_len]
+        if not chunk: continue
+        
+        # Calculate raw bits
+        val = 0
+        actual_bits = 0
+        for char in chunk:
+            char_val = alphabet.find(char)
+            if char_val == -1: # Try lower case for hex
+                char_val = alphabet.lower().find(char.lower())
+            if char_val == -1: char_val = 0
+            
+            val = (val << bits_per_char) | char_val
+            actual_bits += bits_per_char
+        
+        # Extend to 24 bits by repeating low-order bits
+        quant = val
+        if actual_bits > 0 and actual_bits < 24:
+            while actual_bits < 24:
+                shift = min(actual_bits, 24 - actual_bits)
+                # Take low-order 'shift' bits and append them
+                mask = (1 << shift) - 1
+                bits_to_add = val & mask
+                quant = (quant << shift) | bits_to_add
+                actual_bits += shift
+        elif actual_bits > 24:
+            # Should not happen with spec lengths, but for safety:
+            quant = val & 0xFFFFFF
+            
+        tokens.append(Token(chunk, len(tokens), quant))
+        
+    return tokens
+
+def get_median_token(tokens: list[Token]) -> Token:
+    """
+    Identify the first token in the sorted list that contains the median value.
+    Sort by ASCII order with a secondary sort by token index.
+    """
+    if not tokens: return None
+    # Sort by text, then by index
+    sorted_tokens = sorted(tokens, key=lambda t: (t.text, t.index))
+    
+    # If count is even, use first from middle pair (index (n/2) - 1 for 0-based)
+    mid = (len(sorted_tokens) - 1) // 2
+    return sorted_tokens[mid]
+
+def get_quartile_tokens(tokens: list[Token]) -> list[Token]:
+    """
+    Identify the first token in each quartile.
+    Sort by ASCII order of mirror image (reversed text), secondary sort by index.
+    """
+    if not tokens: return [None] * 4
+    
+    # Mirror sort
+    sorted_tokens = sorted(tokens, key=lambda t: (t.text[::-1], t.index))
+    
+    # If not divisible by 4, act as if 4 - (count % 4) blank items existed at bottom.
+    count = len(sorted_tokens)
+    q_size = math.ceil(count / 4)
+    
+    quartiles = []
+    for i in range(4):
+        idx = i * q_size
+        if idx < count:
+            quartiles.append(sorted_tokens[idx])
+        else:
+            quartiles.append(None)
+            
+    return quartiles
