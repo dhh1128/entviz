@@ -1,7 +1,17 @@
 from lxml import etree
-from .layout import Cell, Rect
+from .layout import Cell, Rect, Point, Size
 from .colors import get_nucleus_colors, VisualStyle
 from .cell_shapes import draw_edge_shape
+from .shapes import circle
+
+# Quartile mark corner: (x_fn, y_fn) as lambdas of (cell, r)
+# 1st=top-left, 2nd=top-right, 3rd=bottom-right, 4th=bottom-left
+_QUARTILE_CORNERS = [
+    lambda cell, r: Point(cell.left + r, cell.top + r),
+    lambda cell, r: Point(cell.right - r, cell.top + r),
+    lambda cell, r: Point(cell.right - r, cell.bottom - r),
+    lambda cell, r: Point(cell.left + r, cell.bottom - r),
+]
 
 class Renderer:
     def __init__(self, style: VisualStyle, grid):
@@ -64,3 +74,12 @@ class Renderer:
         is_last_col = (token.index % self.grid.cols) == self.grid.cols - 1
         if is_last_col:
             self.color_shift = (self.color_shift + self.shape_shift) & 0xFF
+
+    def draw_quartile_mark(self, svg: etree.Element, cell: Cell, quartile_index: int):
+        """Draw a small filled circle in the corner of a quartile token's cell (spec step 16)."""
+        e = cell.edge_height  # edge_size
+        r = e / 4             # diameter = edge_size/2, so radius = edge_size/4
+        fill_color = self.style.edge_colors[quartile_index]
+        center = _QUARTILE_CORNERS[quartile_index](cell, r)
+        mark_rect = Rect(Point(center.x - r, center.y - r), Size(r * 2, r * 2))
+        circle(svg, mark_rect, fill_color)

@@ -82,9 +82,42 @@ Entviz = goal:
         for balance and improved comparison. Shifts are triggered by
         the median token and the extrema of the sorted token list.
 
+    Visual Style Selection = decision:
+      id: v1su5ty1
+      why: >
+        Determine the global color palette and shape set for an entviz 
+        based on the median and second quartile tokens. This ensures that 
+        different entropy values result in distinct visual "themes."
+
+    Cell Rendering = decision:
+      id: c3llrend
+      why: >
+        Translate a token's quant and cell position into SVG elements.
+        Includes nucleus background, text contrast, and the 6-edge
+        visual system with XOR-based shifting to ensure local variety.
+        All 8 shapes (triangle, hook, rect, box, slant, hammer, pyramid,
+        double bars) implemented in cell_shapes.py with correct geometry
+        for all 6 edge orientations.
+
+    Quartile Marks = decision:
+      id: q4rtmark
+      why: >
+        Small filled circles (diameter = edge_size/2) drawn in the corners
+        of quartile token cells act as a visual CRC. Corner placement and
+        fill color are indexed by quartile order (1st=top-left, 2nd=top-right,
+        3rd=bottom-right, 4th=bottom-left), using the edge_colors array.
+
+    Full Pipeline = decision:
+      id: f4llpipe
+      why: >
+        pipeline.py wires all steps (parse → tokenize → grid → cell assignment
+        → visual style → render) into a single render() function returning
+        an SVG string. app.py wraps it as a CLI accepting entropy text with
+        optional --ar (aspect ratio) and --fs (font size) flags.
+
     Grid Selection = decision:
       id: g7id5elc
       why: >
-        Select grid dimensions (NxM) that result in an overall aspect ratio 
-        closest to the target, without being less than the target. 
+        Select grid dimensions (NxM) that result in an overall aspect ratio
+        closest to the target, without being less than the target.
         Calculations must account for the 2:1 aspect ratio of individual cells.
