@@ -2,18 +2,16 @@
 Full entviz rendering pipeline: entropy string → SVG string.
 Follows the v2 algorithm in docs/index2.md.
 
-v2 changes from v1:
-- Compute fingerprint (SHA-512 of normalized core) once per render.
-- Tokenize fingerprint into 22 ftoks; the first token_count are the
-  "used ftoks" that drive every fingerprint-derived channel.
-- Median, quartiles, visual style, and blank-cell placement now derive
-  from ftoks. Token-derived channels (text, nucleus bg) come later in
-  Phase 5 when the renderer is repointed.
+Terminology: v1 used "bounding rect" for the rectangle containing the
+grid of cells. v2 reuses that name for the outer canvas (which also
+holds the color bar, shape count summary, and white margin + black
+border). The cells-only rectangle is now grid_rect. The bounding_rect
+and its geometry land in Phase 7.
 """
 from lxml import etree
 
 from .entropy import parse, tokenize_entropy
-from .layout import choose_grid, assign_cell_indices, Cell, Point, Size
+from .layout import choose_grid, assign_cell_indices, Cell, Point, Rect, Size
 from .colors import select_visual_style
 from .fingerprint import (
     compute_fingerprint,
@@ -71,16 +69,21 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     # --- Pixel dimensions ---
+    # nucleus_height drives all geometry. cell is 4×nucleus_height wide and
+    # 2×nucleus_height tall. The grid_rect is the rectangle of cells only;
+    # in Phase 7 it sits inside a larger bounding_rect that also holds the
+    # color bar, the shape count summary, and the white margin + black
+    # border. The v1 spec called this rect the "bounding rect" — that name
+    # is now reserved for the outer canvas, so we use grid_rect here.
     nucleus_height = (font_size_pt * _DPI) / 72
     cell_width = nucleus_height * 4
     cell_height = nucleus_height * 2
-    grid_width = cell_width * grid.cols
-    grid_height = cell_height * grid.rows
+    grid_rect = Rect(Point(0, 0), Size(cell_width * grid.cols, cell_height * grid.rows))
 
     renderer = Renderer(style, grid)
 
-    svg = canvas(Size(grid_width, grid_height))
-    draw_rect(svg, _rect(0, 0, grid_width, grid_height), style.bg_color)
+    svg = canvas(grid_rect.size)
+    draw_rect(svg, grid_rect, style.bg_color)
 
     cell_index_to_cell = {}
 
@@ -88,9 +91,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         ci = cell_indices[token.index]
         col = ci % grid.cols
         row = ci // grid.cols
-        x = col * cell_width
-        y = row * cell_height
-        cell = Cell(Point(x, y), Size(cell_width, cell_height))
+        cell = Cell(
+            Point(grid_rect.left + col * cell_width, grid_rect.top + row * cell_height),
+            Size(cell_width, cell_height),
+        )
         cell_index_to_cell[ci] = cell
         renderer.render_cell(svg, token, used_ftoks[token.index], cell, cell_index=ci)
 
@@ -108,8 +112,3 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         renderer.draw_quartile_mark(svg, cell, q_idx)
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
-
-
-def _rect(x, y, w, h):
-    from .layout import Rect, Point, Size
-    return Rect(Point(x, y), Size(w, h))
