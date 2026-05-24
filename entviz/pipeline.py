@@ -1,12 +1,26 @@
 """
 Full entviz rendering pipeline: entropy string → SVG string.
-Follows the algorithm in docs/index.md steps 1-16.
+Follows the v2 algorithm in docs/index2.md.
+
+v2 changes from v1:
+- Compute fingerprint (SHA-512 of normalized core) once per render.
+- Tokenize fingerprint into 22 ftoks; the first token_count are the
+  "used ftoks" that drive every fingerprint-derived channel.
+- Median, quartiles, visual style, and blank-cell placement now derive
+  from ftoks. Token-derived channels (text, nucleus bg) come later in
+  Phase 5 when the renderer is repointed.
 """
 from lxml import etree
 
-from .entropy import parse, tokenize, get_median_token, get_quartile_tokens
+from .entropy import parse, tokenize
 from .layout import choose_grid, assign_cell_indices, Cell, Point, Size
 from .colors import select_visual_style
+from .fingerprint import (
+    compute_fingerprint,
+    get_median_ftok,
+    get_quartile_ftoks,
+    tokenize_fingerprint,
+)
 from .renderer import Renderer
 from .shapes import canvas, rect as draw_rect
 
@@ -17,7 +31,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     """
     Render entropy as an SVG entviz and return the SVG as a UTF-8 string.
     """
-    # --- Steps 1-2: Normalize and tokenize ---
+    # --- Normalize and tokenize the entropy ---
     parsed = parse(entropy_text.strip())
     if parsed is None:
         import base64
@@ -33,39 +47,39 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     token_count = len(tokens)
 
-    # --- Step 3: Choose grid ---
+    # --- Compute the fingerprint and derive used ftoks ---
+    # The fingerprint avalanche means single-bit input changes propagate
+    # to every ftok-derived channel.
+    used_ftoks = tokenize_fingerprint(compute_fingerprint(core))[:token_count]
+
+    # --- Choose grid ---
     grid = choose_grid(token_count, target_ar)
 
-    # --- Steps 4-7: Number cells and insert blank cells ---
-    median_token = get_median_token(tokens)
-    cell_indices = assign_cell_indices(tokens, grid, median_token)
+    # --- Median, quartiles, visual style — all from ftoks ---
+    median_ftok = get_median_ftok(used_ftoks)
+    quartile_ftoks = get_quartile_ftoks(used_ftoks)
+    second_quartile_ftok = quartile_ftoks[1] if len(quartile_ftoks) > 1 else None
+    style = select_visual_style(median_ftok, second_quartile_ftok)
 
-    # --- Steps 5-6: Quartile tokens ---
-    quartile_tokens = get_quartile_tokens(tokens)
+    # --- Blank cell placement keyed off ftok ASCII sort ---
+    cell_indices = assign_cell_indices(
+        tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
+    )
 
-    # --- Steps 8-11: Compute pixel dimensions ---
+    # --- Pixel dimensions ---
     nucleus_height = (font_size_pt * _DPI) / 72
-    edge_size = nucleus_height / 2
     cell_width = nucleus_height * 4
     cell_height = nucleus_height * 2
     grid_width = cell_width * grid.cols
     grid_height = cell_height * grid.rows
 
-    # --- Steps 12-13: Visual style ---
-    second_quartile_token = quartile_tokens[1] if len(quartile_tokens) > 1 else None
-    style = select_visual_style(median_token, second_quartile_token)
-
-    # --- Step 14: Renderer ---
     renderer = Renderer(style, grid)
 
-    # --- Step 11: Create SVG canvas and background rect ---
     svg = canvas(Size(grid_width, grid_height))
     draw_rect(svg, _rect(0, 0, grid_width, grid_height), style.bg_color)
 
-    # Build a map from cell_index to Cell for quick lookup when drawing quartile marks
     cell_index_to_cell = {}
 
-    # --- Step 15: Render each token into its cell ---
     for token in tokens:
         ci = cell_indices[token.index]
         col = ci % grid.cols
@@ -76,11 +90,12 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         cell_index_to_cell[ci] = cell
         renderer.render_cell(svg, token, cell)
 
-    # --- Step 16: Draw quartile marks ---
-    for q_idx, q_token in enumerate(quartile_tokens):
-        if q_token is None:
+    # Quartile marks placed at the cells of the four quartile ftoks
+    # (mapped through the 1:1 ftok→token→cell correspondence).
+    for q_idx, q_ftok in enumerate(quartile_ftoks):
+        if q_ftok is None:
             continue
-        ci = cell_indices.get(q_token.index)
+        ci = cell_indices.get(q_ftok.index)
         if ci is None:
             continue
         cell = cell_index_to_cell.get(ci)

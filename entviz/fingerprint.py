@@ -22,7 +22,7 @@ import base64
 import hashlib
 from collections import namedtuple
 
-from .entropy import tokenize
+from .entropy import tokenize, get_median_token, get_quartile_tokens
 
 Ftok = namedtuple('Ftok', ['text', 'index', 'quant'])
 
@@ -47,3 +47,11 @@ def tokenize_fingerprint(digest: bytes) -> list[Ftok]:
         f"expected {_EXPECTED_FTOK_COUNT} ftoks, got {len(tokens)}"
     )
     return [Ftok(t.text, i, t.quant) for i, t in enumerate(tokens)]
+
+
+# The median/quartile selection logic is identical to v1's token-based
+# functions because Ftok and Token share the (text, index, quant) shape.
+# These named aliases make ftok-mode call sites unambiguous at the
+# pipeline layer; both return Ftok instances (the input type is preserved).
+get_median_ftok = get_median_token
+get_quartile_ftoks = get_quartile_tokens

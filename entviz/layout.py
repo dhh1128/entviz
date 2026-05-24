@@ -169,39 +169,43 @@ def choose_grid(token_count: int, target_ar: float = 1.0) -> Grid:
         cols, rows, _ = max(candidates, key=lambda c: c[2])
     return Grid(cols, rows, token_count)
 
-def assign_cell_indices(tokens: list, grid: Grid, median_token=None):
+def assign_cell_indices(tokens: list, grid: Grid, median_token=None, sort_keys=None):
     """
-    Step 7: Insert blank cells and assign final cell indices to tokens.
-    Returns a mapping of token_index to cell_index.
+    Insert up to 3 blank cells and assign final cell indices to tokens.
+    Returns a mapping of token_index → cell_index.
+
+    median_token: the item whose .index marks the first blank insertion
+        point. In v2 this is the median *ftok*; in v1 it was the median
+        token. Both share the (text, index, quant) shape; only .index is
+        used here.
+    sort_keys: optional sequence used for the "last" and "first" blank
+        insertions. In v2 this is the list of used ftoks (so blanks land
+        based on ftok ASCII sort, not token ASCII sort). If omitted, the
+        tokens themselves are sorted (v1 behavior).
     """
     cell_indices = {t.index: t.index for t in tokens}
     cell_count = grid.cols * grid.rows
     token_count = len(tokens)
-    
+
     if token_count >= cell_count or not tokens:
         return cell_indices
 
-    # Helper to shift all tokens starting from a specific token_index
     def shift_from(start_token_idx):
         for t_idx in cell_indices:
             if t_idx >= start_token_idx:
                 cell_indices[t_idx] += 1
 
-    # Shift 1: Median token
     if median_token:
         shift_from(median_token.index)
-    
-    # Shift 2: Final token in sorted list
-    if token_count + 1 < cell_count:
-        sorted_tokens = sorted(tokens, key=lambda t: (t.text, t.index))
-        final_token = sorted_tokens[-1]
-        # Shift tokens with token_index >= final_token's index
-        shift_from(final_token.index)
 
-    # Shift 3: First token in sorted list
+    sort_source = sort_keys if sort_keys is not None else tokens
+    sorted_items = sorted(sort_source, key=lambda x: (x.text, x.index))
+
+    if token_count + 1 < cell_count:
+        shift_from(sorted_items[-1].index)
+
     if token_count + 2 < cell_count:
-        sorted_tokens = sorted(tokens, key=lambda t: (t.text, t.index))
-        first_token = sorted_tokens[0]
+        first_token = sorted_items[0]
         # Shift tokens with token_index >= first_token's index
         shift_from(first_token.index)
 

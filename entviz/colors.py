@@ -44,7 +44,7 @@ VisualStyle = namedtuple('VisualStyle', [
 POSSIBLE_EDGE_COLORS = [
     '#ffffff', # white
     '#ffd966', # gold
-    '#ffdf2f', # red
+    '#ff3f2f', # red (v1 had #ffdf2f, which was actually yellow ≈ gold)
     '#2f3fbf', # blue
     '#000000', # black
 ]
