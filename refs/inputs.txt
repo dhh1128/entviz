@@ -1,0 +1,17 @@
+# Phase-0 reference inputs for v1→v2 migration validation.
+#
+# Format: label<TAB>entropy<TAB>rationale
+# Lines starting with # are comments.
+#
+# Used to render v1 and v2 SVGs at each phase so visual changes can be
+# eyeballed in lockstep with the test suite. The UUID pair (uuid-a / uuid-b)
+# differ by a single hex digit and are the primary avalanche-effect oracle:
+# v1 renders them nearly identically, v2 must render them dramatically
+# differently across every fingerprint-driven channel.
+
+short	deadbeef	8 hex chars = 32 bits → 2 tokens. Smallest case; v2 grid is 2×2 with 2 blanks.
+uuid-a	550e8400-e29b-41d4-a716-446655440000	Standard UUID. 32 hex → 6 tokens. Avalanche pair (a).
+uuid-b	550e8400-e29b-41d4-a716-446655440001	UUID-a with low nibble flipped. Avalanche pair (b).
+exact-512	deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef	128 hex = 512 bits → 22 tokens. Boundary case; max grid before large-input rule kicks in.
+large-576	deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef	144 hex = 576 bits. v1 renders all 24 tokens; v2 must show first 256 + blank + last 256 bits (22 tokens total).
+all-aaa	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	64 hex = 256 bits, all same nibble. Visual baseline; tests behavior with very low input entropy.
