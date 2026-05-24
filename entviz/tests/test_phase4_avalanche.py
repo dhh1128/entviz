@@ -92,7 +92,9 @@ def test_pipeline_bg_color_derives_from_median_ftok_not_token():
     expected_bg = POSSIBLE_EDGE_COLORS[med_ftok.quant & 0x03]
 
     svg = render(UUID_A)
-    rects = etree.fromstring(svg.encode()).xpath('//*[local-name()="rect"]')
+    rects = etree.fromstring(svg.encode()).xpath(
+        '//*[local-name()="rect"][not(ancestor::*[local-name()="defs"])]'
+    )
     # Post-Phase 7: rect[0] is the white bounding rect; rect[1] is the
     # grid_rect filled with the entviz bg color.
     assert rects[1].get("fill") == expected_bg

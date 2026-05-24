@@ -92,8 +92,11 @@ def test_different_entropy_produces_different_output():
 def test_background_rect_uses_style_color():
     result = render(HEX_256)
     svg = parse_svg(result)
-    # First rect should be the background
-    first_rect = svg.xpath('//*[local-name()="rect"]')[0]
-    fill = first_rect.get('fill')
+    # Skip any rect inside <defs> (e.g., the Phase 12 clipPath rect).
+    # rect[0] is the white bounding rect; rect[1] is the grid_rect filled
+    # with the entviz bg color (one of POSSIBLE_EDGE_COLORS).
+    rects = svg.xpath(
+        '//*[local-name()="rect"][not(ancestor::*[local-name()="defs"])]'
+    )
     from entviz.colors import POSSIBLE_EDGE_COLORS
-    assert fill in POSSIBLE_EDGE_COLORS
+    assert rects[1].get('fill') in POSSIBLE_EDGE_COLORS

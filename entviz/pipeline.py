@@ -5,9 +5,11 @@ Follows the v2 algorithm in docs/index2.md.
 Terminology: v1 used "bounding rect" for the rectangle containing the
 grid of cells. v2 reuses that name for the outer canvas (which also
 holds the color bar, shape count summary, and white margin + black
-border). The cells-only rectangle is now grid_rect. The bounding_rect
-and its geometry land in Phase 7.
+border). The cells-only rectangle is now grid_rect.
 """
+import colorsys
+import math
+
 from lxml import etree
 
 from .entropy import parse, tokenize_entropy
@@ -100,10 +102,22 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     renderer = Renderer(style, grid)
 
     svg = canvas(bounding_rect.size)
-    # <defs> first so gradients (and future symbols) appear at the top of
-    # the SVG. Order of definitions inside <defs> doesn't matter for SVG
-    # rendering, but consolidating them early keeps the document scannable.
+    # <defs> first so gradients, clipPath, and future symbols appear at
+    # the top of the SVG. Order of definitions inside <defs> doesn't
+    # matter for SVG rendering, but consolidating them early keeps the
+    # document scannable.
     defs = etree.SubElement(svg, 'defs')
+
+    # clipPath spans the entire bounding rect; used to confine the
+    # ellipse overlay (which is sized to overflow) to the entviz outline.
+    clip_id = "bounding-clip"
+    cp = etree.SubElement(defs, 'clipPath', id=clip_id)
+    etree.SubElement(
+        cp, 'rect',
+        x=str(bounding_rect.left), y=str(bounding_rect.top),
+        width=str(bounding_rect.size.width), height=str(bounding_rect.size.height),
+    )
+
     draw_rect(svg, bounding_rect, '#ffffff')
     # Entviz background color (from median ftok) fills the grid_rect so
     # blank cells show that color rather than the white bounding-rect fill.
@@ -134,7 +148,14 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     for token, ftok, cell, ci, nucleus_bg in token_cells:
         renderer.render_edges(svg, defs, ftok, cell, cell_index=ci, nucleus_bg=nucleus_bg)
 
-    # Layer 2: ellipse overlay placeholder — Phase 12 inserts it here.
+    # Layer 2: ellipse overlay derived from raw digest bytes 60-63,
+    # clipped to the bounding rect.
+    digest = compute_fingerprint(core)
+    _draw_ellipse_overlay(
+        svg, defs, digest, bounding_rect, grid_rect,
+        cell_w=cell_width, cell_h=cell_height,
+        bg_color=style.bg_color, clip_id=clip_id,
+    )
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
@@ -184,6 +205,94 @@ def _draw_border_line(svg, x1, y1, x2, y2):
         svg, 'line',
         x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
         stroke='#000000', **{'stroke-width': '1'},
+    )
+
+
+def enumerate_perimeter_points(cols, rows, cell_w, cell_h, origin: Point) -> list:
+    """
+    v2 spec line 156: walk perimeter cells in cell-index order; for each,
+    visit corners in TL, TR, BL, BR order; emit each unique point the
+    first time it is seen.
+
+    Returns a list of Point objects in deterministic order; duplicates
+    suppressed. Points are in user space (offset by `origin`).
+    """
+    seen = {}
+    points = []
+
+    def emit(x, y):
+        key = (x, y)
+        if key in seen:
+            return
+        seen[key] = True
+        points.append(Point(x, y))
+
+    for ci in range(cols * rows):
+        col = ci % cols
+        row = ci // cols
+        is_perimeter = (row == 0 or row == rows - 1 or col == 0 or col == cols - 1)
+        if not is_perimeter:
+            continue
+        x = origin.x + col * cell_w
+        y = origin.y + row * cell_h
+        emit(x, y)                                       # TL
+        emit(x + cell_w, y)                              # TR
+        emit(x, y + cell_h)                              # BL
+        emit(x + cell_w, y + cell_h)                     # BR
+    return points
+
+
+def ellipse_params_from_digest(digest: bytes) -> dict:
+    """
+    Map raw digest bytes 60-63 onto the ellipse's four parameters.
+    Returns a dict with anchor_index (caller mods by point count),
+    axis_ratio (1.0 .. 2.5), rotation_deg (0 .. 180), opacity (0.10 .. 0.30).
+    """
+    return {
+        "anchor_index": digest[60],
+        "axis_ratio": 1.0 + (digest[61] / 255.0) * 1.5,
+        "rotation_deg": (digest[62] / 255.0) * 180.0,
+        "opacity": 0.10 + (digest[63] / 255.0) * 0.20,
+    }
+
+
+def _ellipse_fill_for_bg(bg_color: str) -> str:
+    # Hex → RGB → HLS; if L > 0.5 fill black, else fill white.
+    r = int(bg_color[1:3], 16) / 255.0
+    g = int(bg_color[3:5], 16) / 255.0
+    b = int(bg_color[5:7], 16) / 255.0
+    _, l, _ = colorsys.rgb_to_hls(r, g, b)
+    return '#000000' if l > 0.5 else '#ffffff'
+
+
+def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
+                          cell_w, cell_h, bg_color, clip_id):
+    points = enumerate_perimeter_points(
+        cols=int(grid_rect.size.width / cell_w),
+        rows=int(grid_rect.size.height / cell_h),
+        cell_w=cell_w, cell_h=cell_h,
+        origin=Point(grid_rect.left, grid_rect.top),
+    )
+    if not points:
+        return
+    p = ellipse_params_from_digest(digest)
+    anchor = points[p["anchor_index"] % len(points)]
+    # Smaller semi-axis ≥ half the diagonal of the bounding rect, so the
+    # ellipse always overflows and clips to an arc.
+    half_diag = math.hypot(bounding_rect.size.width, bounding_rect.size.height) / 2
+    smaller = half_diag
+    larger = smaller * p["axis_ratio"]
+    fill = _ellipse_fill_for_bg(bg_color)
+    etree.SubElement(
+        svg, 'ellipse',
+        cx=str(anchor.x), cy=str(anchor.y),
+        rx=str(smaller), ry=str(larger),
+        transform=f"rotate({p['rotation_deg']} {anchor.x} {anchor.y})",
+        fill=fill,
+        **{
+            "fill-opacity": f"{p['opacity']}",
+            "clip-path": f"url(#{clip_id})",
+        },
     )
 
 

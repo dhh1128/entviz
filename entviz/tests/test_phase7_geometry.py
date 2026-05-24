@@ -32,7 +32,9 @@ def test_canvas_size_matches_bounding_rect_formula():
 
 def test_first_rect_is_white_bounding_rect():
     svg = _parse(render("deadbeef"))
-    first = svg.xpath('//*[local-name()="rect"]')[0]
+    # Skip any rect that lives inside <defs> (e.g., the Phase 12 clipPath).
+    rects = svg.xpath('//*[local-name()="rect"][not(ancestor::*[local-name()="defs"])]')
+    first = rects[0]
     assert first.get("fill") == "#ffffff"
     assert float(first.get("x")) == 0
     assert float(first.get("y")) == 0
