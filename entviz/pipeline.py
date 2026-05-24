@@ -154,6 +154,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             continue
         renderer.draw_quartile_mark(svg, cell, q_idx)
 
+    # Layer 5a: color bar along the left GM-wide strip of the bounding
+    # rect. Bands proportional to actual edge-color usage (blank cells
+    # are excluded since their render_edges is never called); sorted
+    # descending by count with edge_colors order as the tiebreak.
+    _draw_color_bar(
+        svg, bounding_rect, gm,
+        renderer.color_usage, style.edge_colors,
+    )
+
     # Black border lines on top, right, bottom of the bounding rect.
     # The left edge is reserved for the color bar and gets no border.
     # The top and bottom lines start at x=GM (color bar's right edge).
@@ -170,3 +179,29 @@ def _draw_border_line(svg, x1, y1, x2, y2):
         x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
         stroke='#000000', **{'stroke-width': '1'},
     )
+
+
+def _draw_color_bar(svg, bounding_rect, gm, color_usage, edge_colors):
+    used = [
+        (c, color_usage.get(c, 0))
+        for c in edge_colors if color_usage.get(c, 0) > 0
+    ]
+    if not used:
+        return
+    # Sort: descending by count, tiebreak by index in edge_colors.
+    color_order = {c: i for i, c in enumerate(edge_colors)}
+    used.sort(key=lambda x: (-x[1], color_order[x[0]]))
+    total = sum(n for _, n in used)
+    y = bounding_rect.top
+    for i, (color, n) in enumerate(used):
+        is_last = i == len(used) - 1
+        # Pin the last band to exactly cover the remaining height so any
+        # floating-point drift doesn't leave a gap or overflow.
+        h = (bounding_rect.bottom - y) if is_last else bounding_rect.size.height * n / total
+        etree.SubElement(
+            svg, 'rect',
+            x=str(bounding_rect.left), y=str(y),
+            width=str(gm), height=str(h),
+            fill=color,
+        )
+        y += h

@@ -46,6 +46,11 @@ class Renderer:
         self.shape_shift = 0
         self.color_shift = 0
         self._gradient_seq = 0
+        # Phase 10/11: tally edge color and shape usage across all
+        # render_edges calls so the color bar and SCS can summarise them.
+        # Blank cells (whose render_edges is never called) are excluded.
+        self.color_usage = {c: 0 for c in style.edge_colors}
+        self.shape_usage = {s: 0 for s in style.edge_shapes}
 
     def render_edges(self, svg: etree.Element, defs: etree.Element,
                      ftok, cell: Cell, cell_index: int, nucleus_bg: str):
@@ -76,6 +81,8 @@ class Renderer:
             self._add_gradient(defs, gradient_id, i, cell.edge_rect(i),
                                nucleus_bg, edge_color)
             edge_shape.draw(svg, cell, i, f"url(#{gradient_id})")
+            self.color_usage[edge_color] = self.color_usage.get(edge_color, 0) + 1
+            self.shape_usage[edge_shape] = self.shape_usage.get(edge_shape, 0) + 1
 
             self.color_shift = (self.color_shift + 1) & 0xFF
             if not is_last_col:

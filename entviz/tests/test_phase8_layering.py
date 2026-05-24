@@ -19,6 +19,13 @@ def _is_nucleus(rect):
     return float(rect.get("width", 0)) == 48 and float(rect.get("height", 0)) == 16
 
 
+def _is_color_bar_band(rect):
+    # Color bar bands are at x=0 with width=GM=4. Phase 10 added these
+    # after the nucleus layer — that's intentional (the color bar is a
+    # gestalt summary, drawn over the bounding rect's left strip).
+    return float(rect.get("x", -1)) == 0 and float(rect.get("width", -1)) == 4
+
+
 def _is_grid_bg(rect):
     # The single rect filling grid_rect with the entviz bg color.
     # Its size matches grid_w × grid_h; for a UUID 2x4 grid that's 128 × 128.
@@ -43,10 +50,9 @@ def test_all_edges_before_any_nucleus():
     # after the first nucleus would mean the layering is wrong.
     for i, el in enumerate(elements[first_nucleus_idx + 1:], start=first_nucleus_idx + 1):
         if el.tag.endswith("}rect"):
-            # Allow trailing nucleus rects (they are siblings within the
-            # nucleus layer). Reject anything that looks like an edge
-            # element (small rects or polygons).
-            if _is_nucleus(el):
+            # Allow trailing nucleus rects and color-bar bands; reject
+            # anything that looks like an edge shape.
+            if _is_nucleus(el) or _is_color_bar_band(el):
                 continue
             assert False, f"non-nucleus rect at index {i} (after nucleus layer began)"
         else:
