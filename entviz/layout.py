@@ -132,31 +132,42 @@ Grid = namedtuple('Grid', ['cols', 'rows', 'token_count'])
 
 def choose_grid(token_count: int, target_ar: float = 1.0) -> Grid:
     """
-    Select the grid layout that produces an overall rectangle with an aspect 
-    ratio closest to the target, without being less than the target.
-    Each cell has an aspect ratio of 2:1.
-    """
-    best_grid = None
-    min_diff = float('inf')
+    Select the grid layout with at least 2 columns and 2 rows whose overall
+    aspect ratio is closest to target_ar without being less than it. Each
+    cell has an aspect ratio of 2:1, so grid AR = (cols * 2) / rows.
 
-    # Possible column counts range from 1 to token_count.
-    for cols in range(1, token_count + 1):
+    If no 2x2+ layout achieves the target ratio (e.g., target_ar=20 with
+    only 11 tokens), fall back to the widest available layout. If
+    token_count is so small that no natural 2x2+ layout exists at all
+    (1 or 2 tokens), force a 2x2 grid; the extra cells become blanks.
+    """
+    # For each row count, keep only the smallest cols that fits — i.e., the
+    # "tight" layout. Without this, target ratios above all achievable values
+    # would pick wasteful layouts like 10x2 for 11 tokens (9 blanks for an
+    # ar of 10) instead of 6x2 (ar of 6, only 1 blank). The spec's worked
+    # example for 11 tokens lists 6x2, 4x3, 3x4, 2x6 — the tight set.
+    tightest_cols_for_rows = {}
+    for cols in range(2, token_count + 1):
         rows = math.ceil(token_count / cols)
-        
-        # Grid AR = (cols * cell_width) / (rows * cell_height)
-        # Since cell_width = 2 * cell_height:
-        # Grid AR = (cols * 2) / rows
-        current_ar = (cols * 2) / rows
-        
-        if current_ar >= target_ar:
-            diff = current_ar - target_ar
-            # We want the one closest to target_ar (smallest diff)
-            # The spec says "closest ... without being less than".
-            if diff <= min_diff:
-                min_diff = diff
-                best_grid = Grid(cols, rows, token_count)
-                
-    return best_grid
+        if rows < 2:
+            continue
+        if rows not in tightest_cols_for_rows or cols < tightest_cols_for_rows[rows]:
+            tightest_cols_for_rows[rows] = cols
+
+    candidates = [
+        (cols, rows, (cols * 2) / rows)
+        for rows, cols in tightest_cols_for_rows.items()
+    ]
+
+    if not candidates:
+        return Grid(2, 2, token_count)
+
+    above = [c for c in candidates if c[2] >= target_ar]
+    if above:
+        cols, rows, _ = min(above, key=lambda c: c[2] - target_ar)
+    else:
+        cols, rows, _ = max(candidates, key=lambda c: c[2])
+    return Grid(cols, rows, token_count)
 
 def assign_cell_indices(tokens: list, grid: Grid, median_token=None):
     """
