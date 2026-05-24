@@ -398,6 +398,13 @@ def tokenize(text: str, type_name: str, token_len: int = None) -> list[Token]:
             char_val = alphabet.find(char)
             if char_val == -1: # Try lower case for hex
                 char_val = alphabet.lower().find(char.lower())
+            if char_val == -1 and bits_per_char == 6:
+                # Accept base64url chars ('-'=62, '_'=63) in addition to the
+                # standard base64 ('+'=62, '/'=63) that BASE64_ALPHABET carries.
+                # The pipeline base64-encodes unrecognized inputs with the
+                # urlsafe variant, and fingerprints are always base64url.
+                if char == '-': char_val = 62
+                elif char == '_': char_val = 63
             if char_val == -1: char_val = 0
             
             val = (val << bits_per_char) | char_val
