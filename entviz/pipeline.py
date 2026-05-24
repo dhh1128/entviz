@@ -163,6 +163,12 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         renderer.color_usage, style.edge_colors,
     )
 
+    # Layer 5b: shape count summary right-justified to grid_rect's right
+    # edge, on the nucleus-height line below the grid.
+    _draw_shape_count_summary(
+        svg, grid_rect, gm, nucleus_height, renderer.shape_usage,
+    )
+
     # Black border lines on top, right, bottom of the bounding rect.
     # The left edge is reserved for the color bar and gets no border.
     # The top and bottom lines start at x=GM (color bar's right edge).
@@ -179,6 +185,28 @@ def _draw_border_line(svg, x1, y1, x2, y2):
         x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
         stroke='#000000', **{'stroke-width': '1'},
     )
+
+
+def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height, shape_usage):
+    used = [(s, n) for s, n in shape_usage.items() if n > 0]
+    if not used:
+        return
+    # Sort descending by count, tiebreak alphabetical by shape letter.
+    used.sort(key=lambda x: (-x[1], x[0].letter))
+    tokens = [f"{s.letter}{n:02d}" for s, n in used]
+    text = " ".join(tokens)
+    # Top of the SCS line is grid_rect.bottom + GM; vertical center for
+    # dominant-baseline=central is half of nucleus_height down from that.
+    y = grid_rect.bottom + gm + nucleus_height / 2
+    el = etree.SubElement(
+        svg, 'text',
+        x=str(grid_rect.right),
+        y=str(y),
+        fill='#000000',
+        style=f"font-family: monospace; font-size: {nucleus_height}px;",
+        **{"text-anchor": "end", "dominant-baseline": "central"},
+    )
+    el.text = text
 
 
 def _draw_color_bar(svg, bounding_rect, gm, color_usage, edge_colors):

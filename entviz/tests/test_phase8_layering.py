@@ -80,16 +80,20 @@ def test_text_appears_after_nucleus_rects():
 def test_quartile_marks_after_nuclei():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     elements = svg.xpath('//*')
-    last_text_idx = next(
-        (i for i, el in reversed(list(enumerate(elements))) if el.tag.endswith("}text")),
-        None,
-    )
+    # The last middle-anchored text is the last per-cell text — quartile
+    # marks should follow it. The SCS text (text-anchor="end") is later
+    # in the document but isn't a per-cell element, so we ignore it.
+    last_cell_text_idx = None
+    for i, el in enumerate(elements):
+        if el.tag.endswith("}text") and el.get("text-anchor") == "middle":
+            last_cell_text_idx = i
     first_circle_idx = next(
         (i for i, el in enumerate(elements) if el.tag.endswith("}circle")), None
     )
     if first_circle_idx is None:
         return  # input may not produce circles
-    assert first_circle_idx > last_text_idx, (
+    assert last_cell_text_idx is not None
+    assert first_circle_idx > last_cell_text_idx, (
         "quartile circle appeared before/within the nucleus+text layer"
     )
 

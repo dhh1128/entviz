@@ -80,7 +80,12 @@ class Renderer:
             self._gradient_seq += 1
             self._add_gradient(defs, gradient_id, i, cell.edge_rect(i),
                                nucleus_bg, edge_color)
-            edge_shape.draw(svg, cell, i, f"url(#{gradient_id})")
+            # Wrap each edge shape in a <g> with a <title> so SVG renderers
+            # surface the shape's full name as a hover tooltip (Phase 11).
+            group = etree.SubElement(svg, 'g')
+            title = etree.SubElement(group, 'title')
+            title.text = edge_shape.name
+            edge_shape.draw(group, cell, i, f"url(#{gradient_id})")
             self.color_usage[edge_color] = self.color_usage.get(edge_color, 0) + 1
             self.shape_usage[edge_shape] = self.shape_usage.get(edge_shape, 0) + 1
 
