@@ -12,7 +12,7 @@ v2 changes from v1:
 """
 from lxml import etree
 
-from .entropy import parse, tokenize
+from .entropy import parse, tokenize_entropy
 from .layout import choose_grid, assign_cell_indices, Cell, Point, Size
 from .colors import select_visual_style
 from .fingerprint import (
@@ -41,10 +41,14 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         core = parsed.core
         type_name = parsed.type
 
-    tokens = tokenize(core, type_name)
+    tokens, _is_truncated = tokenize_entropy(core, type_name)
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
 
+    # _is_truncated indicates the input was > 512 bits and a blank separator
+    # cell must be inserted between tokens 10 and 11. That separator-cell
+    # wiring lands in a later phase; for now the truncated tokens render
+    # contiguously, which is enough to keep large inputs from crashing.
     token_count = len(tokens)
 
     # --- Compute the fingerprint and derive used ftoks ---
@@ -88,7 +92,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         y = row * cell_height
         cell = Cell(Point(x, y), Size(cell_width, cell_height))
         cell_index_to_cell[ci] = cell
-        renderer.render_cell(svg, token, cell)
+        renderer.render_cell(svg, token, used_ftoks[token.index], cell, cell_index=ci)
 
     # Quartile marks placed at the cells of the four quartile ftoks
     # (mapped through the 1:1 ftok→token→cell correspondence).

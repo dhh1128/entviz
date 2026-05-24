@@ -4,17 +4,18 @@ from entviz.renderer import Renderer
 from entviz.colors import VisualStyle
 from entviz.layout import Grid, Cell, Point, Size
 from entviz.entropy import Token
+from entviz.fingerprint import Ftok
 
 @pytest.fixture
 def basic_setup():
     style = VisualStyle(
         bg_color='#ffffff',
-        edge_colors=['#ffd966', '#ffdf2f', '#2f3fbf', '#000000'],
+        edge_colors=['#ffd966', '#ff3f2f', '#2f3fbf', '#000000'],
         edge_shapes=['triangle', 'hook', 'rect', 'box'],
         shape_shift=0,
         color_shift=0
     )
-    grid = Grid(cols=2, rows=1, token_count=2)
+    grid = Grid(cols=2, rows=2, token_count=4)
     renderer = Renderer(style, grid)
     return renderer, style, grid
 
@@ -22,9 +23,10 @@ def test_render_cell_nucleus(basic_setup):
     renderer, style, grid = basic_setup
     svg = etree.Element('svg')
     token = Token("ABCD", 0, 0x123456)
+    ftok = Ftok("EFGH", 0, 0)
     cell = Cell(Point(0, 0), Size(64, 32))
-    
-    renderer.render_cell(svg, token, cell)
+
+    renderer.render_cell(svg, token, ftok, cell, cell_index=0)
     
     # Check nucleus rect
     rects = svg.xpath('//rect')
@@ -75,24 +77,18 @@ def test_renderer_state_transitions(basic_setup):
     renderer, style, grid = basic_setup
     svg = etree.Element('svg')
     cell = Cell(Point(0, 0), Size(64, 32))
-    
-    # Token 0 (Col 0 of 2)
+    ftok = Ftok("F", 0, 0)
+
+    # Cell index 0 (Col 0 of 2, NOT last col)
     token0 = Token("T0", 0, 0)
-    renderer.render_cell(svg, token0, cell)
-    
-    # After 6 edges in Col 0:
-    # color_shift increments 6 times -> 6
-    # shape_shift increments 6 times -> 6 (since NOT last col)
+    renderer.render_cell(svg, token0, ftok, cell, cell_index=0)
     assert renderer.color_shift == 6
     assert renderer.shape_shift == 6
-    
-    # Token 1 (Col 1 of 2 - Last Col)
+
+    # Cell index 1 (Col 1 of 2 - LAST col)
     token1 = Token("T1", 1, 0)
-    renderer.render_cell(svg, token1, cell)
-    
-    # After 6 edges in Col 1:
-    # color_shift starts at 6. Increments 6 times -> 12.
-    # shape_shift starts at 6. Does NOT increment (since IS last col).
-    # Finally, color_shift += shape_shift -> 12 + 6 = 18.
+    renderer.render_cell(svg, token1, ftok, cell, cell_index=1)
+    # color_shift: 6 + 6 = 12, then += shape_shift (still 6) = 18
+    # shape_shift: stays at 6 (last col, no increments)
     assert renderer.color_shift == 18
     assert renderer.shape_shift == 6
