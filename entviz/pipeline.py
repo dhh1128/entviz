@@ -105,8 +105,9 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # blank cells show that color rather than the white bounding-rect fill.
     draw_rect(svg, grid_rect, style.bg_color)
 
+    # Build the token→cell map once so both render passes can reuse it.
     cell_index_to_cell = {}
-
+    token_cells = []  # parallel to tokens: (token, ftok, cell, cell_index)
     for token in tokens:
         ci = cell_indices[token.index]
         col = ci % grid.cols
@@ -116,9 +117,23 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             Size(cell_width, cell_height),
         )
         cell_index_to_cell[ci] = cell
-        renderer.render_cell(svg, token, used_ftoks[token.index], cell, cell_index=ci)
+        token_cells.append((token, used_ftoks[token.index], cell, ci))
 
-    # Quartile marks placed at the cells of the four quartile ftoks
+    # Layer 1: every cell's edge shapes, all drawn before any nucleus or
+    # overlay element. This is required because the ellipse overlay
+    # (Phase 12) must sit on top of all edges but below all nuclei across
+    # the whole grid.
+    for token, ftok, cell, ci in token_cells:
+        renderer.render_edges(svg, ftok, cell, cell_index=ci)
+
+    # Layer 2: ellipse overlay placeholder — Phase 12 inserts it here.
+
+    # Layer 3: every cell's nucleus rect + text, drawn on top of edges
+    # (and on top of the future ellipse overlay).
+    for token, ftok, cell, ci in token_cells:
+        renderer.render_nucleus(svg, token, cell)
+
+    # Layer 4: quartile marks at the cells of the four quartile ftoks
     # (mapped through the 1:1 ftok→token→cell correspondence).
     for q_idx, q_ftok in enumerate(quartile_ftoks):
         if q_ftok is None:

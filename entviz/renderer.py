@@ -20,30 +20,15 @@ class Renderer:
         self.shape_shift = 0
         self.color_shift = 0
 
-    def render_cell(self, svg: etree.Element, token, ftok, cell: Cell, cell_index: int):
+    def render_edges(self, svg: etree.Element, ftok, cell: Cell, cell_index: int):
         """
-        v2 cell rendering. Token supplies nucleus background, foreground,
-        and text (preserving losslessness for ≤512-bit inputs). Ftok
-        supplies the edge_nums that drive edge color and shape selection.
-        The last-column XOR adjustment keys off cell_index, not
-        token.index, because blank-cell insertion can put a token at a
-        cell whose column differs from token.index % grid.cols.
+        v2 layered draw, pass 1: this cell's 6 edge shapes. Ftok.quant
+        drives the edge_num extraction; the XOR shift state on the
+        renderer accumulates across cells. The last-column XOR adjustment
+        keys off cell_index, not token.index, because blank-cell insertion
+        can put a token at a cell whose column differs from
+        token.index % grid.cols.
         """
-        bg_color, fg_color = get_nucleus_colors(token.quant)
-
-        n = cell.nucleus
-        etree.SubElement(svg, 'rect',
-                         x=str(n.left), y=str(n.top),
-                         width=str(n.size.width), height=str(n.size.height),
-                         fill=bg_color)
-
-        text_el = etree.SubElement(svg, 'text',
-                                   x=str(n.center.x), y=str(n.center.y),
-                                   fill=fg_color,
-                                   style=f"font-family: monospace; font-size: {cell.size.height/2}px;",
-                                   **{"text-anchor": "middle", "dominant-baseline": "central"})
-        text_el.text = token.text
-
         edge_nums = [(ftok.quant >> (i * 4)) & 0x0F for i in range(6)]
         is_last_col = (cell_index % self.grid.cols) == self.grid.cols - 1
 
@@ -66,6 +51,26 @@ class Renderer:
 
         if is_last_col:
             self.color_shift = (self.color_shift + self.shape_shift) & 0xFF
+
+    def render_nucleus(self, svg: etree.Element, token, cell: Cell):
+        """
+        v2 layered draw, pass 3: this cell's nucleus rect + centered text.
+        Token.quant drives the nucleus background color (which determines
+        foreground contrast); token.text supplies the displayed string.
+        No state change.
+        """
+        bg_color, fg_color = get_nucleus_colors(token.quant)
+        n = cell.nucleus
+        etree.SubElement(svg, 'rect',
+                         x=str(n.left), y=str(n.top),
+                         width=str(n.size.width), height=str(n.size.height),
+                         fill=bg_color)
+        text_el = etree.SubElement(svg, 'text',
+                                   x=str(n.center.x), y=str(n.center.y),
+                                   fill=fg_color,
+                                   style=f"font-family: monospace; font-size: {cell.size.height/2}px;",
+                                   **{"text-anchor": "middle", "dominant-baseline": "central"})
+        text_el.text = token.text
 
     def draw_quartile_mark(self, svg: etree.Element, cell: Cell, quartile_index: int):
         """Draw a small filled circle in the corner of a quartile token's cell (spec step 16)."""

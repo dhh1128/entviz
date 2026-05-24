@@ -19,25 +19,18 @@ def basic_setup():
     renderer = Renderer(style, grid)
     return renderer, style, grid
 
-def test_render_cell_nucleus(basic_setup):
+def test_render_nucleus(basic_setup):
     renderer, style, grid = basic_setup
     svg = etree.Element('svg')
     token = Token("ABCD", 0, 0x123456)
-    ftok = Ftok("EFGH", 0, 0)
     cell = Cell(Point(0, 0), Size(64, 32))
 
-    renderer.render_cell(svg, token, ftok, cell, cell_index=0)
-    
-    # Check nucleus rect
+    renderer.render_nucleus(svg, token, cell)
+
+    # render_nucleus emits exactly one rect (the nucleus) and one text.
     rects = svg.xpath('//rect')
-    # 1 nucleus + 6 edges = 7 rects
-    assert len(rects) == 7
-    
-    # First rect is nucleus
-    nucleus = rects[0]
-    assert nucleus.get('fill') == '#563412' # 0x123456 -> R=56, G=34, B=12 in hex
-    
-    # Check text
+    assert len(rects) == 1
+    assert rects[0].get('fill') == '#563412'  # 0x123456 → R=56, G=34, B=12
     text = svg.xpath('//text')[0]
     assert text.text == "ABCD"
 
@@ -80,14 +73,12 @@ def test_renderer_state_transitions(basic_setup):
     ftok = Ftok("F", 0, 0)
 
     # Cell index 0 (Col 0 of 2, NOT last col)
-    token0 = Token("T0", 0, 0)
-    renderer.render_cell(svg, token0, ftok, cell, cell_index=0)
+    renderer.render_edges(svg, ftok, cell, cell_index=0)
     assert renderer.color_shift == 6
     assert renderer.shape_shift == 6
 
     # Cell index 1 (Col 1 of 2 - LAST col)
-    token1 = Token("T1", 1, 0)
-    renderer.render_cell(svg, token1, ftok, cell, cell_index=1)
+    renderer.render_edges(svg, ftok, cell, cell_index=1)
     # color_shift: 6 + 6 = 12, then += shape_shift (still 6) = 18
     # shape_shift: stays at 6 (last col, no increments)
     assert renderer.color_shift == 18
