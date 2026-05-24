@@ -69,20 +69,40 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     # --- Pixel dimensions ---
-    # nucleus_height drives all geometry. cell is 4×nucleus_height wide and
-    # 2×nucleus_height tall. The grid_rect is the rectangle of cells only;
-    # in Phase 7 it sits inside a larger bounding_rect that also holds the
-    # color bar, the shape count summary, and the white margin + black
-    # border. The v1 spec called this rect the "bounding rect" — that name
-    # is now reserved for the outer canvas, so we use grid_rect here.
+    # Geometry is anchored on nucleus_height. cell is 4×nucleus_height wide
+    # and 2×nucleus_height tall; edge_size = nucleus_height/2 = half the
+    # height of a top/bottom edge rect; GM (grid margin) = edge_size/2 is
+    # the white margin between the grid_rect and the bounding_rect edges.
     nucleus_height = (font_size_pt * _DPI) / 72
     cell_width = nucleus_height * 4
     cell_height = nucleus_height * 2
-    grid_rect = Rect(Point(0, 0), Size(cell_width * grid.cols, cell_height * grid.rows))
+    edge_size = nucleus_height / 2
+    gm = edge_size / 2
+
+    grid_w = cell_width * grid.cols
+    grid_h = cell_height * grid.rows
+
+    # Bounding rect dimensions per v2 spec step 13:
+    #   width  = GM + GM + grid_width + GM + 1
+    #   height = 1 + GM + grid_height + GM + nucleus_height + GM + 1
+    # Layout left→right: color-bar (GM) | margin (GM) | grid | margin (GM)
+    #                    | right border (1).
+    # Layout top→bottom: top border (1) | margin (GM) | grid | margin (GM)
+    #                    | SCS line (nucleus_height) | margin (GM)
+    #                    | bottom border (1).
+    bounding_w = gm + gm + grid_w + gm + 1
+    bounding_h = 1 + gm + grid_h + gm + nucleus_height + gm + 1
+    bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
+
+    # grid_rect sits at (2*GM, 1+GM) inside the bounding rect.
+    grid_rect = Rect(Point(gm + gm, 1 + gm), Size(grid_w, grid_h))
 
     renderer = Renderer(style, grid)
 
-    svg = canvas(grid_rect.size)
+    svg = canvas(bounding_rect.size)
+    draw_rect(svg, bounding_rect, '#ffffff')
+    # Entviz background color (from median ftok) fills the grid_rect so
+    # blank cells show that color rather than the white bounding-rect fill.
     draw_rect(svg, grid_rect, style.bg_color)
 
     cell_index_to_cell = {}
@@ -111,4 +131,19 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             continue
         renderer.draw_quartile_mark(svg, cell, q_idx)
 
+    # Black border lines on top, right, bottom of the bounding rect.
+    # The left edge is reserved for the color bar and gets no border.
+    # The top and bottom lines start at x=GM (color bar's right edge).
+    _draw_border_line(svg, gm, 0, bounding_w - 1, 0)                              # top
+    _draw_border_line(svg, bounding_w - 1, 0, bounding_w - 1, bounding_h - 1)     # right
+    _draw_border_line(svg, gm, bounding_h - 1, bounding_w - 1, bounding_h - 1)    # bottom
+
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
+
+
+def _draw_border_line(svg, x1, y1, x2, y2):
+    etree.SubElement(
+        svg, 'line',
+        x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
+        stroke='#000000', **{'stroke-width': '1'},
+    )
