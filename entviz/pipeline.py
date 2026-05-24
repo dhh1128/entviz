@@ -1,6 +1,7 @@
 """
 Full entviz rendering pipeline: entropy string → SVG string.
-Follows the v2 algorithm in docs/index2.md.
+Follows the algorithm in docs/index.md (v2; the original v1 spec is
+preserved at docs/v1/index.md for historical reference).
 
 Terminology: v1 used "bounding rect" for the rectangle containing the
 grid of cells. v2 reuses that name for the outer canvas (which also
@@ -41,15 +42,19 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         core = parsed.core
         type_name = parsed.type
 
-    tokens, _is_truncated = tokenize_entropy(core, type_name)
+    tokens, is_truncated = tokenize_entropy(core, type_name)
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
 
-    # _is_truncated indicates the input was > 512 bits and a blank separator
-    # cell must be inserted between tokens 10 and 11. That separator-cell
-    # wiring lands in a later phase; for now the truncated tokens render
-    # contiguously, which is enough to keep large inputs from crashing.
+    # is_truncated means the input was > 512 bits. Spec requires a blank
+    # separator cell between the first 11 tokens (head) and the last 11
+    # tokens (tail), "in addition to" the up-to-3 median/quartile blanks.
+    # Reserve 4 extra cells for truncated input so all 4 possible blanks
+    # (3 normal + 1 separator) deterministically fit. For non-truncated
+    # input the existing assign_cell_indices logic gracefully scales the
+    # blank count to whatever the chosen grid allows.
     token_count = len(tokens)
+    extra_cells_needed = 4 if is_truncated else 0
 
     # --- Compute the fingerprint and derive used ftoks ---
     # The fingerprint avalanche means single-bit input changes propagate
@@ -57,7 +62,9 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     used_ftoks = tokenize_fingerprint(compute_fingerprint(core))[:token_count]
 
     # --- Choose grid ---
-    grid = choose_grid(token_count, target_ar)
+    # Pass token_count + separator-cell budget so the grid is large
+    # enough for the separator plus the up-to-3 median/quartile blanks.
+    grid = choose_grid(token_count + extra_cells_needed, target_ar)
 
     # --- Median, quartiles, visual style — all from ftoks ---
     median_ftok = get_median_ftok(used_ftoks)
@@ -69,6 +76,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     cell_indices = assign_cell_indices(
         tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
     )
+
+    # Large-input separator: shift the second half (tokens 11..21) by one
+    # cell to leave a blank between cells 10 and 11. The shift runs AFTER
+    # the median/quartile insertions so the head/tail split is preserved
+    # exactly. Per spec: "the blank cell separating the first and last
+    # 256-bit groups is in addition to" the other blanks.
+    if is_truncated:
+        for t_idx in list(cell_indices):
+            if t_idx >= 11:
+                cell_indices[t_idx] += 1
 
     # --- Pixel dimensions ---
     # Geometry is anchored on nucleus_height. cell is 4×nucleus_height wide

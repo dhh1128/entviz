@@ -3,7 +3,7 @@ Phase 12 acceptance tests: the ellipse overlay derived from digest
 bytes 60-63 and the SVG clipPath that confines it (and anything else
 that exceeds the bounding rect) to the entviz outline.
 
-Per docs/index2.md:
+Per docs/index.md:
 - anchor: enumerate perimeter cells in cell-index order; for each, visit
   corners TL, TR, BL, BR; emit each unique point the first time it is
   seen. Selection = digest[60] mod (point count).

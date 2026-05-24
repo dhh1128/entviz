@@ -124,9 +124,10 @@ Entviz = goal:
 
     V2 Migration = goal:
       id: v2m1grat
+      status: complete
       why: >
-        Move the implementation from spec v1 (docs/index.md) to spec v2
-        (docs/index2.md). v2 closes a security hole in v1: when the input
+        Move the implementation from spec v1 (docs/v1/index.md) to spec v2
+        (now canonical at docs/index.md). v2 closes a security hole in v1: when the input
         entropy lacks an avalanche effect (UUIDs, chosen hex, base64 blobs),
         single-bit changes produce nearly identical v1 renderings. v2 fixes
         this by deriving most channels from a SHA-512 fingerprint of the
@@ -231,7 +232,7 @@ Entviz = goal:
             seen. This deduplicates shared corners and includes interior
             grid intersections that are corners of perimeter cells (but
             no corners of purely interior cells). Selection uses
-            digest[60] mod (point count). docs/index2.md line 156 carries
+            digest[60] mod (point count). docs/index.md line 156 carries
             the canonical wording.
 
         Shape Decoupling via defs+use = decision:
@@ -267,7 +268,7 @@ Entviz = goal:
             v1's spec wording placed "if last column, add shape_shift to
             color_shift" inside the per-edge loop (would fire 6 times for
             a last-column cell). v1 code does it once after the loop.
-            v2 spec (docs/index2.md) was updated to match the code: the
+            v2 spec (docs/index.md) was updated to match the code: the
             adjustment is a separate step that runs once after all 6 edges
             of the cell have been processed. Per-edge logic stays per-edge;
             per-cell logic is its own step.
