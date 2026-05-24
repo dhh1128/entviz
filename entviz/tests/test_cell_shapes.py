@@ -17,7 +17,7 @@ def count_elements(svg, tag):
 
 def test_all_shapes_known():
     assert set(SHAPE_DRAWERS.keys()) == {
-        'triangle', 'hook', 'rect', 'box', 'slant', 'hammer', 'pyramid', 'double bars'
+        'fin', 'axe', 'brick', 'inf', 'wave', 'hole', 'keel', 'mound'
     }
 
 def test_unknown_shape_raises():
@@ -28,7 +28,7 @@ def test_unknown_shape_raises():
 
 @pytest.mark.parametrize("shape,edge", [
     (shape, edge)
-    for shape in ['triangle', 'hook', 'rect', 'box', 'slant', 'hammer', 'pyramid', 'double bars']
+    for shape in ['fin', 'axe', 'brick', 'inf', 'wave', 'hole', 'keel', 'mound']
     for edge in range(6)
 ])
 def test_shape_produces_elements(shape, edge):
@@ -43,56 +43,56 @@ def test_shape_produces_elements(shape, edge):
 def test_triangle_is_polygon(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'triangle', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'fin', '#ff0000')
     assert count_elements(svg, 'polygon') == 1
 
 @pytest.mark.parametrize("edge", range(6))
-def test_rect_shape_is_single_rect(edge):
+def test_brick_is_single_rect(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'rect', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'brick', '#ff0000')
     assert count_elements(svg, 'rect') == 1
 
 @pytest.mark.parametrize("edge", range(6))
 def test_box_is_single_rect(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'box', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'inf', '#ff0000')
     assert count_elements(svg, 'rect') == 1
 
 @pytest.mark.parametrize("edge", range(6))
 def test_hook_is_two_rects(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'hook', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'axe', '#ff0000')
     assert count_elements(svg, 'rect') == 2
 
 @pytest.mark.parametrize("edge", range(6))
 def test_slant_is_two_polygons(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'slant', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'wave', '#ff0000')
     assert count_elements(svg, 'polygon') == 2
 
 @pytest.mark.parametrize("edge", range(6))
 def test_hammer_is_two_rects(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'hammer', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'hole', '#ff0000')
     assert count_elements(svg, 'rect') == 2
 
 @pytest.mark.parametrize("edge", range(6))
 def test_double_bars_is_two_rects(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'double bars', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'mound', '#ff0000')
     assert count_elements(svg, 'rect') == 2
 
 @pytest.mark.parametrize("edge", [0, 1, 3, 4])
 def test_pyramid_horiz_has_two_polygons_and_one_rect(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'pyramid', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'keel', '#ff0000')
     assert count_elements(svg, 'polygon') == 2
     assert count_elements(svg, 'rect') == 1
 
@@ -100,14 +100,14 @@ def test_pyramid_horiz_has_two_polygons_and_one_rect(edge):
 def test_pyramid_vert_has_two_polygons(edge):
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, edge, 'pyramid', '#ff0000')
+    draw_edge_shape(svg, cell, edge, 'keel', '#ff0000')
     assert count_elements(svg, 'polygon') == 2
 
 def test_box_is_centered():
     """The box should be centered within the edge rect."""
     cell = make_cell()
     svg = make_svg()
-    draw_edge_shape(svg, cell, 0, 'box', '#ff0000')
+    draw_edge_shape(svg, cell, 0, 'inf', '#ff0000')
     rect_el = svg.xpath('//rect')[0]
     e = cell.edge_height
     er = cell.edge_rect(0)

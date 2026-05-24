@@ -170,16 +170,27 @@ def draw_double_bars(svg, cell: Cell, edge: int, fill_color: str):
         draw_rect(svg, _sub(er, 0, start_y + thickness + gap, e, thickness), fill_color)
 
 
+# v2 shape renames:
+#   triangle → fin (F)    slant       → wave  (W)
+#   hook     → axe (A)    hammer      → hole  (H)
+#   rect     → brick (B)  pyramid     → keel  (K)
+#   box      → inf (I)    double bars → mound (M)
+#
+# The drawing geometry is unchanged in this phase; the shape redesign
+# effort happens in a separate workstream. Each function is reused by
+# alias, and the EdgeShape registry (in colors.py) wraps it with its
+# canonical name + letter.
 SHAPE_DRAWERS = {
-    'triangle': draw_triangle,
-    'hook': draw_hook,
-    'rect': draw_rect_shape,
-    'box': draw_box,
-    'slant': draw_slant,
-    'hammer': draw_hammer,
-    'pyramid': draw_pyramid,
-    'double bars': draw_double_bars,
+    'fin':   draw_triangle,
+    'axe':   draw_hook,
+    'brick': draw_rect_shape,
+    'inf':   draw_box,
+    'wave':  draw_slant,
+    'hole':  draw_hammer,
+    'keel':  draw_pyramid,
+    'mound': draw_double_bars,
 }
+
 
 def draw_edge_shape(svg, cell: Cell, edge: int, shape_name: str, fill_color: str):
     drawer = SHAPE_DRAWERS.get(shape_name)

@@ -18,7 +18,7 @@ behavioral, but the per-method assertions below still verify each axis.
 from lxml import etree
 import pytest
 
-from entviz.colors import VisualStyle
+from entviz.colors import VisualStyle, SHAPE_ARRAY_0
 from entviz.entropy import Token
 from entviz.fingerprint import Ftok
 from entviz.layout import Cell, Grid, Point, Size
@@ -30,7 +30,7 @@ def basic_setup():
     style = VisualStyle(
         bg_color='#ffffff',
         edge_colors=['#ffd966', '#ff3f2f', '#2f3fbf', '#000000'],
-        edge_shapes=['triangle', 'hook', 'rect', 'box'],
+        edge_shapes=list(SHAPE_ARRAY_0),
         shape_shift=0,
         color_shift=0,
     )
@@ -63,7 +63,7 @@ def test_edge_nums_derive_from_ftok_quant():
     style = VisualStyle(
         bg_color='#ffffff',
         edge_colors=['#ffd966', '#ff3f2f', '#2f3fbf', '#000000'],
-        edge_shapes=['triangle', 'hook', 'rect', 'box'],
+        edge_shapes=list(SHAPE_ARRAY_0),
         shape_shift=0,
         color_shift=0,
     )
@@ -71,9 +71,15 @@ def test_edge_nums_derive_from_ftok_quant():
     cell = Cell(Point(0, 0), Size(64, 32))
 
     svg1 = etree.Element('svg')
-    Renderer(style, grid).render_edges(svg1, Ftok("A", 0, 0x000000), cell, cell_index=0)
+    defs1 = etree.SubElement(svg1, 'defs')
+    Renderer(style, grid).render_edges(
+        svg1, defs1, Ftok("A", 0, 0x000000), cell, cell_index=0, nucleus_bg='#abcdef'
+    )
     svg2 = etree.Element('svg')
-    Renderer(style, grid).render_edges(svg2, Ftok("B", 0, 0xFFFFFF), cell, cell_index=0)
+    defs2 = etree.SubElement(svg2, 'defs')
+    Renderer(style, grid).render_edges(
+        svg2, defs2, Ftok("B", 0, 0xFFFFFF), cell, cell_index=0, nucleus_bg='#abcdef'
+    )
 
     assert etree.tostring(svg1) != etree.tostring(svg2), (
         "ftok.quant did not affect edge rendering"
@@ -85,8 +91,9 @@ def test_last_column_uses_cell_index_not_token_index(basic_setup):
     # rules must fire based on cell_index (not the token whose .index is 0).
     renderer, _, _ = basic_setup
     svg = etree.Element('svg')
+    defs = etree.SubElement(svg, 'defs')
     cell = Cell(Point(0, 0), Size(64, 32))
-    renderer.render_edges(svg, Ftok("X", 0, 0), cell, cell_index=1)
+    renderer.render_edges(svg, defs, Ftok("X", 0, 0), cell, cell_index=1, nucleus_bg='#abcdef')
     # last col: shape_shift NEVER increments → stays 0
     # last col: color_shift += 1 per edge → 6, then += shape_shift (0) → 6
     assert renderer.shape_shift == 0
@@ -96,7 +103,8 @@ def test_last_column_uses_cell_index_not_token_index(basic_setup):
 def test_non_last_column_increments_shape_shift(basic_setup):
     renderer, _, _ = basic_setup
     svg = etree.Element('svg')
+    defs = etree.SubElement(svg, 'defs')
     cell = Cell(Point(0, 0), Size(64, 32))
-    renderer.render_edges(svg, Ftok("X", 0, 0), cell, cell_index=0)
+    renderer.render_edges(svg, defs, Ftok("X", 0, 0), cell, cell_index=0, nucleus_bg='#abcdef')
     assert renderer.color_shift == 6
     assert renderer.shape_shift == 6

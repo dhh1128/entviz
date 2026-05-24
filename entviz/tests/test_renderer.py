@@ -1,7 +1,7 @@
 import pytest
 from lxml import etree
 from entviz.renderer import Renderer
-from entviz.colors import VisualStyle
+from entviz.colors import VisualStyle, SHAPE_ARRAY_0
 from entviz.layout import Grid, Cell, Point, Size
 from entviz.entropy import Token
 from entviz.fingerprint import Ftok
@@ -11,7 +11,7 @@ def basic_setup():
     style = VisualStyle(
         bg_color='#ffffff',
         edge_colors=['#ffd966', '#ff3f2f', '#2f3fbf', '#000000'],
-        edge_shapes=['triangle', 'hook', 'rect', 'box'],
+        edge_shapes=list(SHAPE_ARRAY_0),
         shape_shift=0,
         color_shift=0
     )
@@ -69,16 +69,17 @@ def test_quartile_mark_corners(basic_setup):
 def test_renderer_state_transitions(basic_setup):
     renderer, style, grid = basic_setup
     svg = etree.Element('svg')
+    defs = etree.SubElement(svg, 'defs')
     cell = Cell(Point(0, 0), Size(64, 32))
     ftok = Ftok("F", 0, 0)
 
     # Cell index 0 (Col 0 of 2, NOT last col)
-    renderer.render_edges(svg, ftok, cell, cell_index=0)
+    renderer.render_edges(svg, defs, ftok, cell, cell_index=0, nucleus_bg='#abcdef')
     assert renderer.color_shift == 6
     assert renderer.shape_shift == 6
 
     # Cell index 1 (Col 1 of 2 - LAST col)
-    renderer.render_edges(svg, ftok, cell, cell_index=1)
+    renderer.render_edges(svg, defs, ftok, cell, cell_index=1, nucleus_bg='#abcdef')
     # color_shift: 6 + 6 = 12, then += shape_shift (still 6) = 18
     # shape_shift: stays at 6 (last col, no increments)
     assert renderer.color_shift == 18

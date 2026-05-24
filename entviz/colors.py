@@ -49,8 +49,60 @@ POSSIBLE_EDGE_COLORS = [
     '#000000', # black
 ]
 
-SHAPE_ARRAY_0 = ['triangle', 'hook', 'rect', 'box']
-SHAPE_ARRAY_1 = ['slant', 'hammer', 'pyramid', 'double bars']
+class EdgeShape:
+    """
+    A renderable edge shape. Owns its canonical v2 name, the identifying
+    capital letter used by the shape count summary (Phase 11), and the
+    drawer that paints the shape into a given cell's edge_rect.
+
+    The drawer signature is (svg, cell, edge_index, fill). `fill` is a
+    string accepted by the svg `fill` attribute — either a hex color (v1
+    behavior, kept for tests) or a "url(#…)" gradient reference (v2
+    pipeline default).
+
+    Defining shapes as objects (rather than plain name strings) lets the
+    upcoming shape-redesign effort swap a shape's geometry in one place
+    without disturbing the renderer, the registry, or the SCS lookup.
+    """
+    __slots__ = ('name', 'letter', 'draw')
+
+    def __init__(self, name: str, letter: str, draw):
+        self.name = name
+        self.letter = letter
+        self.draw = draw
+
+    def __repr__(self):
+        return f"EdgeShape({self.name!r}, {self.letter!r})"
+
+    def __eq__(self, other):
+        if isinstance(other, EdgeShape):
+            return self.name == other.name
+        return False
+
+    def __hash__(self):
+        return hash(self.name)
+
+
+def _make_shape(name, letter):
+    # Late-imported drawer keeps the colors↔cell_shapes import order clean.
+    from .cell_shapes import SHAPE_DRAWERS
+    return EdgeShape(name, letter, SHAPE_DRAWERS[name])
+
+
+# v2 shape arrays. Positions and array assignments unchanged from v1;
+# names and letters per spec.
+SHAPE_ARRAY_0 = [
+    _make_shape('fin',   'F'),
+    _make_shape('axe',   'A'),
+    _make_shape('brick', 'B'),
+    _make_shape('inf',   'I'),
+]
+SHAPE_ARRAY_1 = [
+    _make_shape('wave',  'W'),
+    _make_shape('hole',  'H'),
+    _make_shape('keel',  'K'),
+    _make_shape('mound', 'M'),
+]
 
 def select_visual_style(median_token, second_quartile_token) -> VisualStyle:
     """
