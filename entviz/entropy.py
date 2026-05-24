@@ -425,8 +425,38 @@ def tokenize(text: str, type_name: str, token_len: int = None) -> list[Token]:
             quant = val & 0xFFFFFF
             
         tokens.append(Token(chunk, len(tokens), quant))
-        
+
     return tokens
+
+
+_MAX_TOKENS = 22
+_BITS_PER_SIDE = 256
+
+
+def tokenize_entropy(core: str, type_name: str) -> tuple[list[Token], bool]:
+    """
+    Tokenize entropy with v2 large-input handling.
+
+    For inputs whose tokenization would yield more than 22 tokens, take
+    only the first 256 bits and the last 256 bits of the normalized core,
+    tokenize each side independently, and renumber the combined indices
+    0..21. Returns (tokens, is_truncated). The caller is responsible for
+    inserting a blank separator cell between the two halves when rendering.
+
+    The fingerprint is computed separately over the full core, so a
+    truncated middle still binds into every fingerprint-driven channel.
+    """
+    bits_per_char = 4 if "hex" in type_name.lower() else 6
+    all_tokens = tokenize(core, type_name)
+    if len(all_tokens) <= _MAX_TOKENS:
+        return all_tokens, False
+    chars_per_side = math.ceil(_BITS_PER_SIDE / bits_per_char)
+    head_tokens = tokenize(core[:chars_per_side], type_name)
+    tail_tokens = tokenize(core[-chars_per_side:], type_name)
+    combined = head_tokens + tail_tokens
+    renumbered = [Token(t.text, i, t.quant) for i, t in enumerate(combined)]
+    return renumbered, True
+
 
 def get_median_token(tokens: list[Token]) -> Token:
     """
