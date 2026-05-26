@@ -383,6 +383,22 @@ Entviz = goal:
             point at the same target, forming a geometric pattern
             that varies with the fingerprint.
 
+        Blank Cell Ring as White-Filled Disc = decision:
+          id: v4r1ng3v2
+          why: >
+            v4 ring style simplified from the earlier two-adjacent-
+            strokes design (1-px white outer + 1-px black inner at
+            radii nominal±0.5) to a single white-filled circle at
+            nominal_radius with a 1-px black outline. Same color
+            scheme (white + black), but the ring is now an opaque
+            disc rather than a thin transparent ring. Anything
+            beneath it inside the radius (grid_rect bg, overlay
+            tint) is occluded. Visually more solid and easier to
+            spot at a glance.
+
+            Pointer markers (already white-filled + black-stroked)
+            unchanged — already matched this new aesthetic.
+
         Blank Cell Bicolor Ring = decision:
           id: v4bl4nkc
           why: >

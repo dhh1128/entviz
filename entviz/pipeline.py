@@ -272,17 +272,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         if ci in used_cell_indices:
             continue
         cx, cy = _cell_center(ci)
-        # Bicolor ring: 1-px white outer + 1-px black inner at adjacent radii.
+        # Ring: a solid white disc at nominal_radius with a 1-px black
+        # outline. Replaces the earlier two-adjacent-strokes design
+        # (1-px white outer + 1-px black inner) — same colors but now
+        # an opaque disc, so anything underneath (grid_rect bg, overlay
+        # tint) is occluded inside the ring.
         etree.SubElement(
             svg, 'circle',
-            cx=str(cx), cy=str(cy), r=str(nominal_radius + 0.5),
-            fill='none', stroke='#ffffff',
-            **{'stroke-width': '1'},
-        )
-        etree.SubElement(
-            svg, 'circle',
-            cx=str(cx), cy=str(cy), r=str(nominal_radius - 0.5),
-            fill='none', stroke='#000000',
+            cx=str(cx), cy=str(cy), r=str(nominal_radius),
+            fill='#ffffff', stroke='#000000',
             **{'stroke-width': '1'},
         )
         # Maxftok pointer: small bicolor disc tangent OUTSIDE the ring,

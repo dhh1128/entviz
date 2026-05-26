@@ -27,39 +27,37 @@ def _circles(svg, r):
 # ---- Bicolor ring -------------------------------------------------------
 
 
-def test_blank_ring_consists_of_two_adjacent_circles():
-    """Each blank cell has one circle at r=12.5 (white outer) and one at
-    r=11.5 (black inner) — both centered at the same point."""
-    # "Lorem ipsum..." → 16 tokens → 4x4 fit but choose_grid may pick 4x5 or
-    # similar → at least one blank cell.
+def test_blank_ring_is_white_filled_disc_with_black_outline():
+    """v4 ring style: a single circle at nominal_radius with fill=white
+    and a 1-px black stroke. Replaces the earlier two-adjacent-strokes
+    design (1-px white outer + 1-px black inner) — same colors but now
+    a solid disc instead of a thin ring."""
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
-    white_outers = [
-        c for c in svg.xpath('//*[local-name()="circle"]')
-        if float(c.get("r", -1)) == 12.5 and c.get("stroke") == "#ffffff"
-    ]
-    black_inners = [
-        c for c in svg.xpath('//*[local-name()="circle"]')
-        if float(c.get("r", -1)) == 11.5 and c.get("stroke") == "#000000"
-    ]
-    assert white_outers, "no white-outer ring strokes"
-    assert len(white_outers) == len(black_inners), (
-        f"ring pair mismatch: {len(white_outers)} outer vs {len(black_inners)} inner"
-    )
-    # Each pair must share a center.
-    outer_centers = {(float(c.get("cx")), float(c.get("cy"))) for c in white_outers}
-    inner_centers = {(float(c.get("cx")), float(c.get("cy"))) for c in black_inners}
-    assert outer_centers == inner_centers
+    # Ring nominal_radius at 12pt = nucleus_width/4 = 12.
+    rings = [c for c in svg.xpath('//*[local-name()="circle"]')
+             if float(c.get("r", -1)) == 12
+             and c.get("fill") == "#ffffff"
+             and c.get("stroke") == "#000000"
+             and c.get("stroke-width") == "1"]
+    assert rings, "no white-disc/black-stroke rings found"
+    # And no leftover from the old style.
+    old_outers = [c for c in svg.xpath('//*[local-name()="circle"]')
+                  if float(c.get("r", -1)) == 12.5]
+    old_inners = [c for c in svg.xpath('//*[local-name()="circle"]')
+                  if float(c.get("r", -1)) == 11.5]
+    assert not old_outers and not old_inners, "old two-stroke ring remnants"
 
 
-def test_blank_ring_radius_is_nucleus_width_over_4():
-    """At 12pt, nucleus_width = 48, so nominal_radius = 12, white outer
-    at r=12.5, black inner at r=11.5."""
+def test_blank_ring_nominal_radius_is_nucleus_width_over_4():
+    """nominal_radius = nucleus_width / 4 = 12 at 12pt."""
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
-    outers = [c for c in svg.xpath('//*[local-name()="circle"]')
-              if c.get("stroke") == "#ffffff" and float(c.get("r", -1)) > 5]
-    for c in outers:
-        assert float(c.get("r")) == 12.5
-        assert c.get("stroke-width") == "1"
+    rings = [c for c in svg.xpath('//*[local-name()="circle"]')
+             if c.get("fill") == "#ffffff"
+             and c.get("stroke") == "#000000"
+             and float(c.get("r", -1)) > 5]
+    assert rings
+    for c in rings:
+        assert float(c.get("r")) == 12
 
 
 def test_blank_ring_count_matches_blank_cell_count():
@@ -75,7 +73,8 @@ def test_blank_ring_count_matches_blank_cell_count():
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
     ]
     rings = [c for c in svg.xpath('//*[local-name()="circle"]')
-             if float(c.get("r", -1)) == 12.5 and c.get("stroke") == "#ffffff"]
+             if float(c.get("r", -1)) == 12 and c.get("fill") == "#ffffff"
+                and c.get("stroke") == "#000000"]
     # Compute the grid dimensions from canvas
     bw = float(svg.get("width"))
     bh = float(svg.get("height"))
@@ -97,7 +96,8 @@ def test_pointer_markers_pair_per_blank():
     """Each blank ring has 2 pointer markers (inside + outside), both r=1.5."""
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
     rings = [c for c in svg.xpath('//*[local-name()="circle"]')
-             if float(c.get("r", -1)) == 12.5 and c.get("stroke") == "#ffffff"]
+             if float(c.get("r", -1)) == 12 and c.get("fill") == "#ffffff"
+                and c.get("stroke") == "#000000"]
     markers = _circles(svg, 1.5)
     assert len(markers) == 2 * len(rings)
 
@@ -106,7 +106,8 @@ def test_pointer_markers_at_tangent_distance():
     """Outside markers at distance 15 from ring center; inside at distance 9."""
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
     rings = [c for c in svg.xpath('//*[local-name()="circle"]')
-             if float(c.get("r", -1)) == 12.5 and c.get("stroke") == "#ffffff"]
+             if float(c.get("r", -1)) == 12 and c.get("fill") == "#ffffff"
+                and c.get("stroke") == "#000000"]
     markers = _circles(svg, 1.5)
     for r in rings:
         rcx, rcy = float(r.get("cx")), float(r.get("cy"))
@@ -136,7 +137,8 @@ def test_all_max_pointers_point_at_same_cell():
     input_ = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
     svg = _doc(render(input_))
     rings = [c for c in svg.xpath('//*[local-name()="circle"]')
-             if float(c.get("r", -1)) == 12.5 and c.get("stroke") == "#ffffff"]
+             if float(c.get("r", -1)) == 12 and c.get("fill") == "#ffffff"
+                and c.get("stroke") == "#000000"]
     markers = _circles(svg, 1.5)
 
     # Compute target cell from the actual algorithm

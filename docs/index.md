@@ -259,12 +259,7 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
 
 1. **Blank cells** carry no token. For a blank cell, draw no nucleus, no text, and no surround boxes; the grid_rect's background color shows through. Then draw a **blank-cell marker**: a bicolor ring centered in the cell, plus a pair of small pointer markers indicating the *minftok* and *maxftok* cells (defined below).
 
-    Ring geometry — nominal_radius = `nucleus_width / 4`. The ring is built as two 1-pixel stroked circles at adjacent radii, both `fill = none`, `stroke-width = 1`:
-
-    1. **Outer 1-px white ring** at radius `nominal_radius + 0.5` (stroke paints `nominal_radius` to `nominal_radius + 1`), `stroke = #ffffff`.
-    2. **Inner 1-px black ring** at radius `nominal_radius − 0.5` (stroke paints `nominal_radius − 1` to `nominal_radius`), `stroke = #000000`.
-
-    The net visual is a 2-px-wide ring: 1 px of white outside, 1 px of black immediately inside. Whichever underlying bg color the cell sits on, one of the two strokes contrasts strongly and the other provides a hard edge. No blend mode required.
+    Ring geometry — nominal_radius = `nucleus_width / 4`. The ring is a single `<circle>` at that radius with `fill = #ffffff`, `stroke = #000000`, `stroke-width = 1`. The white fill makes the ring an opaque disc — whatever sits beneath it inside the radius (grid_rect bg color, ellipse overlay tint) is fully occluded; the black 1-px outline gives the disc a crisp boundary against any underlying color. No blend mode required.
 
     **Pointer markers.** Define:
     * **minftok cell**: among the used ftoks, the one with the smallest 24-bit quant; tie-break = highest cell index of the corresponding cell.
