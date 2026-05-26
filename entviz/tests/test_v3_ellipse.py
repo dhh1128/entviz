@@ -89,29 +89,31 @@ def test_v3_params_anchor_index_is_full_byte():
 # ---- pipeline integration -----------------------------------------------
 
 
-def test_overlay_omitted_for_2x2_grid():
-    # 2x2 has 1 interior corner, far below the 6 threshold.
+# v4 hybrid: small grids (< 6 interior corners) get an ellipse anchored
+# at an EXTERNAL (boundary) corner instead of being skipped. The three
+# tests below originally asserted the v3 "skip for small grids" rule;
+# they are kept here to pin the new behavior for posterity, with their
+# names preserved for git-blame continuity but their assertions inverted.
+
+
+def test_overlay_now_drawn_for_2x2_grid():
+    # 2x2 has 1 interior corner; v4 falls back to external corners
+    # (8 of them for a 2x2 grid) and draws the overlay.
     svg = _doc(render("ab"))
-    assert _ellipse(svg) is None
+    assert _ellipse(svg) is not None
 
 
-def test_overlay_omitted_for_3x3_grid():
-    # 3x3 has 4 interior corners (below the 6 threshold).
-    # 9 tokens triggers a 3x3 grid.
-    # (9 base64 chars × 6 bits = 54 bits per cell budget, but 9 tokens
-    # means we need 9 cells; choose_grid picks 3x3 for AR=1.)
-    svg = _doc(render("abcdefghijkl"))  # base64 fallback → 12-char core → 3 tokens, 2x2 grid
-    # Try a clearer 9-token case — 9 tokens means 36 base64 chars or 54 hex chars.
+def test_overlay_now_drawn_for_3x3_grid():
+    # 3x3 has 4 interior corners; v4 falls back to external (12 corners).
     svg = _doc(render("a" * 36))  # 36 chars → fallback base64 path → 9 tokens
-    # Note: choose_grid(9, 1.0) = 3x3 (cells=9, ar=2)
-    assert _ellipse(svg) is None
+    assert _ellipse(svg) is not None
 
 
-def test_overlay_present_for_uuid():
-    # UUID = 8 tokens → 2x4 grid → (2-1)×(4-1) = 3 interior corners.
-    # That's BELOW the 6 threshold, so overlay omitted.
+def test_overlay_now_drawn_for_uuid():
+    # UUID = 6 hex tokens → 2x3 grid → 2 interior corners (< 6);
+    # v4 falls back to external corners (10 for a 2x3 grid).
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    assert _ellipse(svg) is None
+    assert _ellipse(svg) is not None
 
 
 def test_overlay_present_for_512_bit_input():

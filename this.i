@@ -511,6 +511,37 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Hybrid Ellipse Anchoring = decision:
+          id: v4hybell
+          why: >
+            v3 skipped the ellipse overlay entirely for grids with
+            fewer than 6 interior corners (smaller than 3x4 / 4x3,
+            corresponding to roughly <256 bits of input). v4 extends
+            coverage to all valid grids (2x2 and larger) by falling
+            back to EXTERNAL corners — the cell-corner points on
+            grid_rect's outer boundary, of which a 2x2 has 8, a 2x3
+            has 10, etc. The math (r_min ≤ r_max) holds even for
+            the tightest 2x2 edge-midpoint anchor because external
+            anchors have much larger d_far than interior corners
+            give for the same grid.
+
+            Visual character differs between the two anchor types:
+            interior anchors produce a centered curve mostly visible
+            inside the grid; external anchors produce a
+            quarter-ellipse-in-a-corner (for vertex anchors) or
+            half-ellipse-along-an-edge (for midpoint anchors)
+            silhouette because most of the ellipse is clipped
+            outside the grid_rect. Two visual "species" of overlay,
+            but no entviz shows both — the species is determined by
+            grid size, which is a deterministic function of input
+            length.
+
+            Threshold = 6 (unchanged from v3 for the
+            interior-corner-eligible case). Implementation: new
+            enumerate_external_corners() helper alongside the
+            existing enumerate_interior_corners(); _draw_ellipse_overlay
+            chooses between them based on interior_count.
+
         Clip-Path Id Uniqueness = decision:
           id: v4ovr1d1
           why: >

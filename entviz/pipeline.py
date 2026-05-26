@@ -399,6 +399,36 @@ def enumerate_interior_corners(cols, rows, cell_w, cell_h, origin: Point) -> lis
     ]
 
 
+def enumerate_external_corners(cols, rows, cell_w, cell_h, origin: Point) -> list:
+    """
+    v4 hybrid: enumerate cell-corner points on the OUTER boundary of an
+    N x M grid_rect. Used as ellipse anchors when the grid is too small
+    to have ≥ 6 interior corners (i.e., smaller than 3x4 / 4x3).
+
+    For an N-cols × M-rows grid there are 2(N+1) + 2(M-1) = 2(N + M)
+    external corners — every cell-corner on the grid_rect's outer
+    perimeter, including the four grid_rect vertices and the cell
+    boundary midpoints on each edge.
+
+    Enumeration order (row-major):
+      - Top edge: (col, 0) for col in 0..N
+      - For each interior row r in 1..M-1: (0, r) then (N, r)
+      - Bottom edge: (col, M) for col in 0..N
+    """
+    points = []
+    # Top edge — all N+1 corners.
+    for c in range(cols + 1):
+        points.append(Point(origin.x + c * cell_w, origin.y))
+    # Interior rows — just the leftmost and rightmost corners.
+    for r in range(1, rows):
+        points.append(Point(origin.x, origin.y + r * cell_h))
+        points.append(Point(origin.x + cols * cell_w, origin.y + r * cell_h))
+    # Bottom edge — all N+1 corners.
+    for c in range(cols + 1):
+        points.append(Point(origin.x + c * cell_w, origin.y + rows * cell_h))
+    return points
+
+
 def ellipse_params_from_digest(digest: bytes) -> dict:
     """
     v2 mapping (kept for backwards-compatible test imports). v3 uses
@@ -459,30 +489,42 @@ def _ellipse_overlay_for_bg(bg_color: str):
     return ('#000000' if l > 0.5 else '#ffffff', 0.20)
 
 
-_V3_OVERLAY_MIN_INTERIOR_CORNERS = 6  # 3x4 / 4x3 and larger
+# v4 hybrid anchor strategy threshold: grids with at least this many
+# interior corners (3x4 / 4x3 and larger) anchor the ellipse at an
+# interior corner — producing a centered curve mostly visible inside
+# the grid. Smaller grids fall back to external (boundary) corners,
+# producing a quarter-ellipse-in-a-corner or half-ellipse-along-an-
+# edge silhouette. The math (r_min ≤ r_max) holds for both modes
+# all the way down to a 2x2 grid.
+_HYBRID_INTERIOR_THRESHOLD = 6
 
 
 def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
                           cell_w, cell_h, bg_color, clip_id):
     """
-    V3-5 ellipse overlay:
-      - skip if grid has < 6 interior corners (~< 256 bits of input)
-      - anchor: strictly-interior corner of the grid
-      - rx, ry: independent, each in [cell_h, d_far − cell_w] with
-        16-level discretization
+    v4 hybrid ellipse overlay:
+      - anchor: interior corner of the grid if (cols-1)·(rows-1) ≥ 6,
+        otherwise an external (boundary) corner of the grid_rect
+      - rx, ry: independent, each in [r_min, d_far − cell_w] with
+        16-level discretization (r_min = nucleus_height = cell_h/2)
       - rotation: [0°, 180°), 16-level
-      - opacity: fixed 20%
+      - fill and opacity: per entviz bg color
       - clip target: grid_rect (passed in via clip_id)
     """
     cols = int(round(grid_rect.size.width / cell_w))
     rows = int(round(grid_rect.size.height / cell_h))
-    if (cols - 1) * (rows - 1) < _V3_OVERLAY_MIN_INTERIOR_CORNERS:
-        return  # grid too small for the overlay to read
+    interior_count = (cols - 1) * (rows - 1)
 
-    points = enumerate_interior_corners(
-        cols=cols, rows=rows, cell_w=cell_w, cell_h=cell_h,
-        origin=Point(grid_rect.left, grid_rect.top),
-    )
+    if interior_count >= _HYBRID_INTERIOR_THRESHOLD:
+        points = enumerate_interior_corners(
+            cols=cols, rows=rows, cell_w=cell_w, cell_h=cell_h,
+            origin=Point(grid_rect.left, grid_rect.top),
+        )
+    else:
+        points = enumerate_external_corners(
+            cols=cols, rows=rows, cell_w=cell_w, cell_h=cell_h,
+            origin=Point(grid_rect.left, grid_rect.top),
+        )
     if not points:
         return
 
