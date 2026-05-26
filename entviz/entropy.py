@@ -43,10 +43,12 @@ BECH32_ALPHABET_EITHER_CASE = BECH32_ALPHABET + BECH32_ALPHABET.upper()
 HEX       = Alphabet("hex",       HEX_ALPHABET,        4)
 BASE58    = Alphabet("base58",    BASE58_ALPHABET,     6)  # ~5.86 bits true; treated as 6 for token alignment
 BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)
-# At 5 bits/char, 24/5 doesn't divide evenly. We choose 4 chars/token
-# (20 bits) and let the spec's bit-extension rule pad to 24, rather
-# than 5 chars/token (25 bits) which would overshoot the 24-bit quant
-# budget.
+# Both base32 (RFC 4648) and bech32 (BIP-173) are 5 bits/char with
+# different character sets. At 5 bits/char, 24/5 doesn't divide evenly:
+# we choose 4 chars/token (20 bits) and let the spec's bit-extension
+# rule pad to 24, rather than 5 chars/token (25 bits) which would
+# overshoot the 24-bit quant budget.
+BASE32    = Alphabet("base32",    BASE32_ALPHABET,     5)
 BECH32    = Alphabet("bech32",    BECH32_ALPHABET,     5)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
@@ -62,7 +64,7 @@ EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
 CARDANO_SHORT_BYRON_REGEX = re.compile(r'^(Ae2)([' + BASE58_ALPHABET + ']{50})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_LONG_BYRON_REGEX = re.compile(r'^(DdzFF)([' + BASE58_ALPHABET + ']{65})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_ALPHABET_EITHER_CASE + ']{50,100})([' + BECH32_ALPHABET_EITHER_CASE + ']{6})$')
-BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BASE32_ALPHABET + ']{41})', re.I)
+BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
 LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)
 ETHEREUM_REGEX = re.compile(r'^(0x)?([a-fA-F0-9]{32})([a-fA-F0-9]{8})$')
@@ -297,9 +299,10 @@ def parse_bitcoin_cash_address(text) -> Parsed:
     """
     m = BITCOIN_CASH_REGEX.match(text)
     if m:
-        # Bitcoin Cash uses CashAddr (base32 variant). Declared BASE64
-        # for now; BASE32 alphabet (bits_per_char=5) is deferred.
-        return Parsed("Bitcoin Cash", BASE64, m.group(1), m.group(2), None)
+        # Bitcoin Cash uses CashAddr, which despite being commonly called
+        # "base32" actually uses the bech32 alphabet (BIP-173 char set),
+        # NOT RFC 4648 base32. Token alignment uses 5 bits/char either way.
+        return Parsed("Bitcoin Cash", BECH32, m.group(1), m.group(2).lower(), None)
 
 def parse_cardano_address(text) -> Parsed:
     """
@@ -336,8 +339,8 @@ def parse_stellar_address(text) -> Parsed:
     """
     m = STELLAR_REGEX.match(text)
     if m:
-        # Stellar uses base32. Declared BASE64 for now; BASE32 deferred.
-        return Parsed("Stellar", BASE64, m.group(1).upper(), m.group(2).upper(), None)
+        # Stellar uses base32 (RFC 4648).
+        return Parsed("Stellar", BASE32, m.group(1).upper(), m.group(2).upper(), None)
     
 def parse_uuid(text) -> Parsed:
     """
@@ -373,8 +376,8 @@ def parse_ipfs_cid(text) -> Parsed:
         return Parsed("IPFS CID v0", BASE58, m.group(1), m.group(2), None)
     m = IPFS_CIDV1_REGEX.match(text)
     if m:
-        # IPFS CID v1 uses base32. Declared BASE64 for now; BASE32 deferred.
-        return Parsed(f"IPFS CID v1 256", BASE64, m.group(1), m.group(2).lower(), None)
+        # IPFS CID v1 uses base32 (RFC 4648).
+        return Parsed("IPFS CID v1 256", BASE32, m.group(1), m.group(2).upper(), None)
     
 # Register all the functions that do parsing (with one exception below).
 def register_parse_funcs():

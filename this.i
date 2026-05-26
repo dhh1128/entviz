@@ -511,6 +511,29 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Base32 Alphabet = decision:
+          id: v4base32
+          why: >
+            Add a BASE32 alphabet entry (5 bits/char, RFC 4648 alphabet
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"). Same 4-chars-per-token
+            rule as bech32 (= 20 bits, extended to 24).
+
+            Used by Stellar (G prefix) and IPFS CID v1 (b prefix).
+            Bitcoin Cash CashAddr is commonly described as "base32"
+            but actually uses the bech32 alphabet (BIP-173 char set,
+            with 0,8,9 and minus 1,b,i,o); we declare BECH32 for it,
+            not BASE32. Fixed the BITCOIN_CASH_REGEX char class
+            accordingly — it had been using the RFC 4648 base32 char
+            class which rejects 0/1/8/9, so real CashAddr addresses
+            containing '9' fell through to the unknown-input
+            fallback.
+
+            BASE32 and BECH32 are now two distinct alphabet entries
+            sharing bits_per_char=5 but with different character
+            lookup tables. The same input string will produce
+            different quant values depending on which alphabet is
+            declared.
+
         Bech32 Alphabet = decision:
           id: v4bch320
           why: >
