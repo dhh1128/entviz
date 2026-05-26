@@ -127,7 +127,6 @@ SECTION = """
 ROW = """
 <div class="row">
   <div class="meta">
-    <div class="label">{label}</div>
     <div class="input">{input}</div>
   </div>
   <div class="viz">{svg}</div>
@@ -188,7 +187,6 @@ def main():
             else:
                 svg_inline = svg
             rows.append(ROW.format(
-                label=html.escape(label),
                 input=html.escape(entropy),
                 svg=svg_inline,
             ))

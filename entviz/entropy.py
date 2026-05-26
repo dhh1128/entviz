@@ -456,7 +456,9 @@ def parse(entropy: str) -> Parsed:
         # Normalize case for case-insensitive alphabets so the
         # tokenizer's per-char lookup is consistent.
         core = entropy.lower() if detected in (BECH32,) else entropy
-        return Parsed("auto-detected", detected, None, core, None)
+        # type name = alphabet name (e.g., "base32:", "bech32:"), so
+        # the per-entviz top label can show what was detected.
+        return Parsed(detected.name, detected, None, core, None)
 
 
 # Disproof order: most restrictive (smallest character set) first. The

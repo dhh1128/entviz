@@ -164,11 +164,12 @@ def test_overlay_anchor_is_interior_corner_position():
     svg = _doc(render("deadbeefdeadbeef" * 8))
     e = _ellipse(svg)
     cx, cy = float(e.get("cx")), float(e.get("cy"))
-    # For 22-token 4x6 grid at 12pt in v4: grid_rect.left=17, grid_rect.top=6,
-    # cell_w=60, cell_h=40.
+    # For 22-token 4x6 grid at 12pt in v4: grid_rect.left=17,
+    # grid_rect.top=31 (= 1 + GM + nucleus_height + GM, with the top
+    # label strip), cell_w=60, cell_h=40.
     # Interior corners' x ∈ {17+60, 17+120, 17+180} = {77, 137, 197};
-    # y ∈ {6+40, 6+80, 6+120, 6+160, 6+200} = {46, 86, 126, 166, 206}.
+    # y ∈ {31+40, 31+80, 31+120, 31+160, 31+200} = {71, 111, 151, 191, 231}.
     valid_x = {77, 137, 197}
-    valid_y = {46, 86, 126, 166, 206}
+    valid_y = {71, 111, 151, 191, 231}
     assert cx in valid_x, f"cx={cx} not in {valid_x}"
     assert cy in valid_y, f"cy={cy} not in {valid_y}"

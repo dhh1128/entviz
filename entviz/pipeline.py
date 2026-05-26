@@ -38,12 +38,19 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         import base64
         from .entropy import BASE64URL
         core = base64.urlsafe_b64encode(entropy_text.encode()).decode().rstrip('=')
-        type_name = 'base64'
+        # "text as base64url" surfaces in the per-entviz top label so the
+        # viewer knows the input wasn't directly tokenizable in any known
+        # alphabet and we re-encoded it as bytes.
+        type_name = "text as base64url"
         alphabet = BASE64URL  # fallback always produces urlsafe base64
+        prefix = None
+        suffix = None
     else:
         core = parsed.core
         type_name = parsed.type
         alphabet = parsed.alphabet
+        prefix = parsed.prefix
+        suffix = parsed.suffix
 
     tokens, is_truncated = tokenize_entropy(core, alphabet)
     if not tokens:
@@ -112,21 +119,26 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
-    # Bounding rect dimensions (v4 — no SCS):
+    # Bounding rect dimensions (v4):
     #   width  = 1 + box_height + 1 + GM + grid_width + GM + 1
-    #   height = 1 + GM + grid_height + GM + 1
-    # Layout left→right: left border (1) | color bar (box_height) |
-    #                    interior separator (1) | L margin (GM) | grid |
-    #                    R margin (GM) | right border (1).
-    # Layout top→bottom: top border (1) | margin (GM) | grid | margin
-    #                    (GM) | bottom border (1).
+    #   height = 1 + GM + nucleus_height + GM + grid_height
+    #              + [GM + nucleus_height +] GM + 1
+    # The top "type label" strip is always present (the entviz declares
+    # the detected type / alphabet). The bottom "suffix label" strip
+    # appears only when the parsed result has a suffix.
     bounding_w = 1 + box_height + 1 + gm + grid_w + gm + 1
-    bounding_h = 1 + gm + grid_h + gm + 1
+    has_suffix_label = bool(suffix)
+    suffix_strip_h = nucleus_height + gm if has_suffix_label else 0
+    bounding_h = (
+        1 + gm + nucleus_height + gm + grid_h + gm + suffix_strip_h + 1
+    )
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
 
-    # grid_rect sits at (1 + box_height + 1 + GM, 1 + GM) inside the
-    # bounding rect.
-    grid_rect = Rect(Point(1 + box_height + 1 + gm, 1 + gm), Size(grid_w, grid_h))
+    # grid_rect sits below the top label strip.
+    grid_rect = Rect(
+        Point(1 + box_height + 1 + gm, 1 + gm + nucleus_height + gm),
+        Size(grid_w, grid_h),
+    )
 
     # Color bar drawing region: x=1, width=box_height; y starts at 1
     # (just below the top border) and ends at bounding_h - 1 (just
@@ -324,6 +336,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
     )
 
+    # Layer 5b: top / bottom label strips. The top strip is always drawn
+    # ("<Type>:" or "<Type>: <prefix>..."). The bottom strip appears only
+    # when the parsed result has a suffix ("...<suffix>"). Both use the
+    # cell-text font family and rendered size, filled #666 so they read
+    # as a quiet label, not competing with the cells.
+    _draw_label_strips(
+        svg, grid_rect, gm, nucleus_height,
+        type_name=type_name, prefix=prefix, suffix=suffix,
+        text_size_px=cell_text_px,
+    )
+
     # Gray border lines (#808080) on all four sides of the bounding rect,
     # plus an interior vertical separator at x = 1 + box_height + 0.5 (the
     # color bar's right edge). Each line is centered on a half-pixel so a
@@ -340,6 +363,44 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
                       1 + box_height + 0.5, bounding_h)                               # interior separator
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
+
+
+def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
+                       type_name, prefix, suffix, text_size_px):
+    """
+    Render the top "<Type>: <prefix>..." label strip (always) and, when
+    suffix is present, the bottom "...<suffix>" strip. Strips are
+    `nucleus_height` tall, separated from the grid and from the border
+    by GM. Both strips use monospace at `text_size_px`, filled #666.
+    Top is left-aligned to grid_rect.left; bottom is right-aligned to
+    grid_rect.right (so the ellipses on each point inward toward the
+    cells).
+    """
+    style = f"font-family: monospace; font-size: {text_size_px}px;"
+    # Top strip — always.
+    top_text = f"{type_name}:"
+    if prefix:
+        top_text += f" {prefix}..."
+    # Vertical center of the top strip is at grid_rect.top - GM - nucleus_height/2.
+    top_cy = grid_rect.top - gm - nucleus_height / 2
+    el = etree.SubElement(
+        svg, 'text',
+        x=str(grid_rect.left), y=str(top_cy),
+        fill='#666666', style=style,
+        **{"dominant-baseline": "central"},
+    )
+    el.text = top_text
+    # Bottom strip — only when suffix exists.
+    if suffix:
+        bottom_text = f"...{suffix}"
+        bottom_cy = grid_rect.bottom + gm + nucleus_height / 2
+        el = etree.SubElement(
+            svg, 'text',
+            x=str(grid_rect.right), y=str(bottom_cy),
+            fill='#666666', style=style,
+            **{"text-anchor": "end", "dominant-baseline": "central"},
+        )
+        el.text = bottom_text
 
 
 def _draw_border_line(svg, x1, y1, x2, y2):

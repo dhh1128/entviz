@@ -9,9 +9,12 @@ At 12pt / 96 DPI in v4:
   cell_width = 60, cell_height = 40
   GM = 5
 
-Bounding rect:
-  width  = 1 + box_height + 1 + GM + grid_w + GM + 1 = 1 + 10 + 1 + 5 + grid_w + 5 + 1
-  height = 1 + GM + grid_h + GM + 1 = 1 + 5 + grid_h + 5 + 1
+Bounding rect height includes the always-present top label strip
+(nucleus_height + GM = 25 px) and, when the parsed result has a suffix,
+a matching bottom label strip:
+
+  height = 1 + GM + nucleus_height + GM + grid_h
+             + [GM + nucleus_height +] GM + 1
 """
 from lxml import etree
 
@@ -23,12 +26,13 @@ def _parse(svg_str):
 
 
 def test_canvas_size_matches_bounding_rect_formula():
-    # "deadbeef" → 2 hex tokens → 2x2 grid → grid_w=120, grid_h=80.
+    # "deadbeef" → hex (no prefix, no suffix), 2 tokens → 2x2 grid
+    # → grid_w=120, grid_h=80. Top label only (no suffix → no bottom).
     # width  = 1 + 10 + 1 + 5 + 120 + 5 + 1 = 143
-    # height = 1 + 5 + 80 + 5 + 1 = 92
+    # height = 1 + 5 + 20 + 5 + 80 + 5 + 1 = 117
     svg = _parse(render("deadbeef"))
     assert float(svg.get("width")) == 143
-    assert float(svg.get("height")) == 92
+    assert float(svg.get("height")) == 117
 
 
 def test_first_rect_is_white_bounding_rect():
@@ -39,7 +43,7 @@ def test_first_rect_is_white_bounding_rect():
     assert float(first.get("x")) == 0
     assert float(first.get("y")) == 0
     assert float(first.get("width")) == 143
-    assert float(first.get("height")) == 92
+    assert float(first.get("height")) == 117
 
 
 def test_gray_borders_present():
@@ -51,12 +55,11 @@ def test_gray_borders_present():
 
 
 def test_grid_rect_offset_inside_bounding():
-    # v4 grid_rect sits at (1 + box_height + 1 + GM, 1 + GM)
-    # = (1 + 10 + 1 + 5, 1 + 5) = (17, 6).
-    # In a 2x2 grid, nuclei land at:
-    #   x ∈ {grid_rect.left + box_width, grid_rect.left + box_width + cell_w}
-    #     = {17 + 6, 17 + 6 + 60} = {23, 83}
-    #   y ∈ {6 + 10, 6 + 10 + 40} = {16, 56}
+    # v4 grid_rect sits at (1 + box_height + 1 + GM,
+    #                       1 + GM + nucleus_height + GM)
+    # = (17, 31). In a 2x2 grid, nuclei land at:
+    #   x ∈ {17 + 6, 17 + 6 + 60} = {23, 83}
+    #   y ∈ {31 + 10, 31 + 10 + 40} = {41, 81}
     svg = _parse(render("deadbeef"))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
@@ -65,13 +68,14 @@ def test_grid_rect_offset_inside_bounding():
     assert nuclei, "no nucleus rect found"
     for n in nuclei:
         assert float(n.get("x")) in (23, 83), f"nucleus x={n.get('x')}"
-        assert float(n.get("y")) in (16, 56), f"nucleus y={n.get('y')}"
+        assert float(n.get("y")) in (41, 81), f"nucleus y={n.get('y')}"
 
 
 def test_bounding_rect_scales_with_grid_size():
     # UUID → 6 hex tokens → 2x3 grid → grid_w=120, grid_h=120.
+    # No suffix → top label only.
     # width  = 1 + 10 + 1 + 5 + 120 + 5 + 1 = 143
-    # height = 1 + 5 + 120 + 5 + 1 = 132
+    # height = 1 + 5 + 20 + 5 + 120 + 5 + 1 = 157
     svg = _parse(render("550e8400-e29b-41d4-a716-446655440000"))
     assert float(svg.get("width")) == 143
-    assert float(svg.get("height")) == 132
+    assert float(svg.get("height")) == 157

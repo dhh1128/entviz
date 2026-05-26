@@ -511,6 +511,36 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Type/Prefix/Suffix Label Strips = decision:
+          id: v4l4bels
+          why: >
+            Each entviz now declares its detected type and (when
+            applicable) the input's prefix and suffix in dedicated
+            label strips. Top strip is always present: "<Type>:" or
+            "<Type>: <prefix>..." (e.g., "Ethereum: 0x...",
+            "UUID:", "base32:"). Bottom strip is present only when
+            the parser identifies a suffix: "...<suffix>" (e.g.,
+            "...d4af" for Bitcoin Legacy's base58 checksum).
+
+            Strips are nucleus_height tall, separated from the grid
+            and from the borders by GM on each side. Text uses the
+            same monospace font family and rendered font size as
+            cell text, filled in #666 so it reads as a quiet
+            secondary label. Top is left-aligned to grid_rect.left;
+            bottom right-aligned to grid_rect.right — the ellipses
+            on each point inward toward the cell grid.
+
+            For the disproof fallback (no specific parser matched
+            but the input fits some alphabet), parse() returns
+            type = alphabet name ("base32", "bech32", etc.); for
+            the UTF-8 → base64url re-encode fallback, the pipeline
+            uses type "text as base64url" so the viewer sees the
+            distinction.
+
+            Bounding rect height grows by nucleus_height + GM
+            always (top strip) and another nucleus_height + GM
+            when suffix exists (bottom strip).
+
         WCAG Contrast Crossover = decision:
           id: v4wcagxr
           why: >

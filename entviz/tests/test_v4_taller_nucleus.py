@@ -47,12 +47,13 @@ def test_nucleus_dimensions_at_16pt():
 
 
 def test_cell_height_is_25x_font_size_px():
-    """v4 cell_height = 2.5 · font_size_px = 40 at 12pt (was 32 in v3)."""
+    """v4 cell_height = 2.5 · font_size_px = 40 at 12pt (was 32 in v3).
+    Bounding height for a 2x2 grid with top label strip (no suffix):
+       1 + GM + nucleus_height + GM + 2·cell_height + GM + 1
+     = 1 + 5 + 20 + 5 + 80 + 5 + 1 = 117 px (GM=5)."""
     svg = _doc(render("deadbeef"))
-    # Bounding height for a 2x2 grid: 1 + GM + 2·40 + GM + 1 = 92 (GM=5).
-    # v3 was: 1 + 4 + 64 + 4 + 16 + 4 + 1 = 94.
     bh = float(svg.get("height"))
-    assert bh == 92, f"v4 bounding height should be 92, got {bh}"
+    assert bh == 117, f"v4 bounding height should be 117, got {bh}"
 
 
 def test_text_baseline_inside_nucleus():
