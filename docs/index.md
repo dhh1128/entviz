@@ -162,17 +162,17 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge colors** array. Black is therefore always present in the *edge colors* array regardless of which background was chosen.
 
-1. Let *array 0* of possible edge shapes be [fin, axe, brick, inf]:
+1. Let *array 0* be the **cubist** shape set `[C1, C2, C3, C4]`. C1, C2, and C3 are filled shapes drawn from path data; C4 is **empty** (renders as no ink). Each shape's slot index in the array (1, 2, or 3 for non-empty members; 4 for empty) identifies it in the *shape count summary*.
 
-    ![array 0](assets/edge-shapes-0.png)
+    ![cubist set](assets/edge-shapes-0.png)
 
-    Let *array 1* of possible edge shapes be [wave, hole, keel, mound]:
+    Let *array 1* be the **polygon** shape set `[P1, P2, P3, P4]`. Same shape: three filled shapes plus an empty member at slot 4.
 
-    ![array 1](assets/edge-shapes-1.png)
+    ![polygon set](assets/edge-shapes-1.png)
 
-    Each shape's name begins with a distinct letter &mdash; F, A, B, I, W, H, K, M &mdash; and that capital letter identifies the shape in the *shape count summary*.
+    Inspect the **least-significant bit** of the *quant* of the *second quartile ftok* (i.e., `quant & 0x01`). If that bit is 0, the **edge shapes** array is exactly *array 0* (the cubist set). If that bit is 1, the **edge shapes** array is exactly *array 1* (the polygon set). The 4 entries of the chosen set become the per-cell edge shape menu used in the cell rendering algorithm; bits 1, 2, and 3 of the second quartile ftok's quant are not consulted by this step and are reserved for future use.
 
-    Create a new array called the **edge shapes** array. Now iterate over the low-order 4 bits of the *quant* of the *second quartile ftok* in **least-significant-first order**: bit 0 first (where bit 0 is the LSB, value `quant & 0x01`), then bit 1 (`(quant >> 1) & 0x01`), then bit 2, then bit 3. Call the selected bit the **selector** and the loop's iteration count the **bit index** (0 through 3). If the selector is 0, make the **selected shape array** array 0; otherwise, make it array 1. Copy the shape at *bit index* of *selected shape array* into *edge shapes*. This populates the *edge shapes* array with 4 shapes, each of which may come from either source array.
+    The intent: an entviz exhibits a single coherent shape "look" (cubist or polygon) across every edge of every cell. Two entvizes whose only difference is which set they drew from should be obviously distinguishable at a glance; mixing slots across the two sets would dilute that gestalt difference.
 
 1. Define two integers, **shape shift** and **color shift**, and set both of their values to 0.
 

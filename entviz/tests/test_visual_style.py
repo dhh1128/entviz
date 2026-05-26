@@ -28,20 +28,39 @@ def test_select_visual_style_shapes_all_array1():
     
     assert style.edge_shapes == SHAPE_ARRAY_1
 
-def test_select_visual_style_shapes_mixed():
-    # Q2 quant ends in ...1010 (10) 
-    # Bit 0: 0 -> Array 0[0] (triangle)
-    # Bit 1: 1 -> Array 1[1] (hammer)
-    # Bit 2: 0 -> Array 0[2] (rect)
-    # Bit 3: 1 -> Array 1[3] (double bars)
+def test_select_visual_style_uses_lsb_only():
+    # v3: only the LSB of the second quartile ftok's quant matters for
+    # shape selection. Bits 1-3 are unused (reserved). Both q2 quants
+    # below have LSB=0, so the result is always the cubist set (array 0),
+    # regardless of the upper bits.
     median = Token("med", 0, 0x00)
-    q2 = Token("q2", 1, 0x0A)
-    style = select_visual_style(median, q2)
-    
-    expected = [
-        SHAPE_ARRAY_0[0],
-        SHAPE_ARRAY_1[1],
-        SHAPE_ARRAY_0[2],
-        SHAPE_ARRAY_1[3]
-    ]
-    assert style.edge_shapes == expected
+    for q2_quant in (0x00, 0x02, 0x04, 0x0E, 0xFFFFFE):
+        style = select_visual_style(median, Token("q2", 1, q2_quant))
+        assert style.edge_shapes == SHAPE_ARRAY_0, (
+            f"q2.quant=0x{q2_quant:x} (LSB=0) should pick cubist, "
+            f"got {[s.name for s in style.edge_shapes]}"
+        )
+
+    # Mirror: any LSB=1 quant should pick the polygon set entirely.
+    for q2_quant in (0x01, 0x03, 0x05, 0x0F, 0xFFFFFF):
+        style = select_visual_style(median, Token("q2", 1, q2_quant))
+        assert style.edge_shapes == SHAPE_ARRAY_1, (
+            f"q2.quant=0x{q2_quant:x} (LSB=1) should pick polygon, "
+            f"got {[s.name for s in style.edge_shapes]}"
+        )
+
+
+def test_select_visual_style_never_mixes_cubist_and_polygon():
+    # No selection bits should ever produce a mix of cubist + polygon
+    # shapes in a single entviz.
+    median = Token("med", 0, 0x00)
+    cubist_names = {s.name for s in SHAPE_ARRAY_0}
+    polygon_names = {s.name for s in SHAPE_ARRAY_1}
+    for q in range(256):
+        style = select_visual_style(median, Token("q2", 1, q))
+        names = {s.name for s in style.edge_shapes}
+        is_cubist = names <= cubist_names
+        is_polygon = names <= polygon_names
+        assert is_cubist or is_polygon, (
+            f"q2.quant=0x{q:02x} produced a mixed set: {names}"
+        )

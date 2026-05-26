@@ -112,18 +112,17 @@ def select_visual_style(median_token, second_quartile_token) -> VisualStyle:
     # edge_colors is the remaining 4 colors
     edge_colors = [c for i, c in enumerate(POSSIBLE_EDGE_COLORS) if i != color_idx]
     
-    # Step 13: Shape Selection
-    # Iterate over low-order 4 bits of second quartile token quant
-    edge_shapes = []
-    # If second_quartile_token is None (padding), we use a default (bits = 0)
-    bits = second_quartile_token.quant & 0x0F if second_quartile_token else 0
-    
-    for i in range(4):
-        selector = (bits >> i) & 0x01
-        if selector == 0:
-            edge_shapes.append(SHAPE_ARRAY_0[i])
-        else:
-            edge_shapes.append(SHAPE_ARRAY_1[i])
+    # Step 13: Shape Selection (v3 — one bit picks the whole set).
+    # The LSB of the second quartile ftok's quant selects between cubist
+    # and polygon; the chosen set is used as the edge_shapes array in
+    # its entirety. Bits 1-3 are unused for shape selection (reserved
+    # for future use). If second_quartile_token is None (padding edge
+    # case), default to bit 0 → cubist.
+    bit = second_quartile_token.quant & 0x01 if second_quartile_token else 0
+    if bit == 0:
+        edge_shapes = list(SHAPE_ARRAY_0)
+    else:
+        edge_shapes = list(SHAPE_ARRAY_1)
             
     return VisualStyle(
         bg_color=bg_color,
