@@ -1,10 +1,10 @@
 from lxml import etree
 from .layout import Cell, Rect, Point, Size
-from .colors import get_nucleus_colors, VisualStyle
+from .colors import get_nucleus_colors, closest_palette_color, VisualStyle
 from .shapes import circle
 
-# Quartile mark corner: (x_fn, y_fn) as lambdas of (cell, r)
-# 1st=top-left, 2nd=top-right, 3rd=bottom-right, 4th=bottom-left
+# Quartile mark corner: (x_fn, y_fn) as lambdas of (cell, r).
+# 1st=top-left, 2nd=top-right, 3rd=bottom-right, 4th=bottom-left.
 _QUARTILE_CORNERS = [
     lambda cell, r: Point(cell.left + r, cell.top + r),
     lambda cell, r: Point(cell.right - r, cell.top + r),
@@ -13,122 +13,37 @@ _QUARTILE_CORNERS = [
 ]
 
 
-def _gradient_endpoints(edge_index: int, er: Rect):
-    """
-    Return (x1, y1, x2, y2) for a gradient that runs from canonical
-    inner (y=8, touching the nucleus) to canonical outer (y=0, far
-    from the nucleus) in the v3 24×8 edge-shape coordinate space.
-
-    Renderers resolve `userSpaceOnUse` for a gradient referenced via
-    `fill` on a `<use>` element in the post-transform local user space
-    of the referenced path — i.e., canonical 24×8 coordinates. So we
-    emit canonical endpoints and let the `<use>`'s transform carry
-    the gradient through the same scale/rotate/translate as the path.
-
-    All edges share the same canonical inner→outer direction (y=8 →
-    y=0); the per-edge rotation (0°/90°/180°/270°) handled in
-    v3_render._transform_for_edge rotates the gradient too, so the
-    inner stop ends up against the nucleus for every edge.
-
-    `edge_index` and `er` are accepted for legacy callers but no
-    longer affect the output.
-    """
-    return 12, 8, 12, 0
-
-
 class Renderer:
     def __init__(self, style: VisualStyle, grid):
         self.style = style
         self.grid = grid
-        self.shape_shift = 0
-        self.color_shift = 0
-        self._gradient_seq = 0
-        # Phase 10/11: tally edge color and shape usage across all
-        # render_edges calls so the color bar and SCS can summarise them.
-        # Blank cells (whose render_edges is never called) are excluded.
-        self.color_usage = {c: 0 for c in style.edge_colors}
-        self.shape_usage = {s: 0 for s in style.edge_shapes}
 
-    def render_edges(self, svg: etree.Element, defs: etree.Element,
-                     ftok, cell: Cell, cell_index: int, nucleus_bg: str):
+    def render_edges(self, svg: etree.Element, ftok, cell: Cell, nucleus_bg: str):
         """
-        v2 layered draw, pass 1: this cell's 6 edge shapes. Ftok.quant
-        drives edge_num extraction; the XOR shift state on the renderer
-        accumulates across cells. Each edge gets its own linear gradient
-        (inner = nucleus_bg, outer = edge_color, perpendicular to the
-        shared edge) appended to the supplied defs element. The shape
-        is filled via url(#g-N) referencing that gradient.
-
-        Last-column XOR adjustment keys off cell_index, not token.index.
+        v4 surround: 24 small boxes around the nucleus. Bit i of ftok.quant
+        (LSB=bit 0) selects box i (clockwise from the top-left of the top
+        row). A set bit emits a solid <rect> filled with this cell's edge
+        color — the palette entry (one of the 4 non-bg colors) that is
+        perceptually closest to the nucleus_bg under weighted RGB
+        distance. A clear bit emits nothing.
         """
-        from .v3_render import draw_v3_shape
-        edge_nums = [(ftok.quant >> (i * 4)) & 0x0F for i in range(6)]
-        is_last_col = (cell_index % self.grid.cols) == self.grid.cols - 1
-        # Scale = edge_size / 8 (canonical h is 8). At 12pt: edge_size=8 → 1.
-        scale = cell.edge_height / 8
-
-        for i in range(6):
-            edge_num = edge_nums[i]
-
-            color_idx = (edge_num & 0x03) ^ (self.color_shift & 0x03)
-            edge_color = self.style.edge_colors[color_idx]
-
-            shape_idx = ((edge_num >> 2) & 0x03) ^ (self.shape_shift & 0x03)
-            edge_shape = self.style.edge_shapes[shape_idx]
-
-            # Always tally the shape (empties counted; SCS layer filters
-            # them out on display). Only tally the color and emit drawing
-            # for non-empty shapes.
-            self.shape_usage[edge_shape] = self.shape_usage.get(edge_shape, 0) + 1
-            if not edge_shape.is_empty:
-                gradient_id = f"g{self._gradient_seq}"
-                self._gradient_seq += 1
-                self._add_gradient(defs, gradient_id, i, cell.edge_rect(i),
-                                   nucleus_bg, edge_color)
-                # Wrap each edge in a <g> with a <title> so SVG renderers
-                # surface the shape's name as a hover tooltip.
-                group = etree.SubElement(svg, 'g')
-                title = etree.SubElement(group, 'title')
-                title.text = edge_shape.name
-                draw_v3_shape(
-                    group, defs, edge_shape, cell, i,
-                    scale=scale, fill_url=f"url(#{gradient_id})",
-                )
-                self.color_usage[edge_color] = self.color_usage.get(edge_color, 0) + 1
-
-            self.color_shift = (self.color_shift + 1) & 0xFF
-            if not is_last_col:
-                self.shape_shift = (self.shape_shift + 1) & 0xFF
-
-        if is_last_col:
-            self.color_shift = (self.color_shift + self.shape_shift) & 0xFF
-
-    @staticmethod
-    def _add_gradient(defs, gid, edge_index, edge_rect, inner_color, outer_color):
-        x1, y1, x2, y2 = _gradient_endpoints(edge_index, edge_rect)
-        g = etree.SubElement(
-            defs, 'linearGradient',
-            id=gid, gradientUnits='userSpaceOnUse',
-            x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
-        )
-        etree.SubElement(g, 'stop', offset='0%', **{'stop-color': inner_color})
-        etree.SubElement(g, 'stop', offset='100%', **{'stop-color': outer_color})
+        edge_color = closest_palette_color(nucleus_bg, self.style.edge_colors)
+        bw = cell.box_width
+        bh = cell.box_height
+        for i in range(24):
+            if not (ftok.quant >> i) & 1:
+                continue
+            origin = cell.box_origin(i)
+            etree.SubElement(
+                svg, 'rect',
+                x=str(origin.x), y=str(origin.y),
+                width=str(bw), height=str(bh),
+                fill=edge_color,
+            )
 
     def render_nucleus(self, svg: etree.Element, token, cell: Cell,
                        text_size_px=None):
-        """
-        Layered draw, pass 3: this cell's nucleus rect + centered text.
-        Token.quant drives the nucleus background color (which determines
-        foreground contrast); token.text supplies the displayed string.
-        No state change.
-
-        V3-4: text_size_px is the rendered font size in pixels for the
-        cell text. If None (legacy callers), falls back to
-        `cell.size.height / 2` (nucleus_height, = full reference font
-        size). V3 pipeline always passes a computed value: full
-        reference for 4-char tokens; round(0.75 × reference_pt) for
-        6-char (hex) tokens.
-        """
+        """Nucleus rect + centered token text."""
         bg_color, fg_color = get_nucleus_colors(token.quant)
         n = cell.nucleus
         etree.SubElement(svg, 'rect',
@@ -145,9 +60,9 @@ class Renderer:
         text_el.text = token.text
 
     def draw_quartile_mark(self, svg: etree.Element, cell: Cell, quartile_index: int):
-        """Draw a small filled circle in the corner of a quartile token's cell (spec step 16)."""
-        e = cell.edge_height  # edge_size
-        r = e / 4             # diameter = edge_size/2, so radius = edge_size/4
+        """Quartile mark: small filled circle in a cell corner. The 4-color
+        non-bg palette (style.edge_colors) supplies the per-quartile color."""
+        r = cell.box_height / 4
         fill_color = self.style.edge_colors[quartile_index]
         center = _QUARTILE_CORNERS[quartile_index](cell, r)
         mark_rect = Rect(Point(center.x - r, center.y - r), Size(r * 2, r * 2))

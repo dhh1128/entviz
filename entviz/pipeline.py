@@ -91,41 +91,40 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
                 cell_indices[t_idx] += 1
 
     # --- Pixel dimensions ---
-    # Geometry is anchored on nucleus_height. cell is 4×nucleus_height wide
-    # and 2×nucleus_height tall; edge_size = nucleus_height/2 = half the
-    # height of a top/bottom edge rect; GM (grid margin) = edge_size/2 is
-    # the white margin between the grid_rect and the bounding_rect edges.
+    # v4 cell width = nucleus_width + 2·box_width = 3.75·nucleus_height.
+    # cell_height = 2·nucleus_height. box_height = nucleus_height/2;
+    # box_width = 0.75·box_height. GM (grid margin) = box_height/2.
     nucleus_height = (font_size_pt * _DPI) / 72
-    cell_width = nucleus_height * 4
+    cell_width = nucleus_height * 3.75
     cell_height = nucleus_height * 2
-    edge_size = nucleus_height / 2
-    gm = edge_size / 2
+    box_height = nucleus_height / 2
+    gm = box_height / 2
 
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
     # Bounding rect dimensions per v3 spec:
-    #   width  = 1 + edge_size + 1 + GM + grid_width + GM + 1
+    #   width  = 1 + box_height + 1 + GM + grid_width + GM + 1
     #   height = 1 + GM + grid_height + GM + nucleus_height + GM + 1
-    # Layout left→right: left border (1) | color bar (edge_size) |
+    # Layout left→right: left border (1) | color bar (box_height) |
     #                    interior separator (1) | L margin (GM) | grid |
     #                    R margin (GM) | right border (1).
     # Layout top→bottom unchanged from v2: top border (1) | margin (GM) |
     #                    grid | margin (GM) | SCS line (nucleus_height)
     #                    | margin (GM) | bottom border (1).
-    bounding_w = 1 + edge_size + 1 + gm + grid_w + gm + 1
-    bounding_h = 1 + gm + grid_h + gm + nucleus_height + gm + 1
+    bounding_w = 1 + box_height + 1 + gm + grid_w + gm + 1
+    bounding_h = 1 + gm + grid_h + gm + 1
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
 
-    # grid_rect sits at (1 + edge_size + 1 + GM, 1 + GM) inside the
+    # grid_rect sits at (1 + box_height + 1 + GM, 1 + GM) inside the
     # bounding rect.
-    grid_rect = Rect(Point(1 + edge_size + 1 + gm, 1 + gm), Size(grid_w, grid_h))
+    grid_rect = Rect(Point(1 + box_height + 1 + gm, 1 + gm), Size(grid_w, grid_h))
 
-    # Color bar drawing region: x=1, width=edge_size; y starts at 1
+    # Color bar drawing region: x=1, width=box_height; y starts at 1
     # (just below the top border) and ends at bounding_h - 1 (just
     # above the bottom border), so its drawable height is bounding_h - 2.
     color_bar_rect = Rect(
-        Point(1, 1), Size(edge_size, bounding_h - 2),
+        Point(1, 1), Size(box_height, bounding_h - 2),
     )
 
     renderer = Renderer(style, grid)
@@ -137,21 +136,22 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # document scannable.
     defs = etree.SubElement(svg, 'defs')
 
-    # V3-5: clipPath spans the grid_rect (not the bounding rect).
-    # The ellipse overlay clips to the cells-only area; the bounding-rect
-    # margins, color bar, and SCS row stay overlay-free.
-    clip_id = "grid-clip"
+    # clipPath spans the grid_rect (not the bounding rect). The ellipse
+    # overlay clips to the cells-only area; the bounding-rect margins
+    # and color bar stay overlay-free. The id is salted with the first
+    # 8 hex chars of the fingerprint so that multiple SVGs embedded in
+    # the same HTML document (e.g. the gallery page) don't collide on
+    # `#grid-clip` — when two clipPaths share an id, the browser
+    # resolves url(#…) to the FIRST one document-wide, silently
+    # clipping every other entviz to the first one's rectangle.
+    digest_hex = compute_fingerprint(core).hex()
+    clip_id = f"grid-clip-{digest_hex[:8]}-{grid.cols}x{grid.rows}"
     cp = etree.SubElement(defs, 'clipPath', id=clip_id)
     etree.SubElement(
         cp, 'rect',
         x=str(grid_rect.left), y=str(grid_rect.top),
         width=str(grid_rect.size.width), height=str(grid_rect.size.height),
     )
-
-    # V3-7: add the 6 reusable v3 shape paths once; per-edge <use>
-    # elements reference them by id (cN, pN).
-    from .v3_render import add_v3_shape_defs
-    add_v3_shape_defs(defs)
 
     draw_rect(svg, bounding_rect, '#ffffff')
     # Entviz background color (from median ftok) fills the grid_rect so
@@ -181,7 +181,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # (Phase 12) must sit on top of all edges but below all nuclei across
     # the whole grid.
     for token, ftok, cell, ci, nucleus_bg in token_cells:
-        renderer.render_edges(svg, defs, ftok, cell, cell_index=ci, nucleus_bg=nucleus_bg)
+        renderer.render_edges(svg, ftok, cell, nucleus_bg=nucleus_bg)
 
     # Layer 2: ellipse overlay derived from raw digest bytes 60-63,
     # clipped to the bounding rect.
@@ -219,30 +219,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             continue
         renderer.draw_quartile_mark(svg, cell, q_idx)
 
-    # Layer 5a: color bar inside its inset rect (x=1, width=edge_size).
+    # Layer 5a: color bar inside its inset rect (x=1, width=box_height).
     # Bands proportional to count^4 of each edge color (V3-1); empty
     # cells excluded since their render_edges is never called; sorted
     # descending by count with edge_colors order as the tiebreak.
     _draw_color_bar(
         svg, color_bar_rect, gm,
-        renderer.color_usage, style.edge_colors,
-    )
-
-    # Layer 5b: shape count summary right-justified to grid_rect's right
-    # edge, on the nucleus-height line below the grid. Rendered at
-    # min(round(0.84 × reference), cell_text_pt) with #444 fill. For hex
-    # inputs, cell_text_pt = round(0.75 × reference), so the min picks
-    # cell_text_pt and the SCS matches the cell text size.
-    _draw_shape_count_summary(
-        svg, grid_rect, gm, nucleus_height,
-        reference_pt=font_size_pt,
-        cell_text_pt=cell_text_pt,
-        dpi=_DPI,
-        shape_usage=renderer.shape_usage,
+        _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
     )
 
     # Gray border lines (#808080) on all four sides of the bounding rect,
-    # plus an interior vertical separator at x = 1 + edge_size + 0.5 (the
+    # plus an interior vertical separator at x = 1 + box_height + 0.5 (the
     # color bar's right edge). Each line is centered on a half-pixel so a
     # 1-px stroke covers exactly one pixel column/row crisply; the four
     # outer lines extend the full canvas width/height so the corner
@@ -253,8 +240,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     _draw_border_line(svg, bounding_w - 0.5, 0, bounding_w - 0.5, bounding_h)        # right
     _draw_border_line(svg, 0, bounding_h - 0.5, bounding_w, bounding_h - 0.5)        # bottom
     _draw_border_line(svg, 0.5, 0, 0.5, bounding_h)                                  # left
-    _draw_border_line(svg, 1 + edge_size + 0.5, 0,
-                      1 + edge_size + 0.5, bounding_h)                               # interior separator
+    _draw_border_line(svg, 1 + box_height + 0.5, 0,
+                      1 + box_height + 0.5, bounding_h)                               # interior separator
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
@@ -425,12 +412,8 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)
     rotation_deg = (p["rotation_step"] / 15.0) * 180.0
     fill, opacity = _ellipse_overlay_for_bg(bg_color)
-    # SVG quirk: when clip-path and transform live on the same element,
-    # the clip rectangle rotates along with the element (clip-path is
-    # resolved in post-transform user space). Wrap the ellipse in a
-    # non-rotated <g> that carries the clip-path; keep the rotate
-    # transform on the <ellipse> inside. The clip then stays in
-    # screen space while the ellipse rotates within it.
+    # v3 structure restored: <g clip-path><ellipse transform=rotate>.
+    # User confirms this rendered flawlessly in v3.
     clipped = etree.SubElement(svg, 'g', **{"clip-path": f"url(#{clip_id})"})
     etree.SubElement(
         clipped, 'ellipse',
@@ -442,43 +425,16 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     )
 
 
-def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height,
-                              reference_pt, cell_text_pt, dpi, shape_usage):
+def _two_bit_color_usage(digest: bytes, edge_colors) -> dict:
     """
-    SCS rendered font size = min(round(0.84 × reference_pt),
-    cell_text_pt). Fill = #444. The min keeps the SCS from rendering
-    larger than the cell text when cell text has been shrunk for hex
-    inputs.
+    v4 color-bar source: tally each of the 4 two-bit patterns across all
+    256 disjoint 2-bit slices of the digest. Pattern value i → edge_colors[i].
     """
-    # V3 SCS: format is `X##` where X is the shape's 1-digit slot index
-    # (1, 2, 3) and ## is the zero-padded 2-digit count. Empty shapes
-    # (slot 4) are tallied but NOT displayed — their count is derivable
-    # as 6 × non_blank_cells − sum(displayed counts).
-    used = [
-        (s, n) for s, n in shape_usage.items()
-        if n > 0 and not getattr(s, 'is_empty', False)
-    ]
-    if not used:
-        return
-    # Sort descending by count, tiebreak by slot number.
-    used.sort(key=lambda x: (-x[1], x[0].slot))
-    tokens = [f"{s.slot}{n:02d}" for s, n in used]
-    text = " ".join(tokens)
-    # Top of the SCS line is grid_rect.bottom + GM; vertical center for
-    # dominant-baseline=central is half of nucleus_height down from that.
-    y = grid_rect.bottom + gm + nucleus_height / 2
-    # Compute rendered SCS font size in points, then convert to pixels.
-    scs_pt = min(round(0.84 * reference_pt), cell_text_pt)
-    scs_px = scs_pt * dpi / 72
-    el = etree.SubElement(
-        svg, 'text',
-        x=str(grid_rect.right),
-        y=str(y),
-        fill='#444444',
-        style=f"font-family: monospace; font-size: {scs_px}px;",
-        **{"text-anchor": "end", "dominant-baseline": "central"},
-    )
-    el.text = text
+    counts = [0, 0, 0, 0]
+    for byte in digest:
+        for shift in (0, 2, 4, 6):
+            counts[(byte >> shift) & 0x03] += 1
+    return {edge_colors[i]: counts[i] for i in range(4)}
 
 
 def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
@@ -487,7 +443,7 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
 
     bar_rect is the color bar's *drawing region* (already accounting
     for the surrounding black borders that cover 1 px on each side in
-    v3): bar_rect.left = 1, bar_rect.width = edge_size, bar_rect.top = 1,
+    v3): bar_rect.left = 1, bar_rect.width = box_height, bar_rect.top = 1,
     bar_rect.height = bounding_h - 2.
 
     Band heights are weighted by `count^4` (V3-1). The `gm` parameter is

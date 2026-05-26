@@ -69,61 +69,45 @@ class Rect:
 class Cell(Rect):
     def __init__(self, top_left: Point, size: Size):
         super().__init__(top_left, size)
-        # We should have an aspect ratio of 2:1, but allow for some rounding error.
-        assert size.width - (size.height * 2) < (0.01 * size.width)
+        # v4 cell aspect ratio is 15:8 (= 3.75·nucleus_height by 2·nucleus_height),
+        # not the old 2:1. Width = nucleus_width + 2·box_width = 7.5·box_height,
+        # height = 2·nucleus_height = 4·box_height. Tolerance covers float drift.
+        assert abs(size.width * 8 - size.height * 15) < (0.01 * size.width)
         self._invalidate_cache()
     def _invalidate_cache(self):
         super()._invalidate_cache()
         self._nucleus = None
-        self._e0134_size = None
-        self._e25_size = None
-        self._edge_rects = [None] * 6
     @property
-    def edge_height(self):
+    def box_height(self):
+        """Height of every surround box. Equals nucleus_height/2 = cell_height/4."""
         return self.size.height / 4
     @property
-    def edge_width(self):
-        return self.edge_height
-    @property
-    def edge_0134_size(self):
-        if self._e0134_size is None:
-            self._e0134_size = Size(self.nucleus.size.width / 2, self.edge_height)
-        return self._e0134_size
-    @property
-    def edge_25_size(self):
-        if self._e25_size is None:
-            self._e25_size = Size(self.edge_width, self.nucleus.size.height)
-        return self._e25_size
+    def box_width(self):
+        """Width of every surround box. Equals 0.75·box_height."""
+        return 0.75 * self.box_height
     @property
     def nucleus(self):
         if self._nucleus is None:
-            height = self.edge_height * 2
-            width = self.edge_width * 6
             self._nucleus = Rect(
-                    Point(self.left + self.edge_width, 
-                          self.top + self.edge_height), 
-                    Size(width, height))
+                Point(self.left + self.box_width, self.top + self.box_height),
+                Size(self.box_height * 6, self.box_height * 2),
+            )
         return self._nucleus
-    def edge_rect(self, edge: int):
+    def box_origin(self, i: int) -> Point:
+        """Top-left of surround box i (0..23), numbered clockwise from the
+        top-left of the top row. Top/bottom rows have 10 boxes each;
+        left/right columns have 2 boxes each. Every box is box_width ×
+        box_height."""
         n = self.nucleus
-        r = self._edge_rects[edge]
-        if not r:
-            if edge == 0:
-                r = Rect(Point(n.left, self.top), self.edge_0134_size)
-            elif edge == 1:
-                r = Rect(Point(self.center.x, self.top), self.edge_0134_size)
-            elif edge == 2:
-                r = Rect(n.top_right, self.edge_25_size)
-            elif edge == 3:
-                r = Rect(Point(self.center.x, self.nucleus.bottom), self.edge_0134_size)
-            elif edge == 4:
-                r = Rect(Point(n.left, self.nucleus.bottom), self.edge_0134_size)
-            elif edge == 5:
-                r = Rect(Point(self.left, n.top), self.edge_25_size)
-            else:
-                raise ValueError("Edge must be 0 to 5")
-            self._edge_rects[edge] = r
-        return r
+        bw = self.box_width
+        bh = self.box_height
+        if i < 10:                                  # top row, left → right
+            return Point(n.left - bw + i * bw, n.top - bh)
+        if i < 12:                                  # right column, top → bottom
+            return Point(n.right, n.top + (i - 10) * bh)
+        if i < 22:                                  # bottom row, right → left
+            return Point(n.left - bw + (21 - i) * bw, n.bottom)
+        return Point(n.left - bw, n.top + (23 - i) * bh)  # left column, bottom → top
 
 
 import math

@@ -325,7 +325,100 @@ Entviz = goal:
             that is for academic-paper diagrams only and is NOT the spec
             color model.
 
-        Reference and Rendered Font Sizes = decision:
+    V4 Exploration = goal:
+      id: v4expl0r
+      status: prototype
+      why: >
+        Experiment with replacing the v3 shape-based edge channel with a
+        much simpler 24-box surround per cell. Goal: evaluate whether a
+        pure bitmap-of-boxes can carry the same per-cell entropy more
+        legibly than the cubist/polygon shape sets, while removing the
+        per-edge shape menu, the shape-shift/color-shift state, and the
+        per-cell color rotation. Spec docs/index.md is unchanged; this
+        is an isolated implementation prototype.
+
+      children:
+
+        24-Box Surround = decision:
+          id: v4b0xsur
+          why: >
+            Each cell's nucleus is surrounded by exactly 24 boxes — 10
+            top, 10 bottom, 2 left, 2 right — numbered 0..23 clockwise
+            from the top-left of the top row. Every box has the same
+            dimensions: box_height = nucleus_height/2 = cell_height/4
+            and box_width = 0.75·box_height. cell_width = nucleus_width
+            + 2·box_width = 3.75·nucleus_height (15:8 aspect ratio,
+            not v3's 2:1); cell_height = 2·nucleus_height. The surround
+            tiles flush with the cell border, so adjacent cells touch
+            with no inter-cell gap. Bit i of the ftok's 24-bit quant
+            (LSB=bit 0) controls box i: 1 emits a filled rect, 0 emits
+            nothing.
+
+        Per-Cell Edge Color = decision:
+          id: v4edg3c2
+          why: >
+            Filled surround boxes are painted in the cell's edge color,
+            chosen per cell as the palette entry (one of the 4 non-bg
+            colors) that is perceptually closest to that cell's
+            nucleus_bg, using the weighted-RGB distance
+            sqrt(2(Δr)² + 4(Δg)² + 3(Δb)²) as a cheap stand-in for
+            CIELAB ΔE. This replaces an earlier prototype decision to
+            fill the surround with the nucleus color directly: that
+            looked clean but collapsed all contrast between the
+            nucleus and its surround, which in turn made the ellipse
+            overlay invisible (the overlay darkens nucleus-and-surround
+            uniformly, so without contrast there's no visible arc). The
+            palette-closest rule keeps each cell visually anchored to
+            its nucleus while restoring the contrast the overlay needs.
+
+        SCS Removed = decision:
+          id: v4n0sc1m
+          why: >
+            v3's shape count summary (SCS) tallied per-edge shape usage
+            and rendered an `X## X## …` line below the grid. v4 has no
+            shapes to count, so the SCS is removed entirely. The
+            bounding rect height drops by (nucleus_height + GM) — at
+            12pt that's 20 px — and the row of white below the grid
+            collapses to just the bottom GM margin and 1-px gray
+            border.
+
+        Overlay as Pre-Rotated Path = decision:
+          id: v4ovrpat
+          why: >
+            v3 emitted the rotated ellipse as <ellipse transform=rotate>
+            wrapped in a non-rotated <g clip-path>. The strict SVG spec
+            says the clip rect stays in the g's coordinate system and
+            the ellipse rotates inside it — and cairosvg / librsvg
+            implement that. Chrome, Firefox, and Edge do NOT: they
+            rotate the clip rect along with the ellipse's transform,
+            slicing the visible region with a rotated rectangle and
+            producing a partial-ellipse arc that looks "clipped wrong".
+            v4 fixes this by emitting the rotated geometry as a
+            pre-rotated SVG <path> (two A arcs with the rotation baked
+            into the x-axis-rotation argument). With no transform
+            attribute anywhere in the overlay subtree, the clip-vs-
+            transform interaction never arises and every renderer
+            produces the same result.
+
+        V4 Color Bar from Digest Histogram = decision:
+          id: v4c1rbar
+          why: >
+            v3 sourced the color bar from per-edge color-usage tallies.
+            v4 has no per-edge color choices, so the bar is repurposed
+            as a fingerprint summary: tally each of the 4 two-bit
+            patterns (00, 01, 10, 11) across the 256 disjoint 2-bit
+            slices of the 64-byte SHA-512 digest, map binary value i to
+            the i-th non-bg color (the existing quartile palette), then
+            reuse the v3 rendering — descending sort, count^4 skew,
+            edge_colors-order tiebreak. Total count is always 256
+            regardless of grid size, so band proportions stay
+            comparable across small and large inputs. A white band stays
+            distinguishable from the surrounding white canvas because
+            the existing 1-px gray frame (top/bottom borders + left
+            border + interior separator at x = 1 + box_height + 0.5)
+            encloses the bar on all four sides.
+
+    Reference and Rendered Font Sizes = decision:
           id: r3fr3nfn
           why: >
             v3 introduces a distinction: "reference font size" is the

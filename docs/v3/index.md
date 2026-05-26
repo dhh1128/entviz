@@ -1,14 +1,15 @@
 # entviz
 Entviz is a simple way to visualize values with high entropy &mdash; cryptographic keys and signatures, UUIDs, blockchain payment addresses, post-quantum keys, genomes, and so forth &mdash; so a human can compare them visually. The goal is to allow an untrained adult with reasonably good vision to easily decide whether two chunks of entropy are the same or different.
 
-**DRAFT — version 4.** The v3 spec is archived at [v3/index.md](v3/index.md). v4 keeps v2's fingerprint, large-input handling, and overall structure, and keeps v3's color bar skew, color bar frame, ellipse overlay rework, and hex font fitting. The substantive v4 changes are concentrated in the edge channel and a couple of geometry/layout choices that follow from it:
+**DRAFT — version 3.** Version 2 introduced the fingerprint, large-input handling, the gestalt channels, and the shape rename. Version 3 refines several of those channels in response to real-world readability problems observed in v2 output:
 
-* The v3 edge channel — 6 edge rects per cell, each filled with a cubist or polygon shape using a per-edge XOR rotation through a 4-color edge palette — is replaced by a **24-box surround** per cell. Bit *i* of the ftok's quant (LSB = bit 0) controls whether box *i* is filled or empty. The surround tiles the entire region around the nucleus with no corner rects.
-* Each cell has a **single edge color** chosen as the palette entry (one of the 4 non-bg colors) perceptually closest to that cell's nucleus background. Per-edge color rotation, `color_shift`, and `shape_shift` are gone.
-* **Cell aspect ratio** changes from 2:1 to 15:8. `cell_width` is now `nucleus_width + 2·box_width = 3.75·nucleus_height`, exactly enough to enclose the surround flush with cell boundaries so adjacent cells touch.
-* The **shape count summary** (SCS) is removed entirely; there are no shapes left to count. The bounding rect contracts by (nucleus_height + GM) on the bottom.
-* The **color bar's data source** changes: v3 tallied per-edge color usage; v4 tallies the four 2-bit patterns (00, 01, 10, 11) across the 256 disjoint 2-bit slices of the SHA-512 digest. The count⁴ skew, descending sort, and rendering geometry are unchanged.
-* A small **SVG-portability fix** for the ellipse overlay: the clipPath id is salted with the fingerprint and grid dimensions so that multiple entvizes embedded in the same HTML document do not collide on a shared id (which silently makes the browser resolve every `url(#…)` to the first matching id document-wide).
+* The color bar's band heights now use a `count⁴` skew so the dominant color visibly dominates, instead of producing roughly-equal stripes for typical inputs.
+* The color bar gains a true visible frame (black 1-px lines on both its left and right edges) and doubles in width (from GM to edge_size), so it reads as a deliberate inset panel rather than a naked leftmost strip.
+* The shape count summary renders at 84% of the reference font size (or smaller if the cell text is smaller), in dark gray (#444), so it reads as a quiet summary rather than competing with the cell text.
+* The ellipse overlay is comprehensively reworked: anchored at a strictly-interior grid corner, sized to produce a visible curve inside the grid (not just a flat clipped edge), clipped to the grid rect (not the bounding rect), with all entropic parameters discretized to 16 levels. Skipped entirely for inputs under 256 bits.
+* The hex font-overflow bug is fixed: when the input produces 6-character tokens, the rendered font size shrinks to 75% of the reference so the text fits inside the nucleus. This introduces the **reference font size** / **rendered font size** distinction described below.
+
+The geometry of grids and cells is essentially unchanged; the changes above are confined to channels overlaid on or beside the grid.
 
 ![example entviz](assets/example.png)
 
@@ -35,7 +36,7 @@ The input being visualized is the **entropy**. The entropy is serialized to text
 
 The **fingerprint** is the SHA-512 hash of the normalized entropy. Because the fingerprint is produced by a cryptographic hash, it exhibits a strong avalanche effect: a single-bit change anywhere in the entropy changes roughly half the bits of the fingerprint. This is what lets entviz amplify differences even when the entropy itself is chosen rather than generated (for example, a UUID, a raw hex string, or a base64url blob), and what lets entviz handle inputs of any size. The fingerprint is tokenized exactly as the entropy is &mdash; into 24-bit chunks of base64url text. A token of the fingerprint is called an **ftok**. Because SHA-512 is always 512 bits (64 bytes), the fingerprint always yields exactly 22 ftoks: 21 full ftoks of 24 bits each, plus one partial ftok formed from the trailing byte and extended to 24 bits as described below.
 
-Most of the entviz is drawn from the fingerprint rather than from the entropy directly. Specifically, the text of each cell and the background color of each cell's nucleus are derived from the **entropy**, preserving losslessness for inputs of 512 bits or less. Everything else &mdash; the surround-box pattern in each cell, the median and quartile calculations, blank cell placement, the entviz background color, the color bar, and the ellipse overlay &mdash; is derived from the **fingerprint**.
+Most of the entviz is drawn from the fingerprint rather than from the entropy directly. Specifically, the text of each cell and the background color of each cell's nucleus are derived from the **entropy**, preserving losslessness for inputs of 512 bits or less. Everything else &mdash; edge colors, edge shapes, the median and quartile calculations, blank cell placement, the entviz background color, the color bar, the shape count summary, and the ellipse overlay &mdash; is derived from the **fingerprint**.
 
 ## Guarantees
 Each entviz conveys its entropy fully and independently, in a first visual channel, as text. If the text in an entviz is read aloud, *taking into account case-sensitivity*, all information is transferred. Text is tokenized into cells for efficient and reliable reading, and the cells are organized into a grid, which should be read left-to-right and top-to-bottom. For inputs of 512 bits or less, this text channel is fully lossless. For inputs greater than 512 bits, the text channel displays the first 256 bits and the last 256 bits of the entropy, separated by a blank cell; the full input is still bound into the visualization through the fingerprint, which drives all other channels.
@@ -44,11 +45,13 @@ The text channel does not, by itself, provide a visual avalanche effect: two inp
 
 ![text channel](assets/text-channel.png)
 
-Each entviz also conveys its entropy, in a second visual channel, via the **surround** around each cell's nucleus. The surround is composed of 24 small rectangles arranged in a ring (10 above the nucleus, 10 below, 2 on each side). Each box is either filled or empty, controlled by one bit of the cell's ftok quant; the filled boxes use a single per-cell **edge color** chosen as the palette entry perceptually closest to the cell's nucleus background. The result reads as the nucleus color "leaking outward" through a quant-controlled pixel pattern.
+Each entviz also conveys its entropy, in a second visual channel, via the shapes and colors in the edges of its cells. These are derived from the fingerprint. Shapes in edges are carefully chosen to be visually distinct from one another even when they are quite small and pixelated. Shapes in edges sometimes connect to each other to make larger patterns. This allows some valid gestalt judgments and decreases the arbitrary noise that makes QR codes unmemorable for humans. Each edge shape is filled with a gradient that runs from the nucleus background color at the nucleus boundary to the nominal edge color at the cell boundary, so the nucleus color appears to bleed outward into the surrounding shapes. This ties each cell together as a single perceived object.
 
 ![edge channel](assets/edge-channel.png)
 
-The edge color is chosen from a fixed 4-color palette (the 4 non-background entries of [white, gold, red, blue, black]). The palette is intentionally simple, and perceptual selection ensures that even color-blind viewers can detect each cell as a separate object distinct from the background.
+The colors used with edges are selected so their differences are detectable to someone who has difficulty perceiving colors, and also so they remain quite distinct when rendered in print in grayscale.
+
+![edge channel grayscale](assets/edge-channel-grayscale.png)
 
 Each entviz conveys its entropy, in a third visual channel, via the color that provides the background for the text in each cell. This nucleus background color is derived from the entropy, so for inputs of 512 bits or less it remains lossless. However, fine gradations in the colors of the nucleus may not be perceptible to the human eye, and these gradations will disappear if less than 16 million colors are displayable. Therefore, the colors in the nucleus are a partially redundant hint; they will never be misleading, but they should not be a primary comparison method.
 
@@ -58,16 +61,16 @@ Zero or more cells in an entviz may be blank. The positioning of blank cells der
 
 ![visual CRC](assets/crc.png)
 
-Each entviz displays a **color bar** along its left edge. It is derived from the fingerprint and provides a redundant channel that allows rapid gestalt comparison: two entvizes with different 2-bit-pattern histograms will differ visibly in the bar even before a cell-by-cell comparison begins.
+Each entviz displays a **color bar** along its left edge and a **shape count summary** along its bottom. Both are derived from the fingerprint. They provide redundant channels that allow rapid gestalt comparison: two entvizes with different color or shape distributions will differ visibly in these summary regions even before a cell-by-cell comparison begins.
 
-Each entviz that has at least 256 bits of input entropy also displays a partially transparent **ellipse overlay** derived from the fingerprint. The ellipse is anchored at a corner *interior* to the grid (a cell-corner that is not on the grid's outer boundary), sized to produce a visibly curved arc clipped within the grid, and it darkens or lightens the surround boxes and grid background beneath it without affecting the nuclei or text. This creates a large, organic shape that contributes to the overall gestalt identity of the entviz and makes a quick, high-level glance more informative. Inputs smaller than 256 bits omit the overlay entirely; their grids are too small for the curve to be readable.
+Each entviz that has at least 256 bits of input entropy also displays a partially transparent **ellipse overlay** derived from the fingerprint. The ellipse is anchored at a corner *interior* to the grid (a cell-corner that is not on the grid's outer boundary), sized to produce a visibly curved arc clipped within the grid, and it darkens or lightens the edge shapes beneath it without affecting the nuclei or text. This creates a large, organic shape that contributes to the overall gestalt identity of the entviz and makes a quick, high-level glance more informative. Inputs smaller than 256 bits omit the overlay entirely; their grids are too small for the curve to be readable.
 
 ## Thoughts About Comparing
 
-*Note: when reading entviz text aloud, the convention is to precede each capital letter with the one-syllable prefix "cap", to read the hyphen character `-` as "dash", and to read the underscore character `_` as "under". This minimizes the number of syllables while eliminating all ambiguity.*
+*Note: when reading entviz text aloud, the convention is to precede each capital letter with the one-syllable prefix "cap", to read the hyphen character - as "dash", and to read the underscore character as "under". This minimizes the number of syllables while eliminating all ambiguity. This convention applies only to the token text in the grid; the letters in the shape count summary are shape names, not text to be read with this convention.*
 
-* display a 2-bit pattern histogram for the fingerprint as a redundant comparison aid
-* allow toggling off each channel, each color, CRC
+* display counts of each shape and each color
+* allow toggling off each channel, each color, each shape, CRC
 * spotcheck by reading a row or column or by having a column / row slider
 * render with a legend for rows and columns
 
@@ -112,9 +115,9 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. The complete entropy is visualized as a rectangular **grid** consisting of a certain number of **cells**. Call this number of cells the **cell count**. Each token is rendered into one cell in the grid, and if the rectangle of the grid has more cells than *token count*, one or more cells will be empty.
 
-    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of **15:8** (= `cell_width` : `cell_height` = `3.75·nucleus_height` : `2·nucleus_height`). Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
+    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of 2:1. Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
 
-    >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·15):(2·8) = 90:16), 4 columns and 3 rows (60:24), 3 columns and 4 rows (45:32), or 2 columns and 6 rows (30:48). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
+    >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio 12:2), 4 columns and 3 rows (8:3), 3 columns and 4 rows (6:4), or 2 columns and 6 rows (4:6). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows, aspect ratio 6:4.
 
     ![grid options](assets/grid-options.png)
 
@@ -134,47 +137,54 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. Convert the point size of the font into pixels and call this value the **nucleus height**. Use the formula: pixels = (points * DPI) / 72. Most devices use 96 DPI, although other values are possible. At 96 DPI, a 12-point font = 16 pixels. This is the distance between the font's tallest ascender to its lowest descender, with a line height of 1.0, which allows some extra vertical space. It means that a 12-point font will render nicely, with appropriate extra space, in a rectangle that is 16 pixels high.
 
-    The chosen point size is called the **reference font size**. Throughout this spec, all geometry — nucleus height, cell dimensions, grid dimensions, box dimensions, GM, bounding rect, color bar width — is derived from the reference font size. The reference is independent of the size actually applied to any specific piece of rendered text; some text elements are drawn at a smaller **rendered font size** (see the cell rendering algorithm below). The rendered font size never affects geometry.
+    The chosen point size is called the **reference font size**. Throughout this spec, all geometry — nucleus height, cell dimensions, grid dimensions, edge size, GM, bounding rect, color bar width — is derived from the reference font size. The reference is independent of the size actually applied to any specific piece of rendered text; some text elements are drawn at a smaller **rendered font size** (see the cell rendering algorithm and the shape count summary below). The rendered font size never affects geometry.
 
-1. Compute the geometry, all anchored on *nucleus height*:
-
-    * **nucleus width** = `3·nucleus_height` (so the nucleus is a 3:1 rectangle)
-    * **box height** = `nucleus_height / 2` = `cell_height / 4`. This is the long-axis dimension of a surround box: the height of a top/bottom-row box and the length-along-side of a left/right-column box.
-    * **box width** = `0.75·box_height`. This is the short-axis dimension of a surround box: the width of a top/bottom-row box and the depth-from-nucleus of a left/right-column box.
-    * **cell height** = `2·nucleus_height`
-    * **cell width** = `nucleus_width + 2·box_width` = `3.75·nucleus_height`. Cell aspect is 15:8.
-    * **grid width** = `cell_width · cols`
-    * **grid height** = `cell_height · rows`
-    * **GM** (grid margin) = `box_height / 2`
-
-    At 96 DPI with a 12-point font: `nucleus_height` = 16, `nucleus_width` = 48, `box_height` = 8, `box_width` = 6, `cell_width` = 60, `cell_height` = 32, GM = 4.
+1. Calculate the **cell width** by multiplying *nucleus height* by 4, and calculate **cell height** by multiplying *nucleus height* by 2. Calculate the **grid width** by multiplying *cell width* by number of columns, and **grid height** by multiplying *cell height* by number of rows. Calculate the **nucleus width** by multiplying *nucleus height* by 3. Calculate the **edge size** by dividing *nucleus height* by 2. Calculate the **edge rect length** by dividing *nucleus width* by 2. Calculate the **grid margin** (abbreviated GM) by dividing *edge size* by 2; this equals half the width of a left or right edge rect. At 96 DPI with a 12-point font, *edge size* = 8 pixels and GM = 4 pixels.
 
     ![basic measurements for cell and grid](assets/cell-layout.png)
 
 1. Allocate the **grid rect**, a rectangle of dimensions *grid width* x *grid height* that contains only the cells of the grid. We will assume that the top left corner of the *grid rect* is at position (0, 0) on the canvas for the purpose of the cell calculations, but its actual position is determined by the bounding rect below.
 
-1. Allocate the **bounding rect**, the outermost rectangle of the entviz. It contains the *color bar* at its left and the *grid rect*. Its dimensions are:
+1. Allocate the **bounding rect**, the outermost rectangle of the entviz. It contains the *color bar* at its left, the *grid rect*, and the *shape count summary*. Its dimensions are:
 
-    * width = `1 + box_height + 1 + GM + grid_width + GM + 1`
-    * height = `1 + GM + grid_height + GM + 1`
+    * width = 1 + *edge size* + 1 + GM + *grid width* + GM + 1
+    * height = 1 + GM + *grid height* + GM + *nucleus height* + GM + 1
 
-    Read the width left to right: a 1-pixel gray left border; then the *color bar* (width = *box height* = 2·GM); then a 1-pixel gray interior separator between the color bar and the grid area; then a GM margin; then the *grid rect*; then a GM margin; then a 1-pixel gray right border. Read the height top to bottom: a 1-pixel gray top border; then a GM margin; then the *grid rect*; then a GM margin; then a 1-pixel gray bottom border.
+    Read the width left to right: a 1-pixel gray left border; then the *color bar* (width = *edge size* = 2·GM); then a 1-pixel gray interior separator between the color bar and the grid area; then a GM margin; then the *grid rect*; then a GM margin; then a 1-pixel gray right border. Read the height top to bottom: a 1-pixel gray top border; then a GM margin; then the *grid rect*; then a GM margin; then one line (*nucleus height*) for the *shape count summary*; then a GM margin; then a 1-pixel gray bottom border.
 
-    Fill the bounding rect with white. Draw a 1-pixel #808080 line along all four edges of the bounding rect, and a 1-pixel #808080 line down the column between the color bar and the grid area (forming the color bar's right edge). Each border line is centered on a half-pixel coordinate (e.g., x = 0.5 for the left border, x = *bounding_width* − 0.5 for the right border, x = `1 + box_height + 0.5` for the interior separator) and rendered with `shape-rendering="crispEdges"` so a 1-px stroke covers exactly one pixel column or row without antialiasing halos; the four outer lines extend the full canvas width or height so the corner pixels are painted by both adjacent borders. Soft gray rather than pure black avoids visual competition with the black edge color in the palette. The color bar is the inset rectangle bounded on its left by the bounding rect's left gray border and on its right by the interior separator; its drawing region runs from y = 1 (just below the top gray border) to y = `bounding_height − 1` (just above the bottom gray border). Position the *grid rect* with its top-left corner at (`1 + box_height + 1 + GM`, `1 + GM`) within the bounding rect.
+    Fill the bounding rect with white. Draw a 1-pixel #808080 line along all four edges of the bounding rect, and a 1-pixel #808080 line down the column between the color bar and the grid area (forming the color bar's right edge). Each border line is centered on a half-pixel coordinate (e.g., x = 0.5 for the left border, x = *bounding_width* − 0.5 for the right border, x = 1 + *edge size* + 0.5 for the interior separator) and rendered with `shape-rendering="crispEdges"` so a 1-px stroke covers exactly one pixel column or row without antialiasing halos; the four outer lines extend the full canvas width or height so the corner pixels are painted by both adjacent borders. Soft gray rather than pure black avoids visual competition with the black edge color in the palette. The color bar is the inset rectangle bounded on its left by the bounding rect's left gray border and on its right by the interior separator; its drawing region runs from y = 1 (just below the top gray border) to y = bounding_height − 1 (just above the bottom gray border). Position the *grid rect* with its top-left corner at (1 + *edge size* + 1 + GM, 1 + GM) within the bounding rect.
 
-    Use the *grid rect* as a clipping region for the ellipse overlay (see below). The color bar and gray border lines are drawn outside the grid rect and need no clipping. Draw all clipped content first; draw the gray border lines last so the borders are never overwritten.
+    Use the *grid rect* as a clipping region for the ellipse overlay (see below). The color bar, shape count summary, and gray border lines are drawn outside the grid rect and need no clipping. Draw all clipped content first; draw the gray border lines last so the borders are never overwritten.
 
-1. Let the array of **possible edge colors** be `[white #ffffff, gold #ffd966, red #ff3f2f, blue #2f3fbf, black #000000]`. The first four entries (indices 0-3) are the **background candidates**; black at index 4 is *always* an edge color and is never selected as the entviz background. This is intentional: black is too visually heavy to serve as a background.
+1. Let the array of **possible edge colors** be [white - `#ffffff`, gold - `#ffd966`, red - `#ff3f2f`, blue - `#2f3fbf`, black - `#000000`]. The first four entries (indices 0-3) are the **background candidates**; black at index 4 is *always* an edge color and is never selected as the entviz background. This is intentional: black is too visually heavy to serve as a background.
 
     ![colors](assets/colors.png)
 
-    Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge palette**. Black is therefore always present in the *edge palette* regardless of which background was chosen.
+    Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge colors** array. Black is therefore always present in the *edge colors* array regardless of which background was chosen.
 
-1. Inside the *grid rect*, render each token T into its appropriate cell in the grid, using its corresponding used ftok and the *edge palette*, according to the [cell rendering algorithm](#cell-rendering-algorithm) below.
+1. Let *array 0* be the **cubist** shape set `[C1, C2, C3, C4]`. C1, C2, and C3 are filled shapes drawn from path data; C4 is **empty** (renders as no ink). Each shape's slot index in the array (1, 2, or 3 for non-empty members; 4 for empty) identifies it in the *shape count summary*.
 
-1. Draw a circle with diameter = *box height* / 2, centered vertically and horizontally, in a corner of each *quartile ftok*'s corresponding cell. For the first quartile ftok, place the circle in the top left corner of the cell, and use the first item in the *edge palette* as its fill color. For the second, place the circle in the top right, using the second palette entry. For the third, place the circle in the bottom right, using the third. For the fourth, in the bottom left, using the fourth.
+    ![cubist set](assets/edge-shapes-0.png)
 
-1. Draw the **color bar** in the inset rectangle described in the bounding-rect section above (left border at x = 1, right border at `x = 1 + box_height`, drawing height = `bounding_rect.height − 2`). Build a 4-element histogram by counting how many of the 256 disjoint 2-bit slices of the SHA-512 digest (64 bytes × 4 slices/byte = 256 slices) equal each of the four 2-bit patterns (00, 01, 10, 11). Map binary value *i* to *edge palette*[*i*]. For each palette color whose count is greater than zero, compute `count^4`. Divide the color bar's drawing height into horizontal bands, one per nonzero color, with each band's height proportional to that color's `count^4` value as a share of the sum of all four `count^4` values. The fourth-power skew amplifies the dominance of the most-frequent pattern so the bar reads as a clear pecking order rather than four near-equal stripes (which is what a raw-count distribution from a uniformly-random digest typically produces). Order the bands by descending count, most frequent at the top; break ties by the order of the color in the *edge palette*. Fill each band with its color. Total count is always 256 regardless of grid size, so band proportions stay comparable across small and large inputs.
+    Let *array 1* be the **polygon** shape set `[P1, P2, P3, P4]`. Same shape: three filled shapes plus an empty member at slot 4.
+
+    ![polygon set](assets/edge-shapes-1.png)
+
+    Inspect the **least-significant bit** of the *quant* of the *second quartile ftok* (i.e., `quant & 0x01`). If that bit is 0, the **edge shapes** array is exactly *array 0* (the cubist set). If that bit is 1, the **edge shapes** array is exactly *array 1* (the polygon set). The 4 entries of the chosen set become the per-cell edge shape menu used in the cell rendering algorithm; bits 1, 2, and 3 of the second quartile ftok's quant are not consulted by this step and are reserved for future use.
+
+    The intent: an entviz exhibits a single coherent shape "look" (cubist or polygon) across every edge of every cell. Two entvizes whose only difference is which set they drew from should be obviously distinguishable at a glance; mixing slots across the two sets would dilute that gestalt difference.
+
+1. Define two integers, **shape shift** and **color shift**, and set both of their values to 0.
+
+1. Inside the *grid rect*, render each token T into its appropriate cell in the grid, using its corresponding used ftok, *edge colors*, *edge shapes*, *shape shift* and *color shift*, according to the [cell rendering algorithm](#cell-rendering-algorithm) below.
+
+1. Draw a circle with diameter = *edge size* / 2, centered vertically and horizontally, in a corner rect of each *quartile ftok*'s corresponding cell. For the first quartile ftok, place the circle in the top left corner of the cell, and use the first item in the *edge colors* array as its fill color. For the second, place the circle in the top right, using the second edge color. For the third, place the circle in the bottom right, using the third edge color. For the fourth, in the bottom left, using the fourth edge color.
+
+1. Draw the **color bar** in the inset rectangle described in the bounding-rect section above (left border at x = 1, right border at x = 1 + *edge size*, drawing height = bounding rect height − 2, since the top and bottom gray borders cover the top and bottom pixel rows). Tally how many times each of the four *edge colors* is used across all edge rects actually drawn, excluding the edge rects of blank cells. For each color whose count is greater than zero, compute `count^4`. Divide the color bar's drawing height into horizontal bands, one per nonzero color, with each band's height proportional to that color's `count^4` value as a share of the sum of all four `count^4` values. The fourth-power skew amplifies the dominance of the most-used color so the bar reads as a clear pecking order rather than four near-equal stripes (which is what a raw-count distribution typically produces). Order the bands by descending count (equivalently, descending `count^4`, since `x^4` is monotonic for non-negative x), most frequent at the top; break ties by the order of the color in the *edge colors* array. Fill each band with its color.
+
+1. Draw the **shape count summary** (abbreviated SCS) below the grid. Tally how many times each of the (up to 8) *edge shapes* is used across all edge rects actually drawn, excluding the edge rects of blank cells. For each shape whose count is greater than zero, form a token of the form `X##`, where `X` is the shape's identifying letter and `##` is its count, zero-padded to two digits. (Counts will not exceed 99 for any practical grid; the field is two digits wide.) Sort these tokens by descending count, breaking ties alphabetically by shape letter. Join them with single spaces and render the resulting string in the same fixed-width font as the cell text. The SCS **rendered font size** is `min(round(0.84 × reference_font_size), cell_text_rendered_font_size)` — i.e., 84% of the reference (rounded to whole points) unless the cell text is itself smaller than that, in which case the SCS matches the cell text size. This keeps the SCS visually secondary to the cell text (it never appears larger). Fill the text with `#444` (dark gray) rather than pure black, reinforcing the visual hierarchy. Right-justify the string so its right edge aligns with the right edge of the *grid rect*, and position its baseline so the line occupies the *nucleus height* reserved for it, with its top edge at *grid rect* bottom + GM. The string extends left only as far as its content requires; it is at most about 16 characters wide and never wider than two columns of cells.
+
+    In interactive environments, hovering over an edge shape should reveal a tooltip giving the shape's full name.
 
 1. Draw the **ellipse overlay** — unless the input has fewer than 256 bits, in which case skip the overlay entirely and proceed to the next step. For inputs ≥ 256 bits, derive the overlay's parameters from fingerprint bytes (the 64 bytes of the raw SHA-512 digest, numbered 0 to 63):
 
@@ -195,44 +205,21 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
 
-    **Clip the overlay to the grid rect**, not the bounding rect. The overlay must never appear outside the cells of the grid (it must not leak into the margins or color bar).
+    **Clip the overlay to the grid rect**, not the bounding rect. The overlay must never appear outside the cells of the grid (it must not leak into the margins, color bar, or shape count summary area).
 
-    Draw the overlay above the surround-box layer but below the nucleus layer, so that nucleus background colors and text are never affected by it.
+    Draw the overlay above the edge layer but below the nucleus layer, so that nucleus background colors and text are never affected by it.
 
-    **SVG implementation notes.**
-
-    *Clip-path id uniqueness.* The clipPath element used to confine the overlay must have an `id` that is unique within the enclosing HTML document, not merely unique within its own SVG. When multiple entvizes are embedded in one HTML page (e.g. a gallery), the browser resolves every `url(#…)` reference to the *first* matching id document-wide; if two entvizes both use `id="grid-clip"`, every entviz after the first is silently clipped to the first entviz's grid rectangle. Salt the id with something stable but per-entviz — the reference implementation uses `grid-clip-{first_8_hex_of_fingerprint}-{cols}x{rows}`.
-
-    *Clip-path with rotated content.* When emitting the overlay as an `<ellipse>` carrying a `transform="rotate(…)"`, the `clip-path` attribute must live on a non-rotated parent `<g>` element, not on the ellipse itself. If both attributes go on the same element, SVG resolves the clipPath in the element's post-transform coordinate system — i.e., the clip rectangle rotates along with the ellipse. The two-element structure keeps the clip axis-aligned in screen space while the ellipse rotates within it.
+    **SVG implementation note.** When emitting the overlay in SVG, the `clip-path` attribute must live on a non-rotated parent `<g>` element, with the `transform="rotate(…)"` on the `<ellipse>` inside it. If both attributes go on the same element, SVG resolves the clipPath in the element's post-transform coordinate system — i.e., the clip rectangle rotates along with the ellipse. The two-element structure keeps the clip axis-aligned in screen space while the ellipse rotates within it.
 
 ## Cell Rendering Algorithm
 
-A cell is rendered from a token T and the used ftok F that corresponds to it. The token supplies the cell's text and nucleus background color; the ftok supplies the surround pattern.
+A cell is rendered from a token T and the used ftok F that corresponds to it. The token supplies the cell's text and nucleus background color; the ftok supplies the edge colors and shapes.
 
 1. For a given token T, identify the **origin point** within the *grid rect* with coordinates *x*, *y* with the following formulas: *x* = (*T.cell index* mod *column count*) * *cell width*; *y* = int(*T.cell index* / *column count*) * *cell height*.
 
 1. Convert the *quant* for T into an RGB value the same way CSS does it &mdash; red in the low-order byte, and so forth &mdash; and call this RGB value the **nucleus background color**. Also convert the *nucleus background color* into the HLS color system and call the result the **HLS nucleus background color**. If the luminosity of the *HLS nucleus background color* is < 0.5, let the **foreground color** be white (#ffffff). Otherwise, let it be black (#000000).
 
-1. Determine this cell's **edge color** as the entry of the *edge palette* (the 4 non-bg colors) with the minimum **weighted RGB distance** to the *nucleus background color*. The distance metric is:
-
-    ```
-    d(c1, c2) = sqrt( 2·(r1−r2)² + 4·(g1−g2)² + 3·(b1−b2)² )
-    ```
-
-    Green is weighted highest because cone-peak sensitivity in the human visual system is in the green range; blue is weighted lowest. This formula is a cheap stand-in for CIELAB ΔE; implementations MAY substitute true CIELAB ΔE if they prefer, with the understanding that the choice of palette entry per cell may differ on borderline cases.
-
-1. **Surround layout.** Inside the cell, divide the region around the nucleus into 24 **surround boxes**. Every box is `box_width × box_height` (= `0.75·box_height × box_height` = `6 × 8` at 12pt). The 24 boxes are arranged:
-
-    * **Top row** (10 boxes): each box at `y = nucleus.top − box_height`. Box *i* (for *i* in 0..9) starts at `x = nucleus.left − box_width + i·box_width`. The row spans `x = nucleus.left − box_width` to `x = nucleus.right + box_width` (= nucleus_width + 2·box_width = 10·box_width exactly).
-    * **Right column** (2 boxes): each box at `x = nucleus.right`. Box at index 10 starts at `y = nucleus.top`; box at index 11 starts at `y = nucleus.top + box_height`. The two boxes together span the full nucleus height (`2·box_height = nucleus_height`).
-    * **Bottom row** (10 boxes): each box at `y = nucleus.bottom`. Box at index 12 starts at `x = nucleus.left − box_width + 9·box_width`, and successive indices step *left* by `box_width`, so box 21 is at the same `x` as the leftmost top-row box.
-    * **Left column** (2 boxes): each box at `x = nucleus.left − box_width`. Box at index 22 starts at `y = nucleus.top + box_height`; box at index 23 starts at `y = nucleus.top`.
-
-    Box indices 0..23 are numbered clockwise from the top-left of the top row. There are **no corner rects** — the top and bottom rows extend past the nucleus's left and right edges to cover what would otherwise be corner regions, and the surround tiles the cell's full perimeter flush with cell boundaries.
-
-1. **Surround fill.** For each *i* in 0..23: if bit *i* of the ftok quant (LSB = bit 0) is 1, fill box *i* with the cell's *edge color*. If the bit is 0, draw nothing for box *i*.
-
-1. Draw a **nucleus rect**. Dimensions are *nucleus width* x *nucleus height*. Top left corner is at `x + box_width`, `y + box_height`. Fill color = *nucleus background color*. The nucleus is drawn *after* the surround boxes (and after the ellipse overlay), so the overlay never tints the nucleus.
+1. Draw a **nucleus rect**. Dimensions are *nucleus width* x *nucleus height*. Top left corner is at *x* + *edge size*, *y* + *edge size*. Fill color = *nucleus background color*.
 
 1. Determine the **cell text rendered font size** based on the token character count:
 
@@ -246,4 +233,16 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
 
     Geometry (grid, nucleus, cell positions) does not change with the rendered font size — only the size of the glyphs drawn inside the nucleus does. Using the *foreground color*, write the text of the token on top of the *nucleus rect* at the rendered font size, centering it vertically and horizontally.
 
-1. **Blank cells** carry no token. For a blank cell, draw nothing — no nucleus, no text, no surround boxes. The grid_rect's background color shows through. (Quartile marks on blank cells, if the blank happens to land on a quartile ftok's position, follow the same corner placement rule as for non-blank cells.)
+1. Convert the *quant* of the used ftok F into 6 4-bit numbers and call these the **edge nums**. Assign the edge numbers an **edge index**, with index 0 for bits 0-3 and continuing up to index 5 for bits 20-23.
+
+1. Divide the region surrounding the *nucleus rect* into 6 **edge rects** &mdash; two above the nucleus, two below, and one on either side. The 4 corners of the cell are **corner rects** and are not included in any *edge rect*. The *edge rects* above and below the nucleus will have a width of *edge rect length* (= *nucleus width* / 2) and a height of *edge size*. The *edge rects* on either side will have a width of *edge size* and a height of *nucleus height*. Beginning with the top left *edge rect*, and moving clockwise, assign an **edge index** to each *edge rect*.
+
+1. For each *edge num*, select the 2 low-order bits and call this the **color base**. XOR the *color base* with the 2 low-order bits of the *color shift* and call the result the **color index**. Select a color from the *edge colors* array using the *color index*, and call it the **edge color**. Increment *color shift* by 1.
+
+1. For each *edge num*, select the 2 high-order bits and call this the **shape base**. XOR the *shape base* with the 2 low-order bits of the *shape shift* and call the result the **shape index**. Select a shape from the *edge shapes* array using the *shape index*, and call it the **edge shape**. If (T.*cell index* mod *column count*) != *column count* - 1, increment *shape shift* by 1.
+
+1. After all 6 *edge nums* for the cell have been processed, if (T.*cell index* mod *column count*) == *column count* - 1 (i.e., this cell is in the last column of the grid), add *shape shift* to *color shift*. This adjustment runs once per cell, not once per edge.
+
+1. Inside the logical region belonging to each *edge rect*, draw the *edge shape* using a linear gradient as its fill. The gradient runs from the *nucleus background color* at the boundary the edge rect shares with the *nucleus rect* to the *edge color* at the opposite (outer) boundary of the edge rect, perpendicular to the shared boundary. This makes the nucleus color appear to bleed outward into the shape before resolving to the edge color. All triangles are 45&deg;x45&deg;x90&deg;. Shapes are considered standard in edge 0 and edge 1. They rotate 90&deg; (and, in some cases, compress) for edge 2. They rotate 180&deg; from standard in edges 3 and 4. They rotate 270&deg; from standard (and, in some cases, compress) for edge 5. The shape diagrams above show the dimensions and orientations of each shape.
+
+1. The 4 *corner rects* of each cell (each of size *edge size* x *edge size*) touch the nucleus only at a point, not along any side. Quartile marks are drawn in the corner rects of the four quartile cells as described above. In v3-conforming output, all other corner rects MUST be left empty (no drawing within those rectangles). The corner-rect region is reserved as an extension point for future gestalt features, such as connectors that join the shapes of adjacent edge rects into larger emergent patterns; experimental implementations exploring such features are not v3-conforming until a future revision normatively defines the behavior.
