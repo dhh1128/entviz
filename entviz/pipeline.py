@@ -463,16 +463,16 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
     }
 
 
-# Per-bg overlay (fill, opacity). White and gold read well as darkened;
-# red and blue are saturated mid-luminosity hues where darkening drops
-# them into muddy territory and lightening produces a more perceptible
-# silhouette. Red and blue also need more opacity (0.30) than the
-# always-easy white case to register at all.
+# Per-bg overlay (fill, opacity). Saturated bgs need higher opacity to
+# read against the surround boxes; white is least demanding because its
+# darkened overlay is high luminance contrast already. The v4 values
+# below were tuned against the hybrid-anchored small-grid overlays,
+# where the visible silhouette is smaller and needs more pop.
 _V3_OVERLAY_BY_BG = {
-    '#ffffff': ('#000000', 0.20),  # white  → darken
-    '#ffd966': ('#000000', 0.20),  # gold   → darken
-    '#ff3f2f': ('#000000', 0.30),  # red    → darken (needs 0.30 to read)
-    '#2f3fbf': ('#ffffff', 0.30),  # blue   → lighten (opacity bumped from 0.20)
+    '#ffffff': ('#000000', 0.20),  # white  → darken at 20%
+    '#ffd966': ('#000000', 0.30),  # gold   → darken at 30%
+    '#ff3f2f': ('#000000', 0.40),  # red    → darken at 40%
+    '#2f3fbf': ('#ffffff', 0.40),  # blue   → lighten at 40%
 }
 
 

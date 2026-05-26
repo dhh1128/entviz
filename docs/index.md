@@ -195,11 +195,11 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
         | bg color | hex | overlay fill | opacity |
         |---|---|---|---|
         | white | `#ffffff` | `#000000` (darken) | 20% |
-        | gold  | `#ffd966` | `#000000` (darken) | 20% |
-        | red   | `#ff3f2f` | `#000000` (darken)  | 30% |
-        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 30% |
+        | gold  | `#ffd966` | `#000000` (darken) | 30% |
+        | red   | `#ff3f2f` | `#000000` (darken)  | 40% |
+        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 40% |
 
-        Red and blue are saturated mid-luminosity hues where 20% opacity doesn't register; both need 30% to produce a perceptible silhouette. Blue darkens to near-black at 30%, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity.
+        Saturated bgs need higher opacity to read against the surround boxes; white is least demanding because its darkened overlay is high luminance contrast against the bg already. Blue darkens to near-black, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity. The v4 opacity values (20/30/40/40) were tuned against the hybrid-anchored small-grid overlays, where the visible silhouette is smaller and needs more pop than v3's centered curves did.
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
 
