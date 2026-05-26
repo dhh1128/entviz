@@ -358,7 +358,7 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
 _V3_OVERLAY_BY_BG = {
     '#ffffff': ('#000000', 0.20),  # white  → darken
     '#ffd966': ('#000000', 0.20),  # gold   → darken
-    '#ff3f2f': ('#ffffff', 0.30),  # red    → lighten (switched from darken)
+    '#ff3f2f': ('#000000', 0.30),  # red    → darken (needs 0.30 to read)
     '#2f3fbf': ('#ffffff', 0.30),  # blue   → lighten (opacity bumped from 0.20)
 }
 

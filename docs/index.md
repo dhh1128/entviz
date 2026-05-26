@@ -198,10 +198,10 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
         |---|---|---|---|
         | white | `#ffffff` | `#000000` (darken) | 20% |
         | gold  | `#ffd966` | `#000000` (darken) | 20% |
-        | red   | `#ff3f2f` | `#ffffff` (lighten) | 30% |
+        | red   | `#ff3f2f` | `#000000` (darken)  | 30% |
         | blue  | `#2f3fbf` | `#ffffff` (lighten) | 30% |
 
-        White and gold read well as darkened. Red and blue are saturated mid-luminosity hues where darkening drops them into muddy territory; lightening produces a more perceptible silhouette but needs the higher 30% opacity to register at all. No entropy bytes are consumed for fill or opacity.
+        Red and blue are saturated mid-luminosity hues where 20% opacity doesn't register; both need 30% to produce a perceptible silhouette. Blue darkens to near-black at 30%, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity.
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
 
