@@ -547,6 +547,75 @@ commit); the *fixed* items from that review are 1, 2, 3, 6, 7, 11,
 and 15, all already integrated into the draft. Items D12–D14 came
 from visual review of refs/v3-6b/ output.
 
+### D16. Find a way to draw the ellipse overlay for inputs < 256 bits
+
+V3-5's skip rule omits the overlay entirely whenever the grid has
+fewer than 6 interior corners (equivalent to "< 256 bits of input").
+The current geometry — `rx, ry ∈ [cell_h, d_far − cell_w]` — produces
+a degenerate radius range on smaller grids, which is why the skip
+rule exists. But the small-input cards in `refs/gallery-v3/` feel
+visually weaker than the large-input cards because they lack the
+gestalt-level silhouette the overlay provides.
+
+Find a different geometry that produces a meaningful overlay on
+smaller grids too. Some candidates:
+
+- **Scale the radius range with grid size.** Use
+  `r_min = grid_diagonal × min_fraction`, `r_max = grid_diagonal ×
+  max_fraction` with fractions chosen so the math works at 2×2
+  too. Loses the "radius respects cell geometry" property but
+  gains universal applicability.
+- **Different anchor pool for small grids.** Below the threshold,
+  allow perimeter-cell corners (the v2 enumeration) rather than
+  strictly-interior corners. Gives 2×2 a real anchor pool instead
+  of forcing a fixed center.
+- **Different shape primitive for small grids.** A Bezier curve or
+  open arc may read better at small grid sizes than an ellipse,
+  whose closed-curve property isn't visible when most of it is
+  clipped.
+- **Just shrink the radius bounds.** `r_min = cell_h / 2`,
+  `r_max = d_far / 2`. Gives smaller overlays that may still read.
+
+A visual prototype (similar to the overlay-options gallery we did
+earlier) would help pick a direction. The acceptance criteria are
+roughly: every grid ≥ 2×2 produces an overlay, the overlay reads
+as a curve (not a flat-edge clip), and the 16-level discretization
+still gives visibly distinct shapes between adjacent steps.
+
+### D17. UUID / hex-content non-hex types: tokenize as hex or as base64?
+
+A UUID like `550e8400-...-446655440000` normalizes to a 32-character
+hex string but is given type `"UUID"`. The tokenizer treats anything
+without `"hex"` in its type name as base64-style (4-char tokens,
+6 bits per char). So a UUID becomes 8 tokens of 4 hex chars each,
+and the nucleus colors are computed by reading each 4-char chunk as
+if it were base64.
+
+Visible consequence: a UUID ending in `"0000"` gives a nucleus
+quant of `0xD34D34` (~#344dd3, blue), not 0 (black). Because '0'
+is at index 52 in the standard base64 alphabet, not 0. Most viewers
+expect "all zeros in the token → black background." The current
+behavior reads as a bug to a careful observer.
+
+Same applies to other hex-content but non-hex-typed inputs (Bitcoin
+Cash addresses with their hex-like Base32 alphabet, etc.).
+
+Options:
+- **Treat UUID as hex.** parse_uuid sets `type="UUID"`; change to
+  `type="hex"` or special-case in `tokenize()`. Token count for a
+  32-char UUID becomes ~6 (instead of 8); the chosen grid changes;
+  goldens shift.
+- **Generic rule: if the core is pure hex, tokenize as hex regardless
+  of type name.** Cleaner, automatic. Same effect.
+- **Document the quirk and live with it.** The current behavior is
+  a deliberate consequence of treating type-name as the tokenizer's
+  signal; adopters who care can flatten the hex via the unknown-type
+  fallback.
+
+The "tokenize pure-hex-content as hex" rule (option 2) seems most
+honest. Worth a visual A/B before deciding — the change shifts
+both token count and nucleus colors for every UUID-style input.
+
 ### D15. Per-edge gradient is invisible after v3 path transforms
 
 V3-6b's per-edge gradient renders effectively as a uniform color
