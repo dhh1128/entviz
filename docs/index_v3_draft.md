@@ -78,15 +78,40 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 1. Normalize the input.
     * Remove all whitespace.
     * Detect the entropy type, if possible, and split the input into prefix, core, and suffix, with all three pieces of data normalized. This should eliminate case differences, putting the entropy in canonical case, with canonical punctuation. It should identify prefixes that are not true entropy (e.g., the "0x" prefix on an Ethereum address, the "AAAA" at the front of an SSH key, etc.). It should identify suffixes that are checksums or derivations of the true entropy. The reference implementation in python has an `entropy` module with a `parse(txt)` method that can be used as an oracle, and it has unit tests that can provide a test vector.
-    * If the input entropy has an unrecognized type, treat it as an arbitrary bag of bits, and render it as URL-safe base64 string.
+    * If the input entropy has an unrecognized type, treat it as an arbitrary bag of bits: encode the input string to UTF-8 bytes, then re-render those bytes as a URL-safe base64 string (no padding). The resulting base64 string is treated as the normalized core; the type is `base64`. UTF-8 is the canonical byte encoding for the fallback path; implementations MUST NOT use other encodings (Latin-1, UTF-16, etc.) because that would change the fingerprint of identical-looking inputs.
 
 1. Compute the **fingerprint** as the SHA-512 hash of the normalized entropy bytes. Serialize the 64-byte fingerprint to base64url text and split it into **ftoks** using exactly the same tokenization rule applied to the entropy: each ftok represents 3 bytes (24 bits) of the fingerprint. This yields 21 full ftoks plus one partial ftok formed from the trailing byte; extend the partial ftok to 24 bits by repeating its low-order bits, exactly as for a partial token. The fingerprint therefore always provides 22 ftoks. Assign each ftok an **ftok index** between 0 and 21, inclusive. The fingerprint is never displayed as text.
 
-1. Split the entropy string into tokens, such that each token represents 3 bytes (24 bits) of binary entropy &mdash; or as close to that amount as possible on even character boundaries. For base64 and base58 strings, token length = 4. For hex, token length = 6. Call the number of tokens the **token count**. Assign to each token a **token index** between 0 and *token count* - 1, inclusive. If the entropy is greater than 512 bits, do not tokenize the whole input; instead tokenize only the first 256 bits and the last 256 bits of the entropy, and treat the two groups as separated by a single blank cell. In all cases, *token count* will be at most 22.
+1. Split the entropy string into tokens. Each token represents 3 bytes (24 bits) of binary entropy, or as close to that amount as possible while respecting whole-character boundaries of the underlying encoding. The **token length** (chars per token) is determined by the input type:
+
+    * **hex** (4 bits per char): token length = 6 characters (= 24 bits).
+    * **base64 / base64url / base58** (6 bits per char in v2/v3's tokenization; note that base58's *true* information density is ~5.86 bits/char, but this spec treats base58 chars as 6-bit values for tokenization purposes, matching the reference implementation): token length = 4 characters (= 24 bits).
+    * **all other types** (including the unknown-input fallback after the input has been re-encoded as base64url): token length = 4 characters, treated as 6 bits per char.
+
+    Future spec revisions may introduce additional encodings; until then, conforming implementations use token length = 6 only when the input core is pure hex and token length = 4 otherwise. Call the number of tokens the **token count**. Assign to each token a **token index** between 0 and *token count* - 1, inclusive. If the entropy is greater than 512 bits, do not tokenize the whole input; instead tokenize only the first 256 bits and the last 256 bits of the entropy, and treat the two groups as separated by a single blank cell. In all cases, *token count* will be at most 22.
 
     ![split string into tokens](assets/tokens.png)
 
     Also, if a token represents less than 24 bits of entropy, extend the bits of the token by repeating low-order bits until a full 24 bits is used. Call the 24-bit value associated with the token its **quant**.
+
+    Specifically, given an integer value `v` with `actual_bits` bits of information (where `0 < actual_bits < 24`), the extension proceeds by repeated doubling of the current value, taking each pad chunk from the low-order bits of the *current* (already extended) value:
+
+    ```
+    quant = v
+    while actual_bits < 24:
+        shift = min(actual_bits, 24 - actual_bits)
+        pad = quant & ((1 << shift) - 1)        # low-order `shift` bits of quant
+        quant = (quant << shift) | pad
+        actual_bits += shift
+    ```
+
+    Worked examples:
+
+    * 8-bit value `0xAB` (binary `10101011`): iteration 1 (`shift=8`) → `0xABAB`; iteration 2 (`shift=8`) → `0xABABAB`. Final quant: `0xABABAB`.
+    * 4-bit value `0x5` (binary `0101`): iteration 1 (`shift=4`) → `0x55`; iteration 2 (`shift=8`) → `0x5555`; iteration 3 (`shift=8`) → `0x555555`. Final quant: `0x555555`.
+    * 12-bit value `0xABC`: iteration 1 (`shift=12`) → `0xABCABC`. Final quant: `0xABCABC` (one iteration suffices when `actual_bits` doubles cleanly to 24).
+
+    The shift size at each step is `min(actual_bits, 24 - actual_bits)`, so the algorithm terminates in at most a few iterations regardless of the starting size.
 
 1. The complete entropy is visualized as a rectangular **grid** consisting of a certain number of **cells**. Call this number of cells the **cell count**. Each token is rendered into one cell in the grid, and if the rectangle of the grid has more cells than *token count*, one or more cells will be empty.
 
@@ -102,7 +127,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. Define the **used ftoks** as the first *token count* ftoks of the fingerprint, taken in ftok index order. The used ftoks map one-to-one to tokens: the used ftok at index *i* corresponds to the token with *token index* *i*. (Because *token count* is at most 22 and the fingerprint provides 22 ftoks, there are always enough.) Any ftoks beyond *token count* are not used. From here on, all fingerprint-based calculations operate on the used ftoks. The 24-bit value of an ftok is its **quant**, defined exactly as for a token.
 
-1. Sort the used ftoks in ASCII order (with a secondary sort by their *ftok index*, in case the same ftok appears in more than one place). Identify the first ftok in the sorted list that contains the median value. (If the count is even, use the first ftok from the middle pair.) Call this the **median ftok**.
+1. Sort the used ftoks in **ASCII order** &mdash; case-sensitive bytewise (lexicographic) comparison of the ftok's base64url text. Since base64url characters are all in the ASCII range, this is equivalent to UTF-8 bytewise comparison. Shorter strings sort before longer strings that share their full content as a prefix (standard lexicographic ordering; partial ftoks therefore sort below full ftoks that begin with the same chars). Use a secondary sort by *ftok index*, in case the same ftok appears in more than one place. Identify the first ftok in the sorted list that contains the median value. (If the count is even, use the first ftok from the middle pair.) Call this the **median ftok**.
 
 1. Also sort the used ftoks by the ASCII order of their mirror image (with a secondary sort on the ftok index, in case the same ftok appears in more than one place). For example, if an ftok is "a4W6", its sort key would be "6W4a". If the number of used ftoks is not evenly divisible by 4, act as if 4 - (*token count* mod 4) blank items existed at the bottom of the list. Now divide the sorted list into 4 sections and call each section a **quartile**. Identify the first ftok in each quartile and call it the **first quartile ftok**, the **second quartile ftok**, and so on.
 
@@ -131,11 +156,11 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     Use the *grid rect* as a clipping region for the ellipse overlay (see below). The color bar, shape count summary, and black border lines are drawn outside the grid rect and need no clipping. Draw all clipped content first; draw the black border lines last so the borders are never overwritten.
 
-1. Let the array of **possible edge colors** be [white - `#ffffff`, gold - `#ffd966`, red - `#ff3f2f`, blue - `#2f3fbf`, black - `#000000`].
+1. Let the array of **possible edge colors** be [white - `#ffffff`, gold - `#ffd966`, red - `#ff3f2f`, blue - `#2f3fbf`, black - `#000000`]. The first four entries (indices 0-3) are the **background candidates**; black at index 4 is *always* an edge color and is never selected as the entviz background. This is intentional: black is too visually heavy to serve as a background.
 
     ![colors](assets/colors.png)
 
-    Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the *possible edge colors* array to select the background color for the entviz. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the array to generate a new array consisting of 4 colors, and call this the **edge colors** array.
+    Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge colors** array. Black is therefore always present in the *edge colors* array regardless of which background was chosen.
 
 1. Let *array 0* of possible edge shapes be [fin, axe, brick, inf]:
 
@@ -147,7 +172,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     Each shape's name begins with a distinct letter &mdash; F, A, B, I, W, H, K, M &mdash; and that capital letter identifies the shape in the *shape count summary*.
 
-    Create a new array called the **edge shapes** array. Now iterate over the low-order 4 bits (bits 0 to 3) of the *quant* of the *second quartile ftok*. Call the selected bit the **selector** and the index of the bit the **bit index**. If the selector is 0, make the **selected shape array** array 0; otherwise, make it array 1. Copy the shape at *bit index* of *selected shape array* into *edge shapes*. This populates the *edge shapes* array with 4 shapes, each of which may come from either source array.
+    Create a new array called the **edge shapes** array. Now iterate over the low-order 4 bits of the *quant* of the *second quartile ftok* in **least-significant-first order**: bit 0 first (where bit 0 is the LSB, value `quant & 0x01`), then bit 1 (`(quant >> 1) & 0x01`), then bit 2, then bit 3. Call the selected bit the **selector** and the loop's iteration count the **bit index** (0 through 3). If the selector is 0, make the **selected shape array** array 0; otherwise, make it array 1. Copy the shape at *bit index* of *selected shape array* into *edge shapes*. This populates the *edge shapes* array with 4 shapes, each of which may come from either source array.
 
 1. Define two integers, **shape shift** and **color shift**, and set both of their values to 0.
 
@@ -213,4 +238,4 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
 
 1. Inside the logical region belonging to each *edge rect*, draw the *edge shape* using a linear gradient as its fill. The gradient runs from the *nucleus background color* at the boundary the edge rect shares with the *nucleus rect* to the *edge color* at the opposite (outer) boundary of the edge rect, perpendicular to the shared boundary. This makes the nucleus color appear to bleed outward into the shape before resolving to the edge color. All triangles are 45&deg;x45&deg;x90&deg;. Shapes are considered standard in edge 0 and edge 1. They rotate 90&deg; (and, in some cases, compress) for edge 2. They rotate 180&deg; from standard in edges 3 and 4. They rotate 270&deg; from standard (and, in some cases, compress) for edge 5. The shape diagrams above show the dimensions and orientations of each shape.
 
-1. The 4 *corner rects* of each cell (each of size *edge size* x *edge size*) touch the nucleus only at a point, not along any side. Quartile marks are drawn in the corner rects of the four quartile cells as described above. In this version of the algorithm, all other corner rects are left empty. They are reserved as an extension point for future gestalt features, such as connectors that join the shapes of adjacent edge rects into larger emergent patterns; the specific behavior is deliberately left undefined pending visual testing.
+1. The 4 *corner rects* of each cell (each of size *edge size* x *edge size*) touch the nucleus only at a point, not along any side. Quartile marks are drawn in the corner rects of the four quartile cells as described above. In v3-conforming output, all other corner rects MUST be left empty (no drawing within those rectangles). The corner-rect region is reserved as an extension point for future gestalt features, such as connectors that join the shapes of adjacent edge rects into larger emergent patterns; experimental implementations exploring such features are not v3-conforming until a future revision normatively defines the behavior.
