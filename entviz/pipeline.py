@@ -346,16 +346,23 @@ def _draw_color_bar(svg, bounding_rect, gm, color_usage, edge_colors):
     ]
     if not used:
         return
-    # Sort: descending by count, tiebreak by index in edge_colors.
+    # Sort: descending by count, tiebreak by index in edge_colors. Since
+    # x^4 is monotonic for non-negative x, sorting by count or by count^4
+    # produces the same order; we sort by raw count for clarity.
     color_order = {c: i for i, c in enumerate(edge_colors)}
     used.sort(key=lambda x: (-x[1], color_order[x[0]]))
-    total = sum(n for _, n in used)
+    # Band heights are weighted by count^4 (V3-1). This skew amplifies
+    # the dominance of the most-used color so the bar reads as a clear
+    # pecking order rather than four near-equal stripes — typical inputs
+    # have raw color counts that vary by only ~10-20%, which is
+    # essentially invisible without skew.
+    total = sum(n ** 4 for _, n in used)
     y = bounding_rect.top
     for i, (color, n) in enumerate(used):
         is_last = i == len(used) - 1
         # Pin the last band to exactly cover the remaining height so any
         # floating-point drift doesn't leave a gap or overflow.
-        h = (bounding_rect.bottom - y) if is_last else bounding_rect.size.height * n / total
+        h = (bounding_rect.bottom - y) if is_last else bounding_rect.size.height * (n ** 4) / total
         etree.SubElement(
             svg, 'rect',
             x=str(bounding_rect.left), y=str(y),
