@@ -281,3 +281,58 @@ Entviz = goal:
             which collapses the palette in practice. v2 uses #ff3f2f.
             Caught in v1 but only fixed in v2 to keep the migration
             self-contained.
+
+    V3 Migration = goal:
+      id: v3m1grat
+      status: in-progress
+      why: >
+        Move the implementation from spec v2 (docs/index.md) to spec v3
+        (docs/index_v3_draft.md, to become docs/index.md when promoted).
+        v3 refines the gestalt channels (color bar skew, frame, SCS
+        styling, ellipse overlay rework, hex font fitting) and replaces
+        the v2 procedural edge shapes with new path-based cubist and
+        polygon shape sets authored in 24x8 canonical edge space with
+        fill-rule:evenodd. The full design rationale and locked decisions
+        live in docs/spec-improvement-notes.md; the deferred polish items
+        live in that same file under "Deferred items (next v3 polish
+        pass)". The new shape geometry handoff is in new-shapes/.
+
+      children:
+
+        Spec Improvement Notes = decision:
+          id: sp3cnote
+          why: >
+            Canonical record of the v3 design decisions and deferred polish
+            items lives at docs/spec-improvement-notes.md. Six items are
+            locked (color bar skew, color bar frame, SCS styling, ellipse
+            rework, hex font fitting, clip-path bug fix) and eleven are
+            deferred (D1-D11) for a later polish pass. When picking up v3
+            work after a pause, read that doc first.
+
+        New Shapes Handoff = decision:
+          id: n3wshape
+          why: >
+            The v3 edge shapes are a designed set of 6 base shapes
+            (cubist C1-C3 + polygon P1-P3) plus an empty member at slot
+            4 of each set. Authored in 24x8 canonical edge space, single
+            SVG path per shape with fill-rule:evenodd. Rotation uses a
+            "tab" mechanic: shapes with mass outside their 16-wide window
+            use a separate truncated path at 90/270 degrees, with hinge
+            at the tab outer-left corner. Reference materials are in
+            new-shapes/. The color model is UNCHANGED from v2 (per-cell
+            nucleus_bg to per-edge edge_color gradient); the encoding doc
+            in new-shapes/ shows a single-ink fade-to-transparent example
+            that is for academic-paper diagrams only and is NOT the spec
+            color model.
+
+        Reference and Rendered Font Sizes = decision:
+          id: r3fr3nfn
+          why: >
+            v3 introduces a distinction: "reference font size" is the
+            configurable input (nominally 12pt) that drives all geometry
+            (nucleus_height, cell dims, GM, bounding rect, color bar
+            width). "Rendered font size" is the actual size applied to a
+            specific text element. They may differ: hex cell text renders
+            at 75% of reference; SCS renders at min(round(0.9 x reference),
+            cell text rendered size). The rendered size never affects
+            geometry.
