@@ -101,20 +101,29 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
-    # Bounding rect dimensions per v2 spec step 13:
-    #   width  = GM + GM + grid_width + GM + 1
+    # Bounding rect dimensions per v3 spec:
+    #   width  = 1 + edge_size + 1 + GM + grid_width + GM + 1
     #   height = 1 + GM + grid_height + GM + nucleus_height + GM + 1
-    # Layout left→right: color-bar (GM) | margin (GM) | grid | margin (GM)
-    #                    | right border (1).
-    # Layout top→bottom: top border (1) | margin (GM) | grid | margin (GM)
-    #                    | SCS line (nucleus_height) | margin (GM)
-    #                    | bottom border (1).
-    bounding_w = gm + gm + grid_w + gm + 1
+    # Layout left→right: left border (1) | color bar (edge_size) |
+    #                    interior separator (1) | L margin (GM) | grid |
+    #                    R margin (GM) | right border (1).
+    # Layout top→bottom unchanged from v2: top border (1) | margin (GM) |
+    #                    grid | margin (GM) | SCS line (nucleus_height)
+    #                    | margin (GM) | bottom border (1).
+    bounding_w = 1 + edge_size + 1 + gm + grid_w + gm + 1
     bounding_h = 1 + gm + grid_h + gm + nucleus_height + gm + 1
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
 
-    # grid_rect sits at (2*GM, 1+GM) inside the bounding rect.
-    grid_rect = Rect(Point(gm + gm, 1 + gm), Size(grid_w, grid_h))
+    # grid_rect sits at (1 + edge_size + 1 + GM, 1 + GM) inside the
+    # bounding rect.
+    grid_rect = Rect(Point(1 + edge_size + 1 + gm, 1 + gm), Size(grid_w, grid_h))
+
+    # Color bar drawing region: x=1, width=edge_size; y starts at 1
+    # (just below the top border) and ends at bounding_h - 1 (just
+    # above the bottom border), so its drawable height is bounding_h - 2.
+    color_bar_rect = Rect(
+        Point(1, 1), Size(edge_size, bounding_h - 2),
+    )
 
     renderer = Renderer(style, grid)
 
@@ -192,12 +201,12 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             continue
         renderer.draw_quartile_mark(svg, cell, q_idx)
 
-    # Layer 5a: color bar along the left GM-wide strip of the bounding
-    # rect. Bands proportional to actual edge-color usage (blank cells
-    # are excluded since their render_edges is never called); sorted
+    # Layer 5a: color bar inside its inset rect (x=1, width=edge_size).
+    # Bands proportional to count^4 of each edge color (V3-1); empty
+    # cells excluded since their render_edges is never called; sorted
     # descending by count with edge_colors order as the tiebreak.
     _draw_color_bar(
-        svg, bounding_rect, gm,
+        svg, color_bar_rect, gm,
         renderer.color_usage, style.edge_colors,
     )
 
@@ -207,12 +216,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         svg, grid_rect, gm, nucleus_height, renderer.shape_usage,
     )
 
-    # Black border lines on top, right, bottom of the bounding rect.
-    # The left edge is reserved for the color bar and gets no border.
-    # The top and bottom lines start at x=GM (color bar's right edge).
-    _draw_border_line(svg, gm, 0, bounding_w - 1, 0)                              # top
-    _draw_border_line(svg, bounding_w - 1, 0, bounding_w - 1, bounding_h - 1)     # right
-    _draw_border_line(svg, gm, bounding_h - 1, bounding_w - 1, bounding_h - 1)    # bottom
+    # Black border lines on all four sides of the bounding rect, plus an
+    # interior vertical separator at x = 1 + edge_size (the color bar's
+    # right edge). The top, right, bottom, and left borders frame the
+    # whole entviz; the interior separator divides the color bar from
+    # the grid-margin column. All five lines are 1 px stroke #000000.
+    _draw_border_line(svg, 0, 0, bounding_w - 1, 0)                                  # top
+    _draw_border_line(svg, bounding_w - 1, 0, bounding_w - 1, bounding_h - 1)        # right
+    _draw_border_line(svg, 0, bounding_h - 1, bounding_w - 1, bounding_h - 1)        # bottom
+    _draw_border_line(svg, 0, 0, 0, bounding_h - 1)                                  # left
+    _draw_border_line(svg, 1 + edge_size, 0, 1 + edge_size, bounding_h - 1)          # interior separator
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
@@ -339,7 +352,18 @@ def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height, shape_usage):
     el.text = text
 
 
-def _draw_color_bar(svg, bounding_rect, gm, color_usage, edge_colors):
+def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
+    """
+    Draw color-bar bands inside bar_rect's drawing region.
+
+    bar_rect is the color bar's *drawing region* (already accounting
+    for the surrounding black borders that cover 1 px on each side in
+    v3): bar_rect.left = 1, bar_rect.width = edge_size, bar_rect.top = 1,
+    bar_rect.height = bounding_h - 2.
+
+    Band heights are weighted by `count^4` (V3-1). The `gm` parameter is
+    accepted for backwards-compatible call signatures but unused.
+    """
     used = [
         (c, color_usage.get(c, 0))
         for c in edge_colors if color_usage.get(c, 0) > 0
@@ -351,22 +375,17 @@ def _draw_color_bar(svg, bounding_rect, gm, color_usage, edge_colors):
     # produces the same order; we sort by raw count for clarity.
     color_order = {c: i for i, c in enumerate(edge_colors)}
     used.sort(key=lambda x: (-x[1], color_order[x[0]]))
-    # Band heights are weighted by count^4 (V3-1). This skew amplifies
-    # the dominance of the most-used color so the bar reads as a clear
-    # pecking order rather than four near-equal stripes — typical inputs
-    # have raw color counts that vary by only ~10-20%, which is
-    # essentially invisible without skew.
     total = sum(n ** 4 for _, n in used)
-    y = bounding_rect.top
+    y = bar_rect.top
     for i, (color, n) in enumerate(used):
         is_last = i == len(used) - 1
         # Pin the last band to exactly cover the remaining height so any
         # floating-point drift doesn't leave a gap or overflow.
-        h = (bounding_rect.bottom - y) if is_last else bounding_rect.size.height * (n ** 4) / total
+        h = (bar_rect.bottom - y) if is_last else bar_rect.size.height * (n ** 4) / total
         etree.SubElement(
             svg, 'rect',
-            x=str(bounding_rect.left), y=str(y),
-            width=str(gm), height=str(h),
+            x=str(bar_rect.left), y=str(y),
+            width=str(bar_rect.size.width), height=str(h),
             fill=color,
         )
         y += h

@@ -67,11 +67,11 @@ def test_scs_tied_counts_sorted_alphabetically():
 
 
 def test_scs_right_justified_to_grid_right_edge():
-    # grid_rect.right = grid_rect.left + grid_w = (GM*2) + grid_w.
-    # For UUID 2-col grid: GM=4, grid_w=128 → grid_rect.right = 136.
+    # v3: grid_rect.left = 1 + edge_size + 1 + GM = 14; grid_rect.right
+    # = grid_rect.left + grid_w. For UUID 2-col grid (grid_w=128): 142.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     scs = _scs_text(svg)
-    assert float(scs.get("x")) == 136
+    assert float(scs.get("x")) == 142
 
 
 def test_scs_uses_cell_text_font_size():

@@ -20,10 +20,11 @@ def _is_nucleus(rect):
 
 
 def _is_color_bar_band(rect):
-    # Color bar bands are at x=0 with width=GM=4. Phase 10 added these
-    # after the nucleus layer — that's intentional (the color bar is a
-    # gestalt summary, drawn over the bounding rect's left strip).
-    return float(rect.get("x", -1)) == 0 and float(rect.get("width", -1)) == 4
+    # v3: color bar bands are at x=1 with width=edge_size=8 (V3-2; v2 used
+    # x=0, width=GM=4). Drawn after the nucleus layer intentionally — the
+    # color bar is a gestalt summary that overlays the bounding rect's
+    # left inset strip.
+    return float(rect.get("x", -1)) == 1 and float(rect.get("width", -1)) == 8
 
 
 def _is_grid_bg(rect):
