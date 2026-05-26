@@ -405,3 +405,92 @@ design uses both transform and clip-path on the overlay).
   also a prerequisite for item 4's correct rendering.
 - All of these change rendered output, so any goldens captured under
   v2 will need to be regenerated when v3 lands.
+
+---
+
+## Deferred items (next v3 polish pass)
+
+Items raised in a third-party review of `docs/index_v3_draft.md` that
+were judged real but not urgent. Address in a future polish pass.
+
+### D1. Full parser spec for input normalization
+The current v3 draft defers entropy-type detection and normalization
+to the Python reference implementation in `entviz/entropy.py` (~300
+lines of crypto-address regexes and decoding logic). For
+standards-track interoperability this needs to be published as a
+separate normative document with ABNF, type-detection precedence
+rules, and canonical test vectors. *Not a single-pass spec edit; its
+own writing project.*
+
+### D2. Grid-selection pseudocode
+The grid-AR comparison and tight-layout dedup rules in
+`choose_grid()` are concrete in code but expressed as prose in the
+spec. A ~20-line pseudocode block in the grid-layout section would
+remove the ambiguity. Fairly mechanical.
+
+### D3. Blank-cell insertion ordering
+Tighten the prose to make explicit that the ASCII-sort happens once
+(on original ftok identities), all three potential shifts operate on
+the same sorted list, and only `cell_index` (not `token_index`)
+changes during a shift.
+
+### D4. Font pinning
+At hex 75%, the rendered font size is tight (only ~4.8 px of slack on
+typical monospace fonts). Either pin a font family
+(`font-family: "Courier New", Courier, monospace`) in the SVG output,
+or commit to glyph-path embedding. Pinning is a one-sentence spec
+edit; glyph paths are a larger lift.
+
+### D5. Global rounding rules
+The spec rounds the hex-font calculation but doesn't say what
+rounding to apply elsewhere (color-bar band heights, ellipse radii,
+HLS conversion, grid placement). Add a "Numeric precision" section
+that defines a single rule (lean toward round-half-to-even) and
+states where subpixel coordinates are acceptable.
+
+### D6. HLS exact formula
+Different stdlib HLS implementations agree on the L>0.5 test in
+practice, but a spec-grade version should embed the conversion
+formula (or normatively reference a specific definition).
+
+### D7. Quartile-padding sort key
+The "act as if blank items existed at the bottom" rule needs to
+state what the blanks' sort keys are (or just say "padding items
+contribute to count but never appear as the first ftok of a
+quartile slot, since they have no value").
+
+### D8. Ellipse rendering details
+Antialiasing assumptions, sRGB vs linear-RGB compositing of the
+alpha-blended overlay, sub-pixel handling. Different rasterizers
+(SVG/Cairo/Canvas) will differ; spec should pick one.
+
+### D9. "Actually drawn" edge rects
+One sentence to add to the color-bar and SCS sections: "blank cells
+produce no edge rects, hence contribute zero to the color and shape
+tallies." (Currently implied but never stated.)
+
+### D10. Normative vs explanatory prose split
+The draft interleaves motivational paragraphs, implementation notes,
+rationale, examples, and normative requirements. Splitting these
+into separate sections (or adding MUST/SHOULD/MAY markers) would
+make it easier for an implementer to extract the algorithm.
+
+### D11. Conformance test vectors + golden output
+No canonical test vectors or reference rendered images. The
+reference implementation in `entviz/` is the de-facto conformance
+test today. A future revision should publish:
+- a curated set of input strings
+- their expected normalized cores
+- their expected ftoks (hex digest values)
+- their expected SVG outputs (or hashes thereof)
+- tolerance rules for non-determinism (e.g., font rasterization)
+
+### Where to find these later
+
+To work on any deferred item, ask: *"work on D{N} from the deferred
+section of spec-improvement-notes.md"* or *"polish the v3 draft to
+address the deferred items"*. The full review text that produced
+this list is captured in the conversation that led to commit
+`e201654` (the "tighten v3 draft on six interoperability hazards"
+commit); the *fixed* items from that review are 1, 2, 3, 6, 7, 11,
+and 15, all already integrated into the draft.
