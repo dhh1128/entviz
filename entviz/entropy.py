@@ -67,7 +67,7 @@ CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_AL
 BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
 LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)
-ETHEREUM_REGEX = re.compile(r'^(0x)?([a-fA-F0-9]{32})([a-fA-F0-9]{8})$')
+ETHEREUM_REGEX = re.compile(r'^(0x)?([a-fA-F0-9]{32})([a-fA-F0-9]{8})$', re.I)
 RIPPLE_REGEX = re.compile(r'^(r)([' + BASE58_ALPHABET + ']{33})$')
 BITCOIN_LEGACY_REGEX = re.compile(r'^([123mn])([' + BASE58_ALPHABET + ']{21,30})([' + BASE58_ALPHABET + ']{4})$')
 BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BECH32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
@@ -271,13 +271,28 @@ def to_EIP55_address(address: str) -> str:
 
 def parse_ethereum_address(text) -> Parsed:
     """
-    See if we can parse text as an Ethereum address.
-    If yes, return Parsed("Ethereum", "0x", core, checksum).
+    See if we can parse text as an Ethereum address. Recognition
+    requires either:
+      - an explicit "0x" / "0X" prefix on a 40-hex-char body, OR
+      - EIP-55-style mixed case (at least one uppercase AND one
+        lowercase hex letter) on a 40-hex-char body without prefix.
+
+    A bare 40-char single-case hex string without prefix falls through
+    to plain hex — "0x" is a generic hex prefix predating Ethereum,
+    and a length-40 match alone is too weak a signal.
     """
     m = ETHEREUM_REGEX.match(text)
-    if m:
-        eip55_format = to_EIP55_address(m.group(2) + m.group(3))
-        return Parsed("Ethereum", HEX, "0x", eip55_format[2:-8], eip55_format[-8:])
+    if not m:
+        return None
+    has_prefix = bool(m.group(1))
+    body = m.group(2) + m.group(3)
+    if not has_prefix:
+        has_lower = any(c.islower() for c in body if c.isalpha())
+        has_upper = any(c.isupper() for c in body if c.isalpha())
+        if not (has_lower and has_upper):
+            return None  # falls through to plain hex
+    eip55_format = to_EIP55_address(body)
+    return Parsed("Ethereum", HEX, "0x", eip55_format[2:-8], eip55_format[-8:])
 
 def parse_litecoin_address(text) -> Parsed:
     """
