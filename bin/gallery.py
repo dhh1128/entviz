@@ -42,6 +42,13 @@ SAMPLES = [
         ("Bitcoin (Satoshi genesis)", "1NSUpdRFAbn3Y2ZjN8nfNfJTpVTMo6gxa6"),
         ("Ripple",          "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh"),
     ]),
+    ("Bech32 addresses", [
+        ("Bitcoin SegWit P2WPKH",       "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"),
+        ("Bitcoin SegWit P2WSH",        "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"),
+        ("Litecoin (ltc1)",             "ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5"),
+        ("Cardano Shelley",
+         "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"),
+    ]),
     ("Base64 / arbitrary text", [
         ("Short ASCII",       "hello world"),
         ("Lorem ipsum chunk", "Lorem ipsum dolor sit amet, consectetur adipiscing elit."),

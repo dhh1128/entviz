@@ -511,6 +511,39 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Bech32 Alphabet = decision:
+          id: v4bch320
+          why: >
+            Add a BECH32 alphabet entry (5 bits/char, alphabet
+            "qpzry9x8gf2tvdw0s3jn54khce6mua7l" per BIP-173). Token
+            length chosen as 4 chars (= 20 bits) rather than 5 chars
+            (= 25 bits) because the quant is defined as a 24-bit
+            value and the existing extension rule handles
+            under-24-bit tokens cleanly; over-24-bit tokens would
+            require a new collapse rule.
+
+            Bitcoin SegWit (bc1.../tb1...), Litecoin modern
+            (ltc1...), and Cardano Shelley (addr1.../stake1...)
+            parsers updated to declare BECH32 instead of the BASE64
+            placeholder. The Bitcoin SegWit regex previously used the
+            BASE32 character class (a-zA-Z2-7) which is missing 0,
+            1, 8, 9 — valid bech32 chars except for 1 (the
+            separator) — so real bech32 addresses were falling
+            through to the base64 fallback path. The regexes now
+            use a proper bech32 character class.
+
+            BASE32 alphabet (5 bits/char, alphabet A-Z2-7) is still
+            deferred: Bitcoin Cash CashAddr, Stellar, IPFS CID v1
+            continue to use the BASE64 placeholder until a separate
+            commit adds BASE32.
+
+            Default token_len rule simplified from
+              "24 // bits_per_char if 24 % bits_per_char == 0 else 5"
+            to
+              "24 // bits_per_char"
+            which gives 6 / 4 / 4 chars for hex / base58/64 / bech32
+            respectively — all under or equal to the 24-bit budget.
+
         Hybrid Ellipse Anchoring = decision:
           id: v4hybell
           why: >

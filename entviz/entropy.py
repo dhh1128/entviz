@@ -32,14 +32,22 @@ BASE32_ALPHABET_EITHER_CASE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 BASE58_CHECK_LENGTH = 25  # Expected length of Base58Check encoded Bitcoin addresses
 BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 HEX_ALPHABET = "0123456789ABCDEF"
+# Bech32 alphabet per BIP-173: 32 chars, intentionally excludes 1/b/i/o
+# to reduce visual ambiguity (and '1' doubles as the bech32 separator).
+BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
+BECH32_ALPHABET_EITHER_CASE = BECH32_ALPHABET + BECH32_ALPHABET.upper()
 
-# Named alphabet singletons. base32/bech32 are deferred — types whose
-# core uses one of those encodings currently declare `BASE64` (the
-# pre-refactor accidental behavior). A later commit will introduce
-# proper `BASE32`/`BECH32` alphabets with bits_per_char=5.
+# Named alphabet singletons. BASE32 is still deferred — types whose core
+# uses base32 (Bitcoin Cash CashAddr, Stellar, IPFS CID v1) still
+# declare BASE64 as a placeholder.
 HEX       = Alphabet("hex",       HEX_ALPHABET,        4)
 BASE58    = Alphabet("base58",    BASE58_ALPHABET,     6)  # ~5.86 bits true; treated as 6 for token alignment
 BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)
+# At 5 bits/char, 24/5 doesn't divide evenly. We choose 4 chars/token
+# (20 bits) and let the spec's bit-extension rule pad to 24, rather
+# than 5 chars/token (25 bits) which would overshoot the 24-bit quant
+# budget.
+BECH32    = Alphabet("bech32",    BECH32_ALPHABET,     5)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
 
@@ -53,14 +61,14 @@ IPFS_CIDV1_REGEX = re.compile(r'^(b)([' + BASE32_ALPHABET_EITHER_CASE + ']{58,11
 EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
 CARDANO_SHORT_BYRON_REGEX = re.compile(r'^(Ae2)([' + BASE58_ALPHABET + ']{50})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_LONG_BYRON_REGEX = re.compile(r'^(DdzFF)([' + BASE58_ALPHABET + ']{65})([' + BASE58_ALPHABET + ']{6})$')
-CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?)(1[' + BASE32_ALPHABET_EITHER_CASE + ']{50,100})([' + BASE32_ALPHABET_EITHER_CASE + ']{6})$')
+CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_ALPHABET_EITHER_CASE + ']{50,100})([' + BECH32_ALPHABET_EITHER_CASE + ']{6})$')
 BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BASE32_ALPHABET + ']{41})', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
-LITECOIN_REGEX = re.compile(r'^(ltc)([' + BASE58_ALPHABET + ']{42,62})$')
+LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)
 ETHEREUM_REGEX = re.compile(r'^(0x)?([a-fA-F0-9]{32})([a-fA-F0-9]{8})$')
 RIPPLE_REGEX = re.compile(r'^(r)([' + BASE58_ALPHABET + ']{33})$')
 BITCOIN_LEGACY_REGEX = re.compile(r'^([123mn])([' + BASE58_ALPHABET + ']{21,30})([' + BASE58_ALPHABET + ']{4})$')
-BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BASE32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
+BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BECH32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
 SSH_KEY_REGEX = re.compile(r'(AAAA)([0-9A-Za-z+/]+={0,3})')
 HEX_REGEX = re.compile(r'^[a-fA-F0-9]+$')
 BASE64URL_NO_PAD_REGEX = re.compile(r'^[A-Za-z0-9-_]+$') # used by CESR
@@ -230,10 +238,8 @@ def parse_bitcoin_address(text) -> Parsed:
         return Parsed("Bitcoin legacy", BASE58, m.group(1), m.group(2), m.group(3))
     m = BITCOIN_SEGWIT_REGEX.match(text)
     if m:
-        # Bitcoin SegWit uses bech32 — alphabet declared as BASE64 for
-        # now (bits_per_char=6); proper BECH32 alphabet (bits_per_char=5)
-        # is a deferred follow-up.
-        return Parsed("Bitcoin SegWit", BASE64, m.group(1).lower(), m.group(2).lower(), None)
+        # Bitcoin SegWit uses bech32 (BIP-173).
+        return Parsed("Bitcoin SegWit", BECH32, m.group(1).lower(), m.group(2).lower(), None)
 
 def parse_ripple_address(text) -> Parsed:
     """
@@ -281,9 +287,8 @@ def parse_litecoin_address(text) -> Parsed:
         return Parsed("Litecoin legacy", BASE58, m.group(1), m.group(2), None)
     m = LITECOIN_REGEX.match(text)
     if m:
-        # Modern Litecoin "ltc..." is bech32 — declared BASE64 for now;
-        # BECH32 is deferred.
-        return Parsed("Litecoin", BASE64, m.group(1), m.group(2), None)
+        # Modern Litecoin "ltc1..." uses bech32.
+        return Parsed("Litecoin", BECH32, m.group(1).lower(), m.group(2).lower(), None)
 
 def parse_bitcoin_cash_address(text) -> Parsed:
     """
@@ -309,8 +314,8 @@ def parse_cardano_address(text) -> Parsed:
         return Parsed("Cardano Byron", BASE58, m.group(1), m.group(2), m.group(3))
     m = CARDANO_SHELLEY_REGEX.match(text)
     if m:
-        # Cardano Shelley uses bech32. Declared BASE64 for now; BECH32 deferred.
-        return Parsed("Cardano Shelley", BASE64, m.group(1), m.group(2).lower(), m.group(3).lower())
+        # Cardano Shelley uses bech32.
+        return Parsed("Cardano Shelley", BECH32, m.group(1), m.group(2).lower(), m.group(3).lower())
 
 def parse_eos_address(text) -> Parsed:
     """
@@ -442,11 +447,13 @@ def tokenize(text: str, alphabet, token_len: int = None) -> list[Token]:
     bits_per_char = alphabet.bits_per_char
     alphabet_chars = alphabet.chars
     if token_len is None:
-        # Pick token_len so each full token represents 24 bits when
-        # possible. bits_per_char=4 (hex) → 6 chars; bits_per_char=6
-        # (base58/64/url) → 4 chars. bits_per_char=5 (base32/bech32,
-        # deferred) would be 5 chars (25 bits truncated).
-        token_len = 24 // bits_per_char if 24 % bits_per_char == 0 else 5
+        # Pick token_len so each full token represents at most 24 bits.
+        # bits_per_char=4 (hex) → 6 chars (24 bits exact);
+        # bits_per_char=6 (base58/64/url) → 4 chars (24 bits exact);
+        # bits_per_char=5 (bech32 / base32) → 4 chars (20 bits, extended
+        # to 24 by the bit-extension rule). The alternate (5 chars = 25
+        # bits) was rejected because it overshoots the 24-bit quant.
+        token_len = 24 // bits_per_char
 
     tokens = []
     for i in range(0, len(text), token_len):
@@ -526,7 +533,20 @@ def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
     all_tokens = tokenize(core, alphabet)
     if len(all_tokens) <= _MAX_TOKENS:
         return all_tokens, False
-    chars_per_side = math.ceil(_BITS_PER_SIDE / bits_per_char)
+    # chars_per_side must produce ≤ 11 tokens, so cap it by 11 · token_len.
+    # For hex (token_len=6) and base64 (token_len=4) the bit-based bound
+    # (ceil(256/bits_per_char)) is smaller and dominates. For bech32
+    # (token_len=4, bits_per_char=5) the bit-based bound is 52 chars =
+    # 13 tokens, so the token-count bound (44 chars = 11 tokens) wins.
+    # In bech32's case each side captures 220 bits instead of 256 — a
+    # minor info reduction in the text channel, but the fingerprint still
+    # covers the full input and the token-count cap is what the rest of
+    # the spec assumes.
+    token_len = 24 // bits_per_char
+    chars_per_side = min(
+        math.ceil(_BITS_PER_SIDE / bits_per_char),
+        11 * token_len,
+    )
     head_tokens = tokenize(core[:chars_per_side], alphabet)
     tail_tokens = tokenize(core[-chars_per_side:], alphabet)
     combined = head_tokens + tail_tokens
