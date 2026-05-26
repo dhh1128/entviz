@@ -38,10 +38,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         import base64
         from .entropy import BASE64URL
         core = base64.urlsafe_b64encode(entropy_text.encode()).decode().rstrip('=')
-        # "text as base64url" surfaces in the per-entviz top label so the
-        # viewer knows the input wasn't directly tokenizable in any known
-        # alphabet and we re-encoded it as bytes.
-        type_name = "text as base64url"
+        # "txt->b64url" surfaces in the per-entviz top label so the
+        # viewer knows the input wasn't directly tokenizable in any
+        # known alphabet and we re-encoded it as bytes.
+        type_name = "txt->b64url"
         alphabet = BASE64URL  # fallback always produces urlsafe base64
         prefix = None
         suffix = None

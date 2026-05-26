@@ -132,14 +132,14 @@ def test_disproof_alphabet_label_uses_alphabet_name():
     assert top.text == "base32:"
 
 
-def test_utf8_fallback_label_says_text_as_base64url():
+def test_utf8_fallback_label_says_txt_to_b64url():
     """When the input has chars no alphabet can encode (e.g. a space),
-    the UTF-8 → base64url re-encode path activates. Label says
-    'text as base64url:'."""
+    the UTF-8 → base64url re-encode path activates. Label is shortened
+    to 'txt->b64url:' so it fits on narrow grids."""
     svg = _doc(render("hello world"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "text as base64url:"
+    assert top.text == "txt->b64url:"
 
 
 def test_canvas_height_grows_with_top_label_only():
