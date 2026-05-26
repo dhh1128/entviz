@@ -284,10 +284,10 @@ Entviz = goal:
 
     V3 Migration = goal:
       id: v3m1grat
-      status: in-progress
+      status: complete
       why: >
-        Move the implementation from spec v2 (docs/index.md) to spec v3
-        (docs/index_v3_draft.md, to become docs/index.md when promoted).
+        Move the implementation from spec v2 (now archived at
+        docs/v2/index.md) to spec v3 (canonical at docs/index.md).
         v3 refines the gestalt channels (color bar skew, frame, SCS
         styling, ellipse overlay rework, hex font fitting) and replaces
         the v2 procedural edge shapes with new path-based cubist and

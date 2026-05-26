@@ -410,7 +410,8 @@ design uses both transform and clip-path on the overlay).
 
 ## Deferred items (next v3 polish pass)
 
-Items raised in a third-party review of `docs/index_v3_draft.md` that
+Items raised in a third-party review of the v3 spec draft (now
+canonical at `docs/index.md`) that
 were judged real but not urgent. Address in a future polish pass.
 
 ### D1. Full parser spec for input normalization
