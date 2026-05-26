@@ -414,13 +414,65 @@ parse_funcs.append(parse_hex)
 def parse(entropy: str) -> Parsed:
     """
     See if the entropy can be parsed as a known type. If yes,
-    return a Parsed tuple. If no, return None.
+    return a Parsed tuple. If no, attempt disproof-based alphabet
+    detection over the input as a whole. If still no match, return None
+    (the caller falls back to UTF-8 re-encoding as base64url).
     """
     entropy = entropy.strip()
     for func in parse_funcs:
         answer = func(entropy)
         if answer:
-            return answer    
+            return answer
+    # No specific parser recognized the input. Try disproof-based
+    # alphabet detection: if every char of the input belongs to some
+    # known alphabet's character set, treat the input as that alphabet
+    # directly instead of round-tripping through UTF-8 → base64url.
+    detected = detect_alphabet_by_disproof(entropy)
+    if detected is not None:
+        # Normalize case for case-insensitive alphabets so the
+        # tokenizer's per-char lookup is consistent.
+        core = entropy.lower() if detected in (BECH32,) else entropy
+        return Parsed("auto-detected", detected, None, core, None)
+
+
+# Disproof order: most restrictive (smallest character set) first. The
+# tuples are (alphabet, valid-char-set-string). Case-insensitive
+# matching is applied uniformly — input "abc" and "ABC" both match
+# HEX, BASE32, etc.
+_DISPROOF_ORDER = None  # populated after all alphabets are declared
+
+
+def detect_alphabet_by_disproof(text: str):
+    """
+    Return the most-restrictive Alphabet whose character set contains
+    every character of `text`, or None if no alphabet does. Empty input
+    returns None.
+    """
+    if not text:
+        return None
+    global _DISPROOF_ORDER
+    if _DISPROOF_ORDER is None:
+        # Build (alphabet, char_set) tuples. Char sets are case-
+        # insensitive (we test the lower form against the lowered text)
+        # because every alphabet here can be written in either case.
+        _DISPROOF_ORDER = [
+            (HEX,       set(HEX_ALPHABET.lower())),
+            (BASE32,    set(BASE32_ALPHABET.lower())),
+            (BECH32,    set(BECH32_ALPHABET.lower())),
+            (BASE58,    set(BASE58_ALPHABET)),  # base58 is case-sensitive
+            (BASE64,    set(BASE64_ALPHABET)),  # base64 is case-sensitive
+            (BASE64URL, set(BASE64URL_ALPHABET)),
+        ]
+    # For each alphabet in order, check whether every input char fits.
+    # Use case-sensitive comparison for base58/base64/base64url (which
+    # really are case-sensitive); for hex/base32/bech32 use lowered.
+    text_cs = text                  # case-sensitive view
+    text_ci = text.lower()          # case-insensitive view (lowered)
+    for alphabet, char_set in _DISPROOF_ORDER:
+        view = text_cs if alphabet in (BASE58, BASE64, BASE64URL) else text_ci
+        if all(c in char_set for c in view):
+            return alphabet
+    return None
 
 import math
 

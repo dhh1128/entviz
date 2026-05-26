@@ -511,6 +511,42 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Alphabet Detection by Disproof = decision:
+          id: v4d1sprf
+          why: >
+            For inputs that don't match any specific-format parser
+            (UUID, Ethereum, Bitcoin*, IPFS CID*, Stellar, etc.), the
+            v3 fallback always re-encoded the input as UTF-8 bytes →
+            base64url. This loses information: an input like
+            "ABCDEFGHIJKLMNOP" (entirely uppercase letters, no spaces
+            or punctuation) is a perfectly valid base32 string but
+            gets round-tripped through bytes anyway, producing a
+            different fingerprint than treating it directly as
+            base32 would.
+
+            v4 adds detect_alphabet_by_disproof(): walks the known
+            alphabets from most-restrictive to least
+              hex → base32 → bech32 → base58 → base64 → base64url
+            and returns the first whose character set contains every
+            char of the input. hex/base32/bech32 are tested
+            case-insensitively (they have canonical case but accept
+            either); base58/base64/base64url are case-sensitive
+            (their alphabets explicitly treat upper and lower as
+            distinct characters).
+
+            parse() now invokes the disproof detector when no
+            specific parser matched, and returns a synthetic
+            Parsed(type="auto-detected") with the detected alphabet
+            if disproof succeeds. The UTF-8 → base64url re-encode
+            remains as the final fallback for inputs that don't fit
+            any alphabet at all (e.g. contain spaces or punctuation).
+
+            The disproof order is intentionally most-restrictive-
+            first so that ambiguous inputs (e.g., "DEADBEEF" — valid
+            in all alphabets) are treated as their most-specific
+            possibility. This matches the principle that we "can't
+            prove a positive but can disprove" each alternative.
+
         Base32 Alphabet = decision:
           id: v4base32
           why: >
