@@ -173,4 +173,4 @@ def test_small_input_has_no_extra_separator():
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 16
     ]
-    assert len(nuclei) == 8  # UUID → 8 tokens via base64 path
+    assert len(nuclei) == 6  # UUID → 6 tokens via hex path (post-refactor)

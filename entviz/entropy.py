@@ -2,12 +2,48 @@ import collections
 import re
 import hashlib
 
-Parsed = collections.namedtuple('Parsed', ['type', 'prefix', 'core', 'suffix'])
+
+# Alphabet metadata. Each parser declares the alphabet of the `core` it
+# produces; the tokenizer reads `Parsed.alphabet` directly and dispatches
+# without re-guessing from the type name. (See spec-improvement-notes.md
+# discussion in the v3 errata commit; the v1/v2 substring guess broke for
+# UUID and Ethereum, which carry hex content but non-"hex" type names.)
+class Alphabet:
+    __slots__ = ('name', 'chars', 'bits_per_char')
+
+    def __init__(self, name, chars, bits_per_char):
+        self.name = name
+        self.chars = chars
+        self.bits_per_char = bits_per_char
+
+    def __repr__(self):
+        return f"Alphabet({self.name!r})"
+
+    def __eq__(self, other):
+        return isinstance(other, Alphabet) and self.name == other.name
+
+    def __hash__(self):
+        return hash(self.name)
+
 
 BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
 BASE32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 BASE32_ALPHABET_EITHER_CASE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
 BASE58_CHECK_LENGTH = 25  # Expected length of Base58Check encoded Bitcoin addresses
+BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+HEX_ALPHABET = "0123456789ABCDEF"
+
+# Named alphabet singletons. base32/bech32 are deferred — types whose
+# core uses one of those encodings currently declare `BASE64` (the
+# pre-refactor accidental behavior). A later commit will introduce
+# proper `BASE32`/`BECH32` alphabets with bits_per_char=5.
+HEX       = Alphabet("hex",       HEX_ALPHABET,        4)
+BASE58    = Alphabet("base58",    BASE58_ALPHABET,     6)  # ~5.86 bits true; treated as 6 for token alignment
+BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)
+# BASE64URL is declared after BASE64URL_ALPHABET below.
+
+
+Parsed = collections.namedtuple('Parsed', ['type', 'alphabet', 'prefix', 'core', 'suffix'])
 
 UUID_REGEX = re.compile(r'^\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$', re.I)
 DID_REGEX = re.compile(r'^(did:[a-z0-9]+:)((?:[a-zA-Z0-9_.-]|%[a-fA-F0-9]{2})+)((/[^?]*)?([?].*)?)$')
@@ -29,6 +65,7 @@ SSH_KEY_REGEX = re.compile(r'(AAAA)([0-9A-Za-z+/]+={0,3})')
 HEX_REGEX = re.compile(r'^[a-fA-F0-9]+$')
 BASE64URL_NO_PAD_REGEX = re.compile(r'^[A-Za-z0-9-_]+$') # used by CESR
 BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
+BASE64URL = Alphabet("base64url", BASE64URL_ALPHABET, 6)
 
 MULTIHASH_HASH_FUNCS = {
     0x11: "sha1",
@@ -91,7 +128,7 @@ def _parse_multihash(text):
         if hash_func:
             hash_length = int(text[1])
             if len(text) == hash_length + 2:
-                return Parsed(f"multihash {hash_func}", text[0:2], text[2:], None)
+                return Parsed(f"multihash {hash_func}", BASE64, text[0:2], text[2:], None)
 
 def parse_hex_multihash(text) -> Parsed:
     """
@@ -103,7 +140,7 @@ def parse_hex_multihash(text) -> Parsed:
         if m: 
             answer = _parse_multihash(bytes.fromhex(text))
             if answer:
-                return Parsed(f"hex {answer.type}", bytes.hex(answer.prefix).lower(), bytes.hex(answer.core).lower(), None)
+                return Parsed(f"hex {answer.type}", HEX, bytes.hex(answer.prefix).lower(), bytes.hex(answer.core).lower(), None)
             
 CESR_1_BYTE_CODES = [
     ("A", "Ed25519 seed", 44),
@@ -172,7 +209,7 @@ def parse_cesr(text) -> Parsed:
             for item in items:
                 if text.startswith(item[0]) and len_text == item[2]:
                     if BASE64URL_NO_PAD_REGEX.match(text):
-                        return Parsed(f"CESR {item[1]}", item[0], text[len(item[0]):], None)
+                        return Parsed(f"CESR {item[1]}", BASE64URL, item[0], text[len(item[0]):], None)
 
 def parse_ssh_key(text) -> Parsed:
     """
@@ -181,7 +218,7 @@ def parse_ssh_key(text) -> Parsed:
     """
     m = SSH_KEY_REGEX.match(text)
     if m:
-        return Parsed(f"SSH key", m.group(1), m.group(2), None)
+        return Parsed(f"SSH key", BASE64, m.group(1), m.group(2), None)
 
 def parse_bitcoin_address(text) -> Parsed:
     """
@@ -190,10 +227,13 @@ def parse_bitcoin_address(text) -> Parsed:
     """
     m = BITCOIN_LEGACY_REGEX.match(text)
     if m:
-        return Parsed("Bitcoin legacy", m.group(1), m.group(2), m.group(3))
+        return Parsed("Bitcoin legacy", BASE58, m.group(1), m.group(2), m.group(3))
     m = BITCOIN_SEGWIT_REGEX.match(text)
     if m:
-        return Parsed("Bitcoin SegWit", m.group(1).lower(), m.group(2).lower(), None)
+        # Bitcoin SegWit uses bech32 — alphabet declared as BASE64 for
+        # now (bits_per_char=6); proper BECH32 alphabet (bits_per_char=5)
+        # is a deferred follow-up.
+        return Parsed("Bitcoin SegWit", BASE64, m.group(1).lower(), m.group(2).lower(), None)
 
 def parse_ripple_address(text) -> Parsed:
     """
@@ -202,7 +242,7 @@ def parse_ripple_address(text) -> Parsed:
     """
     m = RIPPLE_REGEX.match(text)
     if m:
-        return Parsed("Ripple", m.group(1), m.group(2), None)
+        return Parsed("Ripple", BASE58, m.group(1), m.group(2), None)
 
 def to_EIP55_address(address: str) -> str:
     # Remove the '0x' prefix if present
@@ -229,7 +269,7 @@ def parse_ethereum_address(text) -> Parsed:
     m = ETHEREUM_REGEX.match(text)
     if m:
         eip55_format = to_EIP55_address(m.group(2) + m.group(3))
-        return Parsed("Ethereum", "0x", eip55_format[2:-8], eip55_format[-8:])
+        return Parsed("Ethereum", HEX, "0x", eip55_format[2:-8], eip55_format[-8:])
 
 def parse_litecoin_address(text) -> Parsed:
     """
@@ -238,10 +278,12 @@ def parse_litecoin_address(text) -> Parsed:
     """
     m = LITECOIN_LEGACY_REGEX.match(text)
     if m:
-        return Parsed("Litecoin legacy", m.group(1), m.group(2), None)
+        return Parsed("Litecoin legacy", BASE58, m.group(1), m.group(2), None)
     m = LITECOIN_REGEX.match(text)
     if m:
-        return Parsed("Litecoin", m.group(1), m.group(2), None)
+        # Modern Litecoin "ltc..." is bech32 — declared BASE64 for now;
+        # BECH32 is deferred.
+        return Parsed("Litecoin", BASE64, m.group(1), m.group(2), None)
 
 def parse_bitcoin_cash_address(text) -> Parsed:
     """
@@ -250,7 +292,9 @@ def parse_bitcoin_cash_address(text) -> Parsed:
     """
     m = BITCOIN_CASH_REGEX.match(text)
     if m:
-        return Parsed("Bitcoin Cash", m.group(1), m.group(2), None)
+        # Bitcoin Cash uses CashAddr (base32 variant). Declared BASE64
+        # for now; BASE32 alphabet (bits_per_char=5) is deferred.
+        return Parsed("Bitcoin Cash", BASE64, m.group(1), m.group(2), None)
 
 def parse_cardano_address(text) -> Parsed:
     """
@@ -259,13 +303,14 @@ def parse_cardano_address(text) -> Parsed:
     """
     m = CARDANO_SHORT_BYRON_REGEX.match(text)
     if m:
-        return Parsed("Cardano Byron", m.group(1), m.group(2), m.group(3))
+        return Parsed("Cardano Byron", BASE58, m.group(1), m.group(2), m.group(3))
     m = CARDANO_LONG_BYRON_REGEX.match(text)
     if m:
-        return Parsed("Cardano Byron", m.group(1), m.group(2), m.group(3))
+        return Parsed("Cardano Byron", BASE58, m.group(1), m.group(2), m.group(3))
     m = CARDANO_SHELLEY_REGEX.match(text)
     if m:
-        return Parsed("Cardano Shelley", m.group(1), m.group(2).lower(), m.group(3).lower())
+        # Cardano Shelley uses bech32. Declared BASE64 for now; BECH32 deferred.
+        return Parsed("Cardano Shelley", BASE64, m.group(1), m.group(2).lower(), m.group(3).lower())
 
 def parse_eos_address(text) -> Parsed:
     """
@@ -274,7 +319,10 @@ def parse_eos_address(text) -> Parsed:
     """
     m = EOS_REGEX.match(text)
     if m:
-        return Parsed("EOS", None, m.group(0), None)
+        # EOS uses a constrained alphabet [a-z1-5.] (32 chars + dot, ~5 bits).
+        # Treated as BASE64 alphabet for tokenization for now; a proper
+        # narrow-alphabet treatment is a deferred follow-up.
+        return Parsed("EOS", BASE64, None, m.group(0), None)
 
 def parse_stellar_address(text) -> Parsed:
     """
@@ -283,7 +331,8 @@ def parse_stellar_address(text) -> Parsed:
     """
     m = STELLAR_REGEX.match(text)
     if m:
-        return Parsed("Stellar", m.group(1).upper(), m.group(2).upper(), None)
+        # Stellar uses base32. Declared BASE64 for now; BASE32 deferred.
+        return Parsed("Stellar", BASE64, m.group(1).upper(), m.group(2).upper(), None)
     
 def parse_uuid(text) -> Parsed:
     """
@@ -293,7 +342,10 @@ def parse_uuid(text) -> Parsed:
     m = UUID_REGEX.match(text)
     if m:
         body = m.group(0).lower().replace('-', '').replace('{', '').replace('}', '')
-        return Parsed("UUID", None, body, None)
+        # A UUID's normalized core is 32 hex characters. Declare HEX so
+        # the tokenizer reads each char as 4 bits with the correct
+        # alphabet, not as a base64-position lookup.
+        return Parsed("UUID", HEX, None, body, None)
 
 def parse_did(text) -> Parsed:
     """
@@ -302,7 +354,9 @@ def parse_did(text) -> Parsed:
     """
     m = DID_REGEX.match(text)
     if m:
-        return Parsed("DID", m.group(1), m.group(2), m.group(3))
+        # DID method-specific identifiers vary by method; base64url is
+        # the common case (e.g., did:key). Generic fallback.
+        return Parsed("DID", BASE64URL, m.group(1), m.group(2), m.group(3))
     
 def parse_ipfs_cid(text) -> Parsed:
     """
@@ -311,10 +365,11 @@ def parse_ipfs_cid(text) -> Parsed:
     """
     m = IPFS_CIDV0_REGEX.match(text)
     if m:
-        return Parsed("IPFS CID v0", m.group(1), m.group(2), None)
+        return Parsed("IPFS CID v0", BASE58, m.group(1), m.group(2), None)
     m = IPFS_CIDV1_REGEX.match(text)
     if m:
-        return Parsed(f"IPFS CID v1 256", m.group(1), m.group(2).lower(), None)
+        # IPFS CID v1 uses base32. Declared BASE64 for now; BASE32 deferred.
+        return Parsed(f"IPFS CID v1 256", BASE64, m.group(1), m.group(2).lower(), None)
     
 # Register all the functions that do parsing (with one exception below).
 def register_parse_funcs():
@@ -340,7 +395,7 @@ def parse_hex(text) -> Parsed:
         elif len(text) % 2 != 0: return 
         m = HEX_REGEX.match(text)
         if m:
-            return Parsed("hex", prefix, text.upper(), None)
+            return Parsed("hex", HEX, prefix, text.upper(), None)
 
 # We put parse_hex at the end so it won't be attempted until after
 # we try many other parsers -- especially the Ethereum one, which
@@ -365,26 +420,33 @@ Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
 
 BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
-def tokenize(text: str, type_name: str, token_len: int = None) -> list[Token]:
+def tokenize(text: str, alphabet, token_len: int = None) -> list[Token]:
     """
     Split the string into tokens and assign a 24-bit quant to each.
+
+    `alphabet` is an `Alphabet` instance (HEX, BASE58, BASE64, BASE64URL).
+    For backwards compatibility a legacy string type name (e.g., "hex",
+    "base64", "base58") is accepted and translated to the corresponding
+    Alphabet, but new callers should pass the Alphabet directly. (See
+    the v3 errata commit for why the substring-guess approach was wrong.)
     """
-    if token_len is None:
+    # Accept a legacy string type for backwards compat.
+    if isinstance(alphabet, str):
+        type_name = alphabet
         if "hex" in type_name.lower():
-            token_len = 6
-            bits_per_char = 4
-            alphabet = "0123456789ABCDEF"
+            alphabet = HEX
+        elif "58" in type_name.lower():
+            alphabet = BASE58
         else:
-            token_len = 4
-            bits_per_char = 6
-            if "58" in type_name:
-                alphabet = BASE58_ALPHABET
-            else:
-                alphabet = BASE64_ALPHABET
-    else:
-        # Fallback/Custom
-        bits_per_char = 4 if "hex" in type_name.lower() else 6
-        alphabet = "0123456789ABCDEF" if "hex" in type_name.lower() else BASE64_ALPHABET
+            alphabet = BASE64
+    bits_per_char = alphabet.bits_per_char
+    alphabet_chars = alphabet.chars
+    if token_len is None:
+        # Pick token_len so each full token represents 24 bits when
+        # possible. bits_per_char=4 (hex) → 6 chars; bits_per_char=6
+        # (base58/64/url) → 4 chars. bits_per_char=5 (base32/bech32,
+        # deferred) would be 5 chars (25 bits truncated).
+        token_len = 24 // bits_per_char if 24 % bits_per_char == 0 else 5
 
     tokens = []
     for i in range(0, len(text), token_len):
@@ -395,16 +457,19 @@ def tokenize(text: str, type_name: str, token_len: int = None) -> list[Token]:
         val = 0
         actual_bits = 0
         for char in chunk:
-            char_val = alphabet.find(char)
+            char_val = alphabet_chars.find(char)
             if char_val == -1: # Try lower case for hex
-                char_val = alphabet.lower().find(char.lower())
+                char_val = alphabet_chars.lower().find(char.lower())
             if char_val == -1 and bits_per_char == 6:
-                # Accept base64url chars ('-'=62, '_'=63) in addition to the
-                # standard base64 ('+'=62, '/'=63) that BASE64_ALPHABET carries.
-                # The pipeline base64-encodes unrecognized inputs with the
-                # urlsafe variant, and fingerprints are always base64url.
+                # Cross-alphabet compat: when the configured alphabet is
+                # standard base64 (with '+', '/') but the input came from
+                # a base64url source (with '-', '_'), or vice versa,
+                # accept either pair at indices 62/63 so partial-ftok
+                # bit extension is consistent across either spelling.
                 if char == '-': char_val = 62
                 elif char == '_': char_val = 63
+                elif char == '+': char_val = 62
+                elif char == '/': char_val = 63
             if char_val == -1: char_val = 0
             
             val = (val << bits_per_char) | char_val
@@ -433,9 +498,12 @@ _MAX_TOKENS = 22
 _BITS_PER_SIDE = 256
 
 
-def tokenize_entropy(core: str, type_name: str) -> tuple[list[Token], bool]:
+def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
     """
-    Tokenize entropy with v2 large-input handling.
+    Tokenize entropy with v3 large-input handling.
+
+    `alphabet` is an `Alphabet` instance; legacy string type names are
+    accepted via the same compatibility shim used by `tokenize()`.
 
     For inputs whose tokenization would yield more than 22 tokens, take
     only the first 256 bits and the last 256 bits of the normalized core,
@@ -446,13 +514,21 @@ def tokenize_entropy(core: str, type_name: str) -> tuple[list[Token], bool]:
     The fingerprint is computed separately over the full core, so a
     truncated middle still binds into every fingerprint-driven channel.
     """
-    bits_per_char = 4 if "hex" in type_name.lower() else 6
-    all_tokens = tokenize(core, type_name)
+    if isinstance(alphabet, str):
+        type_name = alphabet
+        if "hex" in type_name.lower():
+            alphabet = HEX
+        elif "58" in type_name.lower():
+            alphabet = BASE58
+        else:
+            alphabet = BASE64
+    bits_per_char = alphabet.bits_per_char
+    all_tokens = tokenize(core, alphabet)
     if len(all_tokens) <= _MAX_TOKENS:
         return all_tokens, False
     chars_per_side = math.ceil(_BITS_PER_SIDE / bits_per_char)
-    head_tokens = tokenize(core[:chars_per_side], type_name)
-    tail_tokens = tokenize(core[-chars_per_side:], type_name)
+    head_tokens = tokenize(core[:chars_per_side], alphabet)
+    tail_tokens = tokenize(core[-chars_per_side:], alphabet)
     combined = head_tokens + tail_tokens
     renumbered = [Token(t.text, i, t.quant) for i, t in enumerate(combined)]
     return renumbered, True

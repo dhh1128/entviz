@@ -36,13 +36,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     parsed = parse(entropy_text.strip())
     if parsed is None:
         import base64
+        from .entropy import BASE64URL
         core = base64.urlsafe_b64encode(entropy_text.encode()).decode().rstrip('=')
         type_name = 'base64'
+        alphabet = BASE64URL  # fallback always produces urlsafe base64
     else:
         core = parsed.core
         type_name = parsed.type
+        alphabet = parsed.alphabet
 
-    tokens, is_truncated = tokenize_entropy(core, type_name)
+    tokens, is_truncated = tokenize_entropy(core, alphabet)
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
 
@@ -194,7 +197,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # text fits inside the 3×nucleus_height-wide nucleus.
     cell_text_pt = (
         round(font_size_pt * 0.75)
-        if "hex" in type_name.lower() else font_size_pt
+        if alphabet.name == "hex" else font_size_pt
     )
     cell_text_px = cell_text_pt * _DPI / 72
 

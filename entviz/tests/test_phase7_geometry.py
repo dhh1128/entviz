@@ -63,9 +63,10 @@ def test_grid_rect_offset_inside_bounding():
 
 
 def test_bounding_rect_scales_with_grid_size():
-    # UUID → 8 tokens → 2x4 grid → grid_w=128, grid_h=128.
+    # UUID → 6 tokens (hex tokenization post-alphabet refactor) →
+    # 2x3 grid → grid_w=128, grid_h=96.
     # width  = 1 + 8 + 1 + 4 + 128 + 4 + 1 = 147
-    # height = 1 + 4 + 128 + 4 + 16 + 4 + 1 = 158
+    # height = 1 + 4 + 96 + 4 + 16 + 4 + 1 = 126
     svg = _parse(render("550e8400-e29b-41d4-a716-446655440000"))
     assert float(svg.get("width")) == 147
-    assert float(svg.get("height")) == 158
+    assert float(svg.get("height")) == 126

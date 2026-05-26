@@ -51,11 +51,12 @@ def test_canvas_size_matches_v3_bounding_rect_formula():
 
 
 def test_uuid_canvas_size_matches_v3_formula():
-    # UUID → 8 tokens → 2x4 grid → grid_w=128, grid_h=128.
-    # bounding_w = 147; bounding_h = 1 + 4 + 128 + 4 + 16 + 4 + 1 = 158
+    # UUID → 6 tokens (hex tokenization post-alphabet refactor) →
+    # 2x3 grid → grid_w=128, grid_h=96.
+    # bounding_w = 147; bounding_h = 1 + 4 + 96 + 4 + 16 + 4 + 1 = 126
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     assert float(svg.get("width")) == 147
-    assert float(svg.get("height")) == 158
+    assert float(svg.get("height")) == 126
 
 
 def test_black_border_on_all_four_sides():

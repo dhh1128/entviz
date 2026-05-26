@@ -56,14 +56,16 @@ def test_hex_input_cell_text_rendered_at_12px():
         assert p == 12, f"hex cell text rendered at {p}px; expected 12"
 
 
-def test_uuid_input_cell_text_rendered_at_16px():
-    # UUID type does not match "hex"; tokenization uses 4-char tokens
-    # → rendered at full reference = 16 px.
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+def test_non_hex_input_cell_text_rendered_at_16px():
+    # A non-hex input (Bitcoin address, base58) → 4-char tokens
+    # → cell text at full reference = 16 px.
+    # (UUID was the v2 example here but post-alphabet-refactor UUID is
+    # correctly typed as hex, so it now exercises the 12 px branch.)
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     pxs = _cell_text_pxs(svg)
     assert pxs
     for p in pxs:
-        assert p == 16, f"UUID cell text rendered at {p}px; expected 16"
+        assert p == 16, f"non-hex cell text rendered at {p}px; expected 16"
 
 
 def test_hex_scs_matches_cell_text_size():
@@ -78,10 +80,12 @@ def test_hex_scs_matches_cell_text_size():
     )
 
 
-def test_uuid_scs_smaller_than_cell_text():
+def test_non_hex_scs_smaller_than_cell_text():
     # For non-hex inputs: scs_pt = min(11, 12) = 11pt → 14.67 px;
-    # cell text is at full reference = 16 px.
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    # cell text is at full reference = 16 px. (See test_v3_scs_styling
+    # for the converse test on the SCS-only path.) Bitcoin address
+    # (base58) exercises this branch post-alphabet-refactor.
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     cell_px = _cell_text_pxs(svg)[0]
     scs = _scs_px(svg)
     assert cell_px == 16

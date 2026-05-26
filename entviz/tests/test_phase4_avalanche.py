@@ -26,12 +26,12 @@ UUID_B_CORE = "550e8400e29b41d4a716446655440001"
 
 
 def _uuid_token_count():
-    # UUID type goes through the base64 tokenization path (token_len=4),
-    # not hex, because "UUID" doesn't contain "hex" — so the 32-char core
-    # yields 8 tokens. Compute it here rather than hard-coding so tests
-    # stay correct if tokenization conventions change.
+    # After the alphabet refactor, UUID parses with alphabet=HEX, so
+    # the 32 hex chars tokenize as 6 hex tokens (5 full of 6 chars +
+    # 1 partial of 2 chars). Compute via the parsed alphabet rather
+    # than hard-coding so tests follow whatever rule is current.
     parsed = parse(UUID_A)
-    return len(tokenize(parsed.core, parsed.type))
+    return len(tokenize(parsed.core, parsed.alphabet))
 
 
 def test_red_color_is_ff3f2f_not_yellow():

@@ -22,7 +22,7 @@ import base64
 import hashlib
 from collections import namedtuple
 
-from .entropy import tokenize, get_median_token, get_quartile_tokens
+from .entropy import tokenize, get_median_token, get_quartile_tokens, BASE64URL
 
 Ftok = namedtuple('Ftok', ['text', 'index', 'quant'])
 
@@ -42,7 +42,7 @@ def tokenize_fingerprint(digest: bytes) -> list[Ftok]:
             f"fingerprint must be {_DIGEST_LEN} bytes, got {len(digest)}"
         )
     b64 = base64.urlsafe_b64encode(digest).decode('ascii').rstrip('=')
-    tokens = tokenize(b64, 'base64')
+    tokens = tokenize(b64, BASE64URL)
     assert len(tokens) == _EXPECTED_FTOK_COUNT, (
         f"expected {_EXPECTED_FTOK_COUNT} ftoks, got {len(tokens)}"
     )

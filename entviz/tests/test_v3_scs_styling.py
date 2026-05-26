@@ -28,7 +28,7 @@ def _scs_text(svg):
 
 
 def test_scs_fill_is_dark_gray_not_black():
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     scs = _scs_text(svg)
     fill = scs.get("fill") or ""
     assert fill in ("#444", "#444444"), f"SCS fill is {fill!r}; expected #444"
@@ -36,7 +36,7 @@ def test_scs_fill_is_dark_gray_not_black():
 
 def test_scs_font_size_at_90_percent_of_reference():
     # Default reference is 12pt → 11pt rendered → 14.67 px.
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     scs = _scs_text(svg)
     style = scs.get("style") or ""
     # Match a couple of acceptable text forms ("14.67", "14.666...", "14.6").
@@ -48,7 +48,7 @@ def test_scs_font_size_at_90_percent_of_reference():
 def test_scs_font_size_smaller_than_cell_text():
     # The cell text in v2/v3 (pre-V3-4) renders at nucleus_height = 16 px.
     # SCS should be visibly smaller, which is the whole point of 90%.
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     scs = _scs_text(svg)
     cell_text = next(
         t for t in svg.xpath('//*[local-name()="text"]')
@@ -69,7 +69,7 @@ def test_scs_font_size_smaller_than_cell_text():
 
 def test_scs_at_larger_reference_size_scales_proportionally():
     # 18pt reference → 0.9 × 18 = 16.2 → round to 16pt → 21.33 px.
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000", font_size_pt=18))
+    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", font_size_pt=18))
     scs = _scs_text(svg)
     style = scs.get("style") or ""
     # 21.33 — accept the typical rendered prefixes.
