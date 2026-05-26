@@ -511,6 +511,23 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        WCAG Contrast Crossover = decision:
+          id: v4wcagxr
+          why: >
+            v3 used the naive rule `relative_luminance(bg) < 0.5 →
+            white text, else black`. This mis-paired
+            medium-luminance backgrounds with white text — e.g.,
+            light beige #c3b2a1 (Y ≈ 0.47) was paired with white,
+            giving WCAG contrast 2.0:1 (fails AA) where black would
+            have given 10.4:1.
+
+            v4 uses the true black-vs-white crossover: the Y at
+            which contrast(white, Y) = contrast(Y, black). Solving
+              (1 + 0.05) / (Y + 0.05) = (Y + 0.05) / 0.05
+            gives Y = sqrt(0.0525) - 0.05 ≈ 0.1791. Below: pair
+            with white; above: pair with black. Every bg ends up
+            with its higher-contrast partner.
+
         Ethereum Detection & Full-Body Core = decision:
           id: v4eth4ddr
           why: >
