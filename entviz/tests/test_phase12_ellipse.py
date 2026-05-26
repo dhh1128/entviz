@@ -55,11 +55,14 @@ def test_ellipse_fill_is_black_or_white():
 
 
 def test_clip_path_defined():
+    # V3-5: the grid_rect clipPath ("grid-clip") is for the ellipse.
+    # V3-6b adds additional per-edge clipPaths ("v3clip-N") for vertical
+    # edges where canonical content extends outside the tab window.
+    # We verify the grid_rect clipPath is present and correctly sized.
     svg = _doc(render(LARGE_INPUT))
-    cps = svg.xpath('//*[local-name()="clipPath"]')
+    cps = svg.xpath('//*[local-name()="clipPath"][@id="grid-clip"]')
     assert len(cps) == 1
     rect = cps[0].xpath('./*[local-name()="rect"]')[0]
-    # V3-5: clipPath rect = grid_rect, smaller than the SVG canvas.
     assert float(rect.get("width")) < float(svg.get("width"))
     assert float(rect.get("height")) < float(svg.get("height"))
 

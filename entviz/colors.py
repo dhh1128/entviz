@@ -85,24 +85,20 @@ class EdgeShape:
 
 def _make_shape(name, letter):
     # Late-imported drawer keeps the colors↔cell_shapes import order clean.
+    # Used only by legacy v2 EdgeShape construction; v3 shape arrays
+    # (below) use V3EdgeShape directly with no procedural drawer.
     from .cell_shapes import SHAPE_DRAWERS
     return EdgeShape(name, letter, SHAPE_DRAWERS[name])
 
 
-# v2 shape arrays. Positions and array assignments unchanged from v1;
-# names and letters per spec.
-SHAPE_ARRAY_0 = [
-    _make_shape('fin',   'F'),
-    _make_shape('axe',   'A'),
-    _make_shape('brick', 'B'),
-    _make_shape('inf',   'I'),
-]
-SHAPE_ARRAY_1 = [
-    _make_shape('wave',  'W'),
-    _make_shape('hole',  'H'),
-    _make_shape('keel',  'K'),
-    _make_shape('mound', 'M'),
-]
+# v3 shape arrays: the cubist and polygon sets. SHAPE_ARRAY_0 and
+# SHAPE_ARRAY_1 retain their names for spec compatibility (array 0 is
+# the "binary selector = 0" array), but their contents are now v3
+# V3EdgeShape instances rather than v2 EdgeShape instances. Slot 4 of
+# each array is the empty member.
+from .v3_shapes import CUBIST_SHAPES, POLYGON_SHAPES
+SHAPE_ARRAY_0 = CUBIST_SHAPES
+SHAPE_ARRAY_1 = POLYGON_SHAPES
 
 def select_visual_style(median_token, second_quartile_token) -> VisualStyle:
     """

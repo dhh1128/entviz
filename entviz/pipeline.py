@@ -423,12 +423,19 @@ def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height,
     shrinking; pre-V3-4 the min is a no-op because cell_text_pt ==
     reference_pt.
     """
-    used = [(s, n) for s, n in shape_usage.items() if n > 0]
+    # V3 SCS: format is `X##` where X is the shape's 1-digit slot index
+    # (1, 2, 3) and ## is the zero-padded 2-digit count. Empty shapes
+    # (slot 4) are tallied but NOT displayed — their count is derivable
+    # as 6 × non_blank_cells − sum(displayed counts).
+    used = [
+        (s, n) for s, n in shape_usage.items()
+        if n > 0 and not getattr(s, 'is_empty', False)
+    ]
     if not used:
         return
-    # Sort descending by count, tiebreak alphabetical by shape letter.
-    used.sort(key=lambda x: (-x[1], x[0].letter))
-    tokens = [f"{s.letter}{n:02d}" for s, n in used]
+    # Sort descending by count, tiebreak by slot number.
+    used.sort(key=lambda x: (-x[1], x[0].slot))
+    tokens = [f"{s.slot}{n:02d}" for s, n in used]
     text = " ".join(tokens)
     # Top of the SCS line is grid_rect.bottom + GM; vertical center for
     # dominant-baseline=central is half of nucleus_height down from that.

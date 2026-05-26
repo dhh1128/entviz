@@ -64,8 +64,11 @@ class Renderer:
 
         Last-column XOR adjustment keys off cell_index, not token.index.
         """
+        from .v3_render import draw_v3_shape
         edge_nums = [(ftok.quant >> (i * 4)) & 0x0F for i in range(6)]
         is_last_col = (cell_index % self.grid.cols) == self.grid.cols - 1
+        # Scale = edge_size / 8 (canonical h is 8). At 12pt: edge_size=8 → 1.
+        scale = cell.edge_height / 8
 
         for i in range(6):
             edge_num = edge_nums[i]
@@ -76,18 +79,25 @@ class Renderer:
             shape_idx = ((edge_num >> 2) & 0x03) ^ (self.shape_shift & 0x03)
             edge_shape = self.style.edge_shapes[shape_idx]
 
-            gradient_id = f"g{self._gradient_seq}"
-            self._gradient_seq += 1
-            self._add_gradient(defs, gradient_id, i, cell.edge_rect(i),
-                               nucleus_bg, edge_color)
-            # Wrap each edge shape in a <g> with a <title> so SVG renderers
-            # surface the shape's full name as a hover tooltip (Phase 11).
-            group = etree.SubElement(svg, 'g')
-            title = etree.SubElement(group, 'title')
-            title.text = edge_shape.name
-            edge_shape.draw(group, cell, i, f"url(#{gradient_id})")
-            self.color_usage[edge_color] = self.color_usage.get(edge_color, 0) + 1
+            # Always tally the shape (empties counted; SCS layer filters
+            # them out on display). Only tally the color and emit drawing
+            # for non-empty shapes.
             self.shape_usage[edge_shape] = self.shape_usage.get(edge_shape, 0) + 1
+            if not edge_shape.is_empty:
+                gradient_id = f"g{self._gradient_seq}"
+                self._gradient_seq += 1
+                self._add_gradient(defs, gradient_id, i, cell.edge_rect(i),
+                                   nucleus_bg, edge_color)
+                # Wrap each edge in a <g> with a <title> so SVG renderers
+                # surface the shape's name as a hover tooltip.
+                group = etree.SubElement(svg, 'g')
+                title = etree.SubElement(group, 'title')
+                title.text = edge_shape.name
+                draw_v3_shape(
+                    group, defs, edge_shape, cell, i,
+                    scale=scale, fill_url=f"url(#{gradient_id})",
+                )
+                self.color_usage[edge_color] = self.color_usage.get(edge_color, 0) + 1
 
             self.color_shift = (self.color_shift + 1) & 0xFF
             if not is_last_col:

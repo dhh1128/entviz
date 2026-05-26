@@ -33,14 +33,16 @@ def test_scs_text_element_present():
     assert _scs_text(svg) is not None, "no right-anchored SCS text element"
 
 
-def test_scs_format_is_tokens_of_letter_plus_2digit_count():
+def test_scs_format_is_tokens_of_digit_plus_2digit_count():
+    # V3 SCS: tokens are "X##" where X is the slot digit (1, 2, or 3)
+    # and ## is the zero-padded count. Slot 4 (empty) is omitted.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     scs = _scs_text(svg)
     assert scs is not None
     tokens = scs.text.split()
     for tok in tokens:
-        assert re.fullmatch(r"[FABIWHKM]\d{2}", tok), (
-            f"SCS token {tok!r} not in X## form"
+        assert re.fullmatch(r"[123]\d{2}", tok), (
+            f"SCS token {tok!r} not in v3 digit format"
         )
 
 
@@ -85,10 +87,12 @@ def test_scs_uses_v3_rendered_font_size():
 
 
 def test_shapes_carry_title_tooltips():
+    # V3-6b: tooltip text is now the v3 shape name (C1..C3, P1..P3).
+    # Empty members (C4/P4) don't render a tooltip because they don't
+    # render at all.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     titles = svg.xpath('//*[local-name()="title"]')
     assert len(titles) > 0, "no <title> tooltip elements found"
-    # Every title text should be one of the 8 v2 shape names.
-    valid = {"fin", "axe", "brick", "inf", "wave", "hole", "keel", "mound"}
+    valid = {"C1", "C2", "C3", "P1", "P2", "P3"}
     for t in titles:
         assert t.text in valid, f"unexpected tooltip text {t.text!r}"

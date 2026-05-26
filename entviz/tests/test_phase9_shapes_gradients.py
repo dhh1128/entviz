@@ -15,32 +15,33 @@ def _doc(svg_str):
     return etree.fromstring(svg_str.encode())
 
 
-def test_shape_names_are_v2():
+def test_shape_names_are_v3():
+    # V3-6b: SHAPE_ARRAY_0/1 now point at the cubist and polygon sets.
     names0 = [s.name for s in SHAPE_ARRAY_0]
     names1 = [s.name for s in SHAPE_ARRAY_1]
-    assert names0 == ['fin', 'axe', 'brick', 'inf']
-    assert names1 == ['wave', 'hole', 'keel', 'mound']
+    assert names0 == ['C1', 'C2', 'C3', 'C4']
+    assert names1 == ['P1', 'P2', 'P3', 'P4']
 
 
-def test_v1_shape_names_are_gone():
+def test_v1_v2_shape_names_are_gone():
     names0 = [s.name for s in SHAPE_ARRAY_0]
     names1 = [s.name for s in SHAPE_ARRAY_1]
-    for old in ['triangle', 'hook', 'rect', 'box', 'slant', 'hammer', 'pyramid', 'double bars']:
+    for old in ['triangle', 'hook', 'rect', 'box', 'slant', 'hammer', 'pyramid',
+                'double bars', 'fin', 'axe', 'brick', 'inf', 'wave', 'hole',
+                'keel', 'mound']:
         assert old not in names0 + names1
 
 
-def test_shape_letters_unique_and_distinct():
-    letters = [s.letter for s in SHAPE_ARRAY_0 + SHAPE_ARRAY_1]
-    assert letters == ['F', 'A', 'B', 'I', 'W', 'H', 'K', 'M']
-    assert len(set(letters)) == 8
-
-
-def test_each_edgeshape_has_drawer():
+def test_each_v3_edgeshape_has_slot():
+    # V3 shapes are identified by slot (1-4) rather than letter; slot 4
+    # is the empty member.
     for s in SHAPE_ARRAY_0 + SHAPE_ARRAY_1:
-        assert callable(s.draw)
+        assert s.slot in (1, 2, 3, 4)
 
 
-def test_shape_drawers_registry_has_v2_keys():
+def test_v2_procedural_drawer_registry_still_exists():
+    # The v2 SHAPE_DRAWERS dict is dead code post-V3-6b but kept in
+    # cell_shapes.py for now. V3-6/V3-7 cleanup may remove it.
     expected = {'fin', 'axe', 'brick', 'inf', 'wave', 'hole', 'keel', 'mound'}
     assert set(SHAPE_DRAWERS.keys()) == expected
 
@@ -64,14 +65,13 @@ def test_gradient_stops_carry_two_colors():
 
 
 def test_edge_shape_fill_references_gradient():
-    # At least one rect or polygon in the rendered SVG should have a fill
-    # of the form url(#...) — i.e., a gradient reference.
+    # V3-6b: edges render as <path> elements (not <rect>/<polygon>).
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    all_shapes = svg.xpath('//*[local-name()="rect" or local-name()="polygon"]')
+    all_shapes = svg.xpath('//*[local-name()="path"]')
     has_gradient_fill = any(
         (el.get("fill") or "").startswith("url(#") for el in all_shapes
     )
-    assert has_gradient_fill, "no shape uses a gradient fill"
+    assert has_gradient_fill, "no edge path uses a gradient fill"
 
 
 def test_edgeshape_class_basics():
