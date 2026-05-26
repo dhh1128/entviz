@@ -211,9 +211,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     # Layer 5b: shape count summary right-justified to grid_rect's right
-    # edge, on the nucleus-height line below the grid.
+    # edge, on the nucleus-height line below the grid. V3-3a: rendered
+    # at min(round(0.9 × reference), cell_text_pt) with #444 fill.
+    # cell_text_pt == reference_pt pre-V3-4; V3-4 will introduce per-token
+    # shrinking, at which point the call site passes the per-token value.
     _draw_shape_count_summary(
-        svg, grid_rect, gm, nucleus_height, renderer.shape_usage,
+        svg, grid_rect, gm, nucleus_height,
+        reference_pt=font_size_pt,
+        cell_text_pt=font_size_pt,
+        dpi=_DPI,
+        shape_usage=renderer.shape_usage,
     )
 
     # Black border lines on all four sides of the bounding rect, plus an
@@ -330,7 +337,15 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     )
 
 
-def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height, shape_usage):
+def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height,
+                              reference_pt, cell_text_pt, dpi, shape_usage):
+    """
+    V3-3a: SCS rendered font size = min(round(0.9 × reference_pt),
+    cell_text_pt). Fill = #444. The min keeps the SCS from rendering
+    larger than the cell text once V3-4 introduces per-token cell-text
+    shrinking; pre-V3-4 the min is a no-op because cell_text_pt ==
+    reference_pt.
+    """
     used = [(s, n) for s, n in shape_usage.items() if n > 0]
     if not used:
         return
@@ -341,12 +356,15 @@ def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height, shape_usage):
     # Top of the SCS line is grid_rect.bottom + GM; vertical center for
     # dominant-baseline=central is half of nucleus_height down from that.
     y = grid_rect.bottom + gm + nucleus_height / 2
+    # Compute rendered SCS font size in points, then convert to pixels.
+    scs_pt = min(round(0.9 * reference_pt), cell_text_pt)
+    scs_px = scs_pt * dpi / 72
     el = etree.SubElement(
         svg, 'text',
         x=str(grid_rect.right),
         y=str(y),
-        fill='#000000',
-        style=f"font-family: monospace; font-size: {nucleus_height}px;",
+        fill='#444444',
+        style=f"font-family: monospace; font-size: {scs_px}px;",
         **{"text-anchor": "end", "dominant-baseline": "central"},
     )
     el.text = text

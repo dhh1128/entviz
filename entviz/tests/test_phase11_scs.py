@@ -74,12 +74,14 @@ def test_scs_right_justified_to_grid_right_edge():
     assert float(scs.get("x")) == 142
 
 
-def test_scs_uses_cell_text_font_size():
-    # Cell text font-size is nucleus_height = 16 at 12pt/96.
+def test_scs_uses_v3_rendered_font_size():
+    # V3-3a: SCS rendered font size = round(0.9 × reference_pt) = 11pt
+    # at 12pt reference → 14.67 px (was 16 px in v2; the cell text stays
+    # at 16 px until V3-4 makes per-token shrinking happen).
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     scs = _scs_text(svg)
     style = scs.get("style") or ""
-    assert "font-size: 16" in style
+    assert "font-size: 14.6" in style or "font-size: 14.7" in style
 
 
 def test_shapes_carry_title_tooltips():
