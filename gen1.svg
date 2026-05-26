@@ -1,0 +1,762 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="862" height="358" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <path id="fin" d="M 0,8 H 8 A 8,8 0 0 0 0,0 Z"/>
+  <path id="fng" d="M 8,0 H 24 C 21,1 17,3 16,6 C 10,5 9,2 8,0 Z"/>
+  <rect id="brk" width="24" height="8" rx="2"/>
+  <rect id="brkv" width="8" height="16" rx="2"/>
+  <path id="inf" d="M 8,0 C 6,0 4,2 4,4 S 6,8 8,8 S 14,0 16,0 S 20,2 20,4 S 18,8 16,8 S 10,0 8,0 Z"/>
+  <path id="wav" d="M 8,8 H 24 C 22,8 22,2 20,2 S 18,6 16,6 S 14,4 12,4 S 10,8 8,8 Z"/>
+  <path id="kel" d="M 12,0 C 8,0 6,2 5,4 C 5,7 4,8 0,8 V 0 Z"/>
+  <path id="mnd" d="M 4,8 H 20 A 8,8 0 0 0 4,8 Z"/>
+</defs>
+<rect width="862" height="358" fill="white"/>
+<text x="431.0" y="36" font-family="sans-serif" font-size="12" text-anchor="middle" fill="#666">array 0: fin / fang / brick / inf</text>
+<g transform="translate(20 42)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#brkv" x="56" y="8" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(230 42)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#brkv" x="56" y="8" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(440 42)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#brkv" x="56" y="8" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(0 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#brkv" x="56" y="8" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(650 42)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(56 8) translate(0 0) rotate(90 4 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fng" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#brkv" x="56" y="8" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brkv" x="0" y="8" fill="#ddd"/>
+</g>
+<g transform="translate(0 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#brk" transform="translate(8 0)" fill="#ddd"/>
+<use href="#inf" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#brk" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#inf" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#fin" transform="translate(8 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 0)" fill="#ddd"/>
+<use href="#fng" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#fng" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#inf" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#fin" transform="translate(0 8) translate(0 8) rotate(-90 4 4)" fill="#ddd"/>
+</g>
+</g>
+<text x="431.0" y="204" font-family="sans-serif" font-size="12" text-anchor="middle" fill="#666">array 1: wave / hole / keel / mound</text>
+<g transform="translate(20 210)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(230 210)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(440 210)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(56 8) translate(-2 2) rotate(90 6 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+</g>
+<g transform="translate(650 210)">
+<g transform="translate(0 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#wav" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 0)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 32)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(64 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(0 8) translate(-12 4) rotate(-90 16 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 64)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#mnd" transform="translate(8 0)" fill="#ddd"/>
+<use href="#kel" transform="translate(32 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(56 8) translate(-12 4) rotate(90 16 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(0 8) translate(-2 6) rotate(-90 6 4)" fill="#ddd"/>
+</g>
+<g transform="translate(0 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+</g>
+<g transform="translate(128 96)">
+<rect x="8" y="8" width="48" height="16" fill="#ccc"/>
+<use href="#kel" transform="translate(8 0)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 0)" fill="#ddd"/>
+<use href="#mnd" transform="translate(56 8) translate(-8 4) rotate(90 12 4)" fill="#ddd"/>
+<use href="#wav" transform="translate(32 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#kel" transform="translate(8 24) rotate(180 12 4)" fill="#ddd"/>
+<use href="#mnd" transform="translate(0 8) translate(-8 4) rotate(-90 12 4)" fill="#ddd"/>
+</g>
+</g>
+</svg>
