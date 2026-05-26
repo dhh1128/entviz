@@ -23,6 +23,35 @@ _CANONICAL_W = 24
 _CANONICAL_H = 8
 
 
+def add_v3_shape_defs(defs):
+    """
+    Emit the 6 non-empty v3 shape paths into <defs> as referenceable
+    <path id="cN"|"pN"> elements. Each carries fill-rule="evenodd" so
+    holes / pieces / self-touching outlines resolve correctly when the
+    shape is referenced via <use>. No fill or transform is set here;
+    those come from each <use> call site.
+
+    Idempotent: safe to call multiple times per render (only adds defs
+    that don't already exist).
+    """
+    from .v3_shapes import C1, C2, C3, P1, P2, P3
+    existing = {
+        p.get("id")
+        for p in defs.xpath('./*[local-name()="path"]')
+        if p.get("id")
+    }
+    for shape in [C1, C2, C3, P1, P2, P3]:
+        sid = shape.name.lower()
+        if sid in existing:
+            continue
+        etree.SubElement(
+            defs, 'path',
+            id=sid,
+            d=shape.path_d,
+            **{'fill-rule': 'evenodd'},
+        )
+
+
 def _transform_for_edge(edge_index, edge_rect, scale, hinge):
     """
     Return the SVG transform attribute string for placing a canonical
@@ -103,10 +132,13 @@ def draw_v3_shape(svg_parent, defs, shape, cell, edge_index, scale, fill_url):
 
     edge_rect = cell.edge_rect(edge_index)
     transform = _transform_for_edge(edge_index, edge_rect, scale, shape.hinge)
+    shape_href = f"#{shape.name.lower()}"
 
     if _needs_tab_clip(edge_index):
-        # One clipPath per drawn edge — pre-V3-7. V3-7 will collapse via
-        # defs+use. Use a counter on the defs element for uniqueness.
+        # One clipPath per drawn vertical edge. V3-7 keeps these
+        # per-edge because each rect is a different position; collapsing
+        # them would require objectBoundingBox + per-cell layout work
+        # that's outside the scope of this phase.
         clip_seq = defs.get('data-v3-clip-seq', '0')
         next_id = f"v3clip-{clip_seq}"
         defs.set('data-v3-clip-seq', str(int(clip_seq) + 1))
@@ -116,20 +148,18 @@ def draw_v3_shape(svg_parent, defs, shape, cell, edge_index, scale, fill_url):
             x=str(edge_rect.left), y=str(edge_rect.top),
             width=str(edge_rect.size.width), height=str(edge_rect.size.height),
         )
-        # clip-path on the wrapper <g> (not on the path), so the clip
-        # rect stays axis-aligned in screen space while the path rotates
+        # clip-path on the wrapper <g> (not on the use), so the clip rect
+        # stays axis-aligned in screen space while the shape rotates
         # inside it (see test_ellipse_clip_fix for the same pattern).
         clipped = etree.SubElement(
             svg_parent, 'g', **{'clip-path': f'url(#{next_id})'}
         )
         etree.SubElement(
-            clipped, 'path',
-            d=shape.path_d, transform=transform,
-            fill=fill_url, **{'fill-rule': 'evenodd'},
+            clipped, 'use',
+            href=shape_href, transform=transform, fill=fill_url,
         )
     else:
         etree.SubElement(
-            svg_parent, 'path',
-            d=shape.path_d, transform=transform,
-            fill=fill_url, **{'fill-rule': 'evenodd'},
+            svg_parent, 'use',
+            href=shape_href, transform=transform, fill=fill_url,
         )

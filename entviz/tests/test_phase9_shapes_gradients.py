@@ -65,13 +65,14 @@ def test_gradient_stops_carry_two_colors():
 
 
 def test_edge_shape_fill_references_gradient():
-    # V3-6b: edges render as <path> elements (not <rect>/<polygon>).
+    # V3-7: edges render as <use> elements (referencing shape paths
+    # in <defs>). The gradient fill lives on the <use>.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    all_shapes = svg.xpath('//*[local-name()="path"]')
+    uses = svg.xpath('//*[local-name()="use"]')
     has_gradient_fill = any(
-        (el.get("fill") or "").startswith("url(#") for el in all_shapes
+        (el.get("fill") or "").startswith("url(#") for el in uses
     )
-    assert has_gradient_fill, "no edge path uses a gradient fill"
+    assert has_gradient_fill, "no edge <use> uses a gradient fill"
 
 
 def test_edgeshape_class_basics():

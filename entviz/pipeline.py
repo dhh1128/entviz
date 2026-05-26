@@ -145,6 +145,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         width=str(grid_rect.size.width), height=str(grid_rect.size.height),
     )
 
+    # V3-7: add the 6 reusable v3 shape paths once; per-edge <use>
+    # elements reference them by id (cN, pN).
+    from .v3_render import add_v3_shape_defs
+    add_v3_shape_defs(defs)
+
     draw_rect(svg, bounding_rect, '#ffffff')
     # Entviz background color (from median ftok) fills the grid_rect so
     # blank cells show that color rather than the white bounding-rect fill.
