@@ -107,12 +107,20 @@ class Renderer:
         etree.SubElement(g, 'stop', offset='0%', **{'stop-color': inner_color})
         etree.SubElement(g, 'stop', offset='100%', **{'stop-color': outer_color})
 
-    def render_nucleus(self, svg: etree.Element, token, cell: Cell):
+    def render_nucleus(self, svg: etree.Element, token, cell: Cell,
+                       text_size_px=None):
         """
-        v2 layered draw, pass 3: this cell's nucleus rect + centered text.
+        Layered draw, pass 3: this cell's nucleus rect + centered text.
         Token.quant drives the nucleus background color (which determines
         foreground contrast); token.text supplies the displayed string.
         No state change.
+
+        V3-4: text_size_px is the rendered font size in pixels for the
+        cell text. If None (legacy callers), falls back to
+        `cell.size.height / 2` (nucleus_height, = full reference font
+        size). V3 pipeline always passes a computed value: full
+        reference for 4-char tokens; round(0.75 × reference_pt) for
+        6-char (hex) tokens.
         """
         bg_color, fg_color = get_nucleus_colors(token.quant)
         n = cell.nucleus
@@ -120,10 +128,12 @@ class Renderer:
                          x=str(n.left), y=str(n.top),
                          width=str(n.size.width), height=str(n.size.height),
                          fill=bg_color)
+        if text_size_px is None:
+            text_size_px = cell.size.height / 2
         text_el = etree.SubElement(svg, 'text',
                                    x=str(n.center.x), y=str(n.center.y),
                                    fill=fg_color,
-                                   style=f"font-family: monospace; font-size: {cell.size.height/2}px;",
+                                   style=f"font-family: monospace; font-size: {text_size_px}px;",
                                    **{"text-anchor": "middle", "dominant-baseline": "central"})
         text_el.text = token.text
 

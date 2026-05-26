@@ -183,10 +183,19 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         bg_color=style.bg_color, clip_id=clip_id,
     )
 
+    # V3-4: per-token cell-text rendered size. Reference drives all
+    # geometry; rendered size shrinks for hex (6-char tokens) so the
+    # text fits inside the 3×nucleus_height-wide nucleus.
+    cell_text_pt = (
+        round(font_size_pt * 0.75)
+        if "hex" in type_name.lower() else font_size_pt
+    )
+    cell_text_px = cell_text_pt * _DPI / 72
+
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
     for token, ftok, cell, ci, _nucleus_bg in token_cells:
-        renderer.render_nucleus(svg, token, cell)
+        renderer.render_nucleus(svg, token, cell, text_size_px=cell_text_px)
 
     # Layer 4: quartile marks at the cells of the four quartile ftoks
     # (mapped through the 1:1 ftok→token→cell correspondence).
@@ -211,14 +220,14 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     # Layer 5b: shape count summary right-justified to grid_rect's right
-    # edge, on the nucleus-height line below the grid. V3-3a: rendered
-    # at min(round(0.9 × reference), cell_text_pt) with #444 fill.
-    # cell_text_pt == reference_pt pre-V3-4; V3-4 will introduce per-token
-    # shrinking, at which point the call site passes the per-token value.
+    # edge, on the nucleus-height line below the grid. Rendered at
+    # min(round(0.9 × reference), cell_text_pt) with #444 fill. For hex
+    # inputs, cell_text_pt = round(0.75 × reference), so the min picks
+    # cell_text_pt and the SCS matches the cell text size.
     _draw_shape_count_summary(
         svg, grid_rect, gm, nucleus_height,
         reference_pt=font_size_pt,
-        cell_text_pt=font_size_pt,
+        cell_text_pt=cell_text_pt,
         dpi=_DPI,
         shape_usage=renderer.shape_usage,
     )
