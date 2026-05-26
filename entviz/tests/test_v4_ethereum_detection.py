@@ -79,3 +79,26 @@ def test_long_mixed_case_hex_is_not_ethereum():
     p = parse("DeadBeefDeadBeefDeadBeefDeadBeefDeadBeefDeadBeefDeadBeefDeadBeef")
     assert p is not None
     assert p.type == "hex"
+
+
+def test_ethereum_core_includes_all_40_hex_chars():
+    """The full 40-char address body sits in `core` (no suffix split).
+    Previously the parser carved off the last 8 chars into `suffix` as if
+    they were a separable checksum — but Ethereum's EIP-55 checksum is
+    the case pattern of the entire 40 chars, not a trailing slice."""
+    p = parse("0x742d35cc6634c0532925a3b844bc454e4438f44e")
+    assert p is not None
+    # core should be the full 40 hex chars (in EIP-55 mixed case)
+    assert len(p.core) == 40
+    # suffix should be empty (or None)
+    assert not p.suffix
+
+
+def test_two_ethereums_differing_in_last_8_chars_produce_different_cores():
+    """Regression: under the old 32/8 split, addresses differing only in
+    the last 8 chars produced identical `core` values, which meant their
+    entvizes were identical too. With the fix, the full address is in
+    `core` and they diverge."""
+    a = parse("0x742d35cc6634c0532925a3b844bc454e44380000")
+    b = parse("0x742d35cc6634c0532925a3b844bc454e4438ffff")
+    assert a.core != b.core

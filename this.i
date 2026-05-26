@@ -511,6 +511,38 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
+        Ethereum Detection & Full-Body Core = decision:
+          id: v4eth4ddr
+          why: >
+            Two fixes to Ethereum address handling.
+
+            (1) Tighten recognition. v3 used regex
+              ^(0x)?[a-fA-F0-9]{40}$
+            with the 0x optional, so any 40-char hex blob (regardless
+            of case or context) was classified as Ethereum. But '0x'
+            is a generic C-derived hex prefix and 40 hex chars alone
+            is too weak a signal. v4 requires EITHER an explicit 0x
+            prefix OR EIP-55-style mixed case (both upper and lower
+            letters in the body). A pure single-case 40-char hex
+            without prefix falls through to plain hex.
+
+            (2) Full-body core. v3 split the 40-char body as 32 + 8,
+            treating the last 8 chars as a "suffix" (like Bitcoin
+            Legacy's true 4-char base58 checksum). But Ethereum has
+            no separable checksum suffix — the EIP-55 checksum is
+            the case pattern of the entire 40 chars. The 32/8 split
+            dropped the last 8 chars from both the text channel and
+            the fingerprint computation, so two addresses differing
+            only in those bits produced identical entvizes. v4 puts
+            the full 40-char EIP-55-cased body in `core`, leaves
+            `suffix` empty.
+
+            Plain hex is normalized to lowercase (parse_hex returns
+            lower-case core) to avoid the oral-reading "cap A"
+            ambiguity. Ethereum is the exception: it preserves
+            EIP-55 mixed case because the case pattern is the
+            checksum, not presentation.
+
         Alphabet Detection by Disproof = decision:
           id: v4d1sprf
           why: >

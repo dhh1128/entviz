@@ -139,7 +139,8 @@ def test_hex_normalization():
             prefix = None
             core = input
         assert answer.prefix == prefix
-        assert answer.core == core.upper()
+        # v4: plain hex normalized to lowercase (oral-reading hygiene).
+        assert answer.core == core.lower()
 
 def test_stellar_normalization():
     for input in [
@@ -161,14 +162,15 @@ def test_hex_multihash_normalization():
         assert answer.type == "hex multihash sha2-256"
 
 def test_etherereum_normalization():
+    """v4: core is the full 40-char EIP-55-cased body; no separable suffix.
+    (The old 32/8 split dropped the last 8 chars from the visualization.)"""
     for input in [
-        #"0xc932bE343B94f860124dC4fEe278FDCBD38C102D", # mixed case, but wrong
-        #"0xc932be343b94f860124dc4fee278fdcbd38c102d", # all lower case
-        "0xC932BE343B94F860124DC4FEE278FDCBD38C102D", # all upper case
+        "0xC932BE343B94F860124DC4FEE278FDCBD38C102D",  # all upper case
+        "0xc932be343b94f860124dc4fee278fdcbd38c102d",  # all lower case
         ]:
         answer = parse(input)
-        assert answer.core == 'C932Be343b94f860124dc4FEe278fDcB'
-        assert answer.suffix == 'd38c102d'
+        assert answer.core == 'C932Be343b94f860124dc4FEe278fDcBd38c102d'
+        assert not answer.suffix
         assert answer.type == "Ethereum"
 
 def test_UUID_normalization():

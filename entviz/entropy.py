@@ -67,7 +67,7 @@ CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_AL
 BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
 LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)
-ETHEREUM_REGEX = re.compile(r'^(0x)?([a-fA-F0-9]{32})([a-fA-F0-9]{8})$', re.I)
+ETHEREUM_REGEX = re.compile(r'^(0x)?([0-9a-f]{40})$', re.I)
 RIPPLE_REGEX = re.compile(r'^(r)([' + BASE58_ALPHABET + ']{33})$')
 BITCOIN_LEGACY_REGEX = re.compile(r'^([123mn])([' + BASE58_ALPHABET + ']{21,30})([' + BASE58_ALPHABET + ']{4})$')
 BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BECH32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
@@ -285,14 +285,19 @@ def parse_ethereum_address(text) -> Parsed:
     if not m:
         return None
     has_prefix = bool(m.group(1))
-    body = m.group(2) + m.group(3)
+    body = m.group(2)  # the 40-char hex body
     if not has_prefix:
         has_lower = any(c.islower() for c in body if c.isalpha())
         has_upper = any(c.isupper() for c in body if c.isalpha())
         if not (has_lower and has_upper):
             return None  # falls through to plain hex
+    # The full 40-char body is the core. Ethereum addresses don't have
+    # a separable checksum suffix — the EIP-55 "checksum" is the case
+    # pattern of the entire 40 chars. (A prior implementation split off
+    # the last 8 chars as a fake suffix, which silently dropped them
+    # from tokenization and the fingerprint.)
     eip55_format = to_EIP55_address(body)
-    return Parsed("Ethereum", HEX, "0x", eip55_format[2:-8], eip55_format[-8:])
+    return Parsed("Ethereum", HEX, "0x", eip55_format[2:], None)
 
 def parse_litecoin_address(text) -> Parsed:
     """
@@ -418,7 +423,11 @@ def parse_hex(text) -> Parsed:
         elif len(text) % 2 != 0: return 
         m = HEX_REGEX.match(text)
         if m:
-            return Parsed("hex", HEX, prefix, text.upper(), None)
+            # Normalize to lowercase so oral reading doesn't need
+            # "cap A" prefixes for A-F. UUIDs already lowercase via
+            # parse_uuid; Ethereum is exempt (EIP-55 mixed case is
+            # the checksum).
+            return Parsed("hex", HEX, prefix, text.lower(), None)
 
 # We put parse_hex at the end so it won't be attempted until after
 # we try many other parsers -- especially the Ethereum one, which
