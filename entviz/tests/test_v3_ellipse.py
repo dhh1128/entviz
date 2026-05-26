@@ -121,11 +121,12 @@ def test_overlay_present_for_512_bit_input():
     assert _ellipse(svg) is not None
 
 
-def test_overlay_opacity_is_fixed_at_20_percent():
+def test_overlay_opacity_is_per_bg():
+    # Per-bg overlay: white/gold darken at 0.20; red/blue lighten at 0.30.
     svg = _doc(render("deadbeefdeadbeef" * 8))
     e = _ellipse(svg)
     assert e is not None
-    assert abs(float(e.get("fill-opacity")) - 0.20) < 1e-9
+    assert float(e.get("fill-opacity")) in (0.20, 0.30)
 
 
 def test_overlay_rx_ry_in_bounded_range():

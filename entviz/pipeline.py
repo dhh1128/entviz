@@ -350,17 +350,33 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
     }
 
 
-def _ellipse_fill_for_bg(bg_color: str) -> str:
-    # Hex → RGB → HLS; if L > 0.5 fill black, else fill white.
+# Per-bg overlay (fill, opacity). White and gold read well as darkened;
+# red and blue are saturated mid-luminosity hues where darkening drops
+# them into muddy territory and lightening produces a more perceptible
+# silhouette. Red and blue also need more opacity (0.30) than the
+# always-easy white case to register at all.
+_V3_OVERLAY_BY_BG = {
+    '#ffffff': ('#000000', 0.20),  # white  → darken
+    '#ffd966': ('#000000', 0.20),  # gold   → darken
+    '#ff3f2f': ('#ffffff', 0.30),  # red    → lighten (switched from darken)
+    '#2f3fbf': ('#ffffff', 0.30),  # blue   → lighten (opacity bumped from 0.20)
+}
+
+
+def _ellipse_overlay_for_bg(bg_color: str):
+    """Return (fill_color, opacity) for the ellipse overlay on bg_color."""
+    if bg_color in _V3_OVERLAY_BY_BG:
+        return _V3_OVERLAY_BY_BG[bg_color]
+    # Fallback for any unexpected bg (e.g., test inputs): use the v3-5
+    # luminosity rule with the old default 0.20 opacity.
     r = int(bg_color[1:3], 16) / 255.0
     g = int(bg_color[3:5], 16) / 255.0
     b = int(bg_color[5:7], 16) / 255.0
     _, l, _ = colorsys.rgb_to_hls(r, g, b)
-    return '#000000' if l > 0.5 else '#ffffff'
+    return ('#000000' if l > 0.5 else '#ffffff', 0.20)
 
 
 _V3_OVERLAY_MIN_INTERIOR_CORNERS = 6  # 3x4 / 4x3 and larger
-_V3_OVERLAY_OPACITY = 0.20
 
 
 def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
@@ -408,7 +424,7 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     rx = r_min + (p["rx_step"] / 15.0) * (r_max - r_min)
     ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)
     rotation_deg = (p["rotation_step"] / 15.0) * 180.0
-    fill = _ellipse_fill_for_bg(bg_color)
+    fill, opacity = _ellipse_overlay_for_bg(bg_color)
     # SVG quirk: when clip-path and transform live on the same element,
     # the clip rectangle rotates along with the element (clip-path is
     # resolved in post-transform user space). Wrap the ellipse in a
@@ -422,7 +438,7 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
         rx=str(rx), ry=str(ry),
         transform=f"rotate({rotation_deg} {anchor.x} {anchor.y})",
         fill=fill,
-        **{"fill-opacity": f"{_V3_OVERLAY_OPACITY}"},
+        **{"fill-opacity": f"{opacity}"},
     )
 
 

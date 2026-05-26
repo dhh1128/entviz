@@ -41,11 +41,13 @@ def test_ellipse_present_in_output():
     assert _ellipse(svg) is not None, "no ellipse element rendered"
 
 
-def test_ellipse_opacity_is_20_percent():
-    # V3-5 fixed opacity at 20%.
+def test_ellipse_opacity_is_per_bg():
+    # Overlay opacity is per-bg: 0.20 on white/gold (darken), 0.30 on
+    # red/blue (lighten). Whatever bg this input lands on, the opacity
+    # must be one of those two values.
     svg = _doc(render(LARGE_INPUT))
     e = _ellipse(svg)
-    assert abs(float(e.get("fill-opacity")) - 0.20) < 1e-9
+    assert float(e.get("fill-opacity")) in (0.20, 0.30)
 
 
 def test_ellipse_fill_is_black_or_white():

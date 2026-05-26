@@ -192,11 +192,18 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
     * **rx (horizontal semi-axis)**: compute `rx_step = digest[61] mod 16`. Then `rx = r_min + (rx_step / 15) × (r_max − r_min)`, where `r_min = nucleus_height` (= cell_height / 2) and `r_max = d_far − cell_width`. `d_far` is the distance from the chosen anchor to the farthest of the grid rect's four outer corners. The lower bound prevents the curve from being too small to read; the upper bound prevents it from being so large that the visible arc looks flat (the v2 failure mode).
     * **ry (vertical semi-axis)**: compute `ry_step = digest[62] mod 16`. Then `ry = r_min + (ry_step / 15) × (r_max − r_min)`, with the same `r_min` and `r_max` as rx. `rx` and `ry` are drawn independently, so the ellipse ranges from a near-circle to a strongly elongated shape.
     * **rotation**: compute `rotation_step = digest[63] mod 16`. Then `rotation = (rotation_step / 15) × 180°`. Rotates the ellipse around the anchor.
-    * **opacity**: fixed at 20%. No entropy.
+    * **fill and opacity**: chosen per *entviz background color*, since the four background candidates each need different treatment to produce a perceptible silhouette:
+
+        | bg color | hex | overlay fill | opacity |
+        |---|---|---|---|
+        | white | `#ffffff` | `#000000` (darken) | 20% |
+        | gold  | `#ffd966` | `#000000` (darken) | 20% |
+        | red   | `#ff3f2f` | `#ffffff` (lighten) | 30% |
+        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 30% |
+
+        White and gold read well as darkened. Red and blue are saturated mid-luminosity hues where darkening drops them into muddy territory; lightening produces a more perceptible silhouette but needs the higher 30% opacity to register at all. No entropy bytes are consumed for fill or opacity.
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
-
-    Choose the fill: convert the entviz background color to HLS; if its luminosity is greater than 0.5, fill the ellipse with black; otherwise fill it with white. Apply the fill at 20% opacity.
 
     **Clip the overlay to the grid rect**, not the bounding rect. The overlay must never appear outside the cells of the grid (it must not leak into the margins, color bar, or shape count summary area).
 
