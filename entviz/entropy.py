@@ -32,6 +32,11 @@ BASE32_ALPHABET_EITHER_CASE = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVW
 BASE58_CHECK_LENGTH = 25  # Expected length of Base58Check encoded Bitcoin addresses
 BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 HEX_ALPHABET = "0123456789ABCDEF"
+# Base36: digits then uppercase letters. Used by GLEIF LEI (ISO 17442).
+# Case-insensitive (LEI normalizes to upper). 36 isn't a power of 2; for
+# token-alignment purposes we treat it like BASE58 — 6 effective bits/char,
+# 4 chars per 24-bit token (true entropy is ~5.17 bits/char).
+BASE36_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # Bech32 alphabet per BIP-173: 32 chars, intentionally excludes 1/b/i/o
 # to reduce visual ambiguity (and '1' doubles as the bech32 separator).
 BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
@@ -50,6 +55,9 @@ BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)
 # overshoot the 24-bit quant budget.
 BASE32    = Alphabet("base32",    BASE32_ALPHABET,     5)
 BECH32    = Alphabet("bech32",    BECH32_ALPHABET,     5)
+# base36 is used only by GLEIF LEI today. 6 bits/char for token alignment
+# (mirrors BASE58); true entropy is ~5.17 bits/char.
+BASE36    = Alphabet("base36",    BASE36_ALPHABET,     6)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
 
@@ -72,6 +80,7 @@ RIPPLE_REGEX = re.compile(r'^(r)([' + BASE58_ALPHABET + ']{33})$')
 BITCOIN_LEGACY_REGEX = re.compile(r'^([123mn])([' + BASE58_ALPHABET + ']{21,30})([' + BASE58_ALPHABET + ']{4})$')
 BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BECH32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
 SSH_KEY_REGEX = re.compile(r'(AAAA)([0-9A-Za-z+/]+={0,3})')
+LEI_REGEX = re.compile(r'^[0-9A-Z]{20}$', re.I)
 HEX_REGEX = re.compile(r'^[a-fA-F0-9]+$')
 BASE64URL_NO_PAD_REGEX = re.compile(r'^[A-Za-z0-9-_]+$') # used by CESR
 BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
@@ -398,7 +407,45 @@ def parse_ipfs_cid(text) -> Parsed:
     if m:
         # IPFS CID v1 uses base32 (RFC 4648).
         return Parsed("IPFS CID v1 256", BASE32, m.group(1), m.group(2).upper(), None)
-    
+
+def _lei_checksum_ok(lei: str) -> bool:
+    """
+    Validate a 20-char uppercase LEI candidate against the ISO/IEC 7064
+    MOD 97-10 check. Replace each letter with its base36 numeric value
+    (A=10..Z=35), interpret the resulting digit string as a base-10
+    integer, and require it ≡ 1 (mod 97). Same algorithm IBAN uses, but
+    without the country-code rotation.
+    """
+    digits = []
+    for c in lei:
+        if c.isdigit():
+            digits.append(c)
+        elif 'A' <= c <= 'Z':
+            digits.append(str(ord(c) - ord('A') + 10))
+        else:
+            return False
+    return int(''.join(digits)) % 97 == 1
+
+def parse_lei(text) -> Parsed:
+    """
+    See if we can parse text as a GLEIF Legal Entity Identifier (ISO 17442).
+    20 chars total: 4-char LOU + "00" reserved + 12-char entity body +
+    2-char MOD 97-10 checksum. Case-insensitive; normalized to upper.
+    If yes, return Parsed("LEI", BASE36, None, <20 upper chars>, None).
+    """
+    if not text:
+        return None
+    m = LEI_REGEX.match(text)
+    if not m:
+        return None
+    upper = text.upper()
+    # ISO 17442: reserved digits at positions 5-6 (0-indexed 4-5) are "00".
+    if upper[4:6] != "00":
+        return None
+    if not _lei_checksum_ok(upper):
+        return None
+    return Parsed("LEI", BASE36, None, upper, None)
+
 # Register all the functions that do parsing (with one exception below).
 def register_parse_funcs():
     g = globals()

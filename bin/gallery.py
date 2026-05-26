@@ -54,6 +54,11 @@ SAMPLES = [
         ("Stellar account",     "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM"),
         ("IPFS CID v1",         "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
     ]),
+    ("GLEIF LEI (ISO 17442, MOD 97-10 checksum)", [
+        ("Bloomberg L.P.",                       "5493001KJTIIGC8Y1R12"),
+        ("Goldman Sachs Group, Inc.",            "529900T8BM49AURSDO55"),
+        ("JPMorgan Chase (lowercase input)",     "213800wavvops85n2205"),
+    ]),
     ("Base64 / arbitrary text", [
         ("Short ASCII",       "hello world"),
         ("Lorem ipsum chunk", "Lorem ipsum dolor sit amet, consectetur adipiscing elit."),

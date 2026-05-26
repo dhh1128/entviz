@@ -803,6 +803,53 @@ Entviz = goal:
             border + interior separator at x = 1 + box_height + 0.5)
             encloses the bar on all four sides.
 
+        GLEIF LEI Parser = decision:
+          id: v4le1gle
+          why: >
+            Add `parse_lei` for GLEIF Legal Entity Identifiers (ISO
+            17442). Shape: exactly 20 characters from base36
+            (0-9, A-Z); structure is 4-char LOU prefix + "00" reserved +
+            12-char entity body + 2-char ISO/IEC 7064 MOD 97-10
+            checksum. Same checksum algorithm IBAN uses, minus the
+            country-code rotation: replace each letter with its base36
+            numeric value (A=10..Z=35), interpret the resulting digit
+            string as a base-10 integer, and require it ≡ 1 (mod 97).
+            Input is case-insensitive; the parser normalizes to upper.
+
+            The MOD 97-10 validation matters. Without it, the LEI
+            parser would claim every 20-char base36 string — a huge
+            false-positive surface that would mis-label random tokens,
+            short hex blobs (when interpreted upper-cased), and many
+            base32/base64 fragments. The checksum reduces the false
+            positive rate to ~1/97 ≈ 1% of arbitrary 20-char base36
+            strings, and the additional "positions 5-6 = 00" structural
+            check filters out a further ~99% of the survivors. Together
+            the two checks make LEI safe to dispatch ahead of generic
+            disproof-based alphabet detection.
+
+            BASE36 alphabet is new: 0-9 then A-Z, 36 chars. 36 isn't a
+            power of 2, so true entropy is ~5.17 bits/char. For
+            token-alignment purposes we declare bits_per_char=6 — the
+            same trick BASE58 uses (also non-power-of-2): 4 chars per
+            24-bit token, with the existing under-24-bit extension
+            rule unaffected because 4 chars × 6 bits = exactly 24. A
+            20-char LEI tokenizes to exactly 5 tokens.
+
+            BASE36 is intentionally NOT added to
+            detect_alphabet_by_disproof. A bare 20-char base36 string
+            without a checksum carries no positive signal vs hex,
+            base32 (RFC 4648), or base58 — all of which already appear
+            earlier in the disproof order. The specific LEI parser
+            with its checksum is the only place base36 carries
+            information.
+
+            Parser precedence: registered alongside the other format
+            parsers (before parse_hex). The 20-char + MOD 97-10 +
+            position 5-6 = "00" gate is strict enough that ordering
+            against UUID, Ethereum, Bitcoin, etc. doesn't matter — no
+            valid LEI is a syntactically valid UUID (UUIDs are hex
+            only) or starts with 0x.
+
     Reference and Rendered Font Sizes = decision:
           id: r3fr3nfn
           why: >
