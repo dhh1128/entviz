@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>entviz gallery 3 — cubed color bar</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         background: #f4f4f6; color: #222; margin: 0; padding: 24px; }
+  h1 { margin: 0 0 8px 0; font-weight: 600; }
+  p.intro { max-width: 720px; line-height: 1.5; color: #444; }
+  .grid { display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+          gap: 20px; margin-top: 24px; }
+  .card { background: #fff; border: 1px solid #ddd; border-radius: 8px;
+          padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+  .label { font-weight: 600; margin-bottom: 4px; }
+  .input { font-family: ui-monospace, "SF Mono", Consolas, monospace;
+           font-size: 11px; color: #666; word-break: break-all;
+           margin-bottom: 10px; }
+  .svg-wrap { display: flex; justify-content: center;
+              background: #fafafa; border-radius: 4px;
+              padding: 8px; overflow: hidden; }
+  .svg-wrap img { max-width: 100%; height: auto; image-rendering: crisp-edges; }
+  .pair { background: #fff8e1; border-color: #f0c674; }
+  .note { color: #888; font-size: 11px; margin-top: 6px; }
+  .heading-note { background: #e8f4ff; border-left: 4px solid #4a9eff;
+                  padding: 8px 12px; margin: 16px 0 24px 0; font-size: 13px;
+                  border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+<h1>entviz gallery 3 — cubed color bar</h1>
+<p class="intro">
+Same set of inputs as <code>refs/gallery/</code>, rendered with the
+color-bar band heights computed from <strong>cubed counts</strong>
+instead of raw counts. Compare each card here to the corresponding
+card in the original gallery to see whether the cubing makes the
+dominant color visibly dominate, or whether the bands still look
+roughly uniform.
+</p>
+<div class="heading-note">
+The change is only to the color-bar (left strip). The rest of each
+entviz is byte-identical to <code>refs/gallery/</code>.
+</div>
+
+<div class="grid">
+
+<div class="card pair">
+  <div class="label">UUID a</div>
+  <div class="input">550e8400-e29b-41d4-a716-446655440000</div>
+  <div class="svg-wrap"><img src="uuid-a.svg" alt=""></div>
+</div>
+
+<div class="card pair">
+  <div class="label">UUID b (one digit flipped)</div>
+  <div class="input">550e8400-e29b-41d4-a716-446655440001</div>
+  <div class="svg-wrap"><img src="uuid-b.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">Bitcoin genesis address</div>
+  <div class="input">1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</div>
+  <div class="svg-wrap"><img src="bitcoin.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">Ethereum address (Vitalik)</div>
+  <div class="input">0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B</div>
+  <div class="svg-wrap"><img src="ethereum.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">DID:key</div>
+  <div class="input">did:key:z6MkpTHR8VNsBxYAAWHut2Geadd9jSruc5pgyTC1jXxbVQGZ</div>
+  <div class="svg-wrap"><img src="did-key.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">Short hex (8 bytes)</div>
+  <div class="input">deadbeefcafebabe</div>
+  <div class="svg-wrap"><img src="hex-short.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">SHA-256 of the empty string</div>
+  <div class="input">e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</div>
+  <div class="svg-wrap"><img src="sha256-empty.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">IPFS CID v0</div>
+  <div class="input">QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG</div>
+  <div class="svg-wrap"><img src="ipfs-cidv0.svg" alt=""></div>
+</div>
+
+<div class="card pair">
+  <div class="label">Random 128-bit (a)</div>
+  <div class="input">f7c3b8a219de4f5e1a92b06d7c1f4e08</div>
+  <div class="svg-wrap"><img src="rand-a.svg" alt=""></div>
+</div>
+
+<div class="card pair">
+  <div class="label">Random 128-bit (b) — 1-bit diff</div>
+  <div class="input">f7c3b8a219de4f5e1a92b06d7c1f4e09</div>
+  <div class="svg-wrap"><img src="rand-b.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">All zeros (128 bits)</div>
+  <div class="input">00000000000000000000000000000000</div>
+  <div class="svg-wrap"><img src="all-zero.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">All ones (128 bits)</div>
+  <div class="input">ffffffffffffffffffffffffffffffff</div>
+  <div class="svg-wrap"><img src="all-ones.svg" alt=""></div>
+</div>
+
+<div class="card">
+  <div class="label">SHA-512 hash (>512 bits)</div>
+  <div class="input">9b71d224bd62f3785d96d46ad3ea3d73319bfbc2890caadae2dff72519673ca72323c3d99ba5c11d7c7acc6e14b8c5da0c4663475c2e5c3adef46f73bcdec043</div>
+  <div class="svg-wrap"><img src="sha512-large.svg" alt=""></div>
+</div>
+
+</div>
+</body>
+</html>
