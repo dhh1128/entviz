@@ -485,12 +485,87 @@ test today. A future revision should publish:
 - their expected SVG outputs (or hashes thereof)
 - tolerance rules for non-determinism (e.g., font rasterization)
 
+### D12. SCS font size: change percentage from 90% to 84%
+
+The current spec rule `scs_pt = min(round(0.9 × reference_pt), cell_text_pt)`
+produces 11pt at the 12pt reference (= 14.67 px), which is only 8.3%
+smaller than the 12pt cell text (16 px). At normal viewing size the
+visual difference doesn't read as "noticeably smaller."
+
+Change the multiplier from 0.9 to 0.84: `round(0.84 × 12) = round(10.08)
+= 10pt = 13.33 px`. That's a 16.7% reduction from cell text — the SCS
+will visibly read as secondary. Update item 3 of this doc accordingly.
+
+For hex inputs (cell text already at 9pt), the min still picks
+cell_text_pt = 9pt and the SCS matches cell text size — unchanged.
+
+### D13. Border + interior-separator color: change from #000000 to #808080
+
+Currently the four bounding-rect borders and the interior separator
+between the color bar and the grid margin are drawn at #000000 (pure
+black). Change all five to #808080 (medium gray). Softens the frame,
+reads as "structural" rather than "intrusive," and avoids visual
+competition with the black edge color which is one of the four edge
+colors in the palette.
+
+Update item 2 of this doc (the color bar frame decision) to use
+#808080 for both the border lines and the interior separator.
+
+### D14. Shrink the white region below the grid to a single nucleus height
+
+The space below grid_rect currently runs `GM + nucleus_height + GM + 1`
+= 25 px at 12pt nominal: a GM gap, the nucleus-height-tall SCS line,
+another GM gap, and the 1-px bottom border. The two GM gaps add
+visual weight without earning their keep.
+
+Shrink to `nucleus_height + 1` = 17 px: the SCS line abuts the grid
+on top and the bottom border on the bottom, with no GM padding. The
+new bounding_rect height formula becomes:
+
+```
+bounding_h = 1 + GM + grid_h + nucleus_height + 1
+```
+
+The SCS text's vertical center moves from
+`grid_rect.bottom + GM + nucleus_height/2` to
+`grid_rect.bottom + nucleus_height/2`. At 12pt: bounding_h drops by
+8 px (was 158 for UUID, becomes 150).
+
+This is a coupled change with bounding_rect.height in the spec, all
+geometry/golden tests that depend on bounding_h, and the SCS
+y-coordinate computation in `_draw_shape_count_summary`.
+
 ### Where to find these later
 
 To work on any deferred item, ask: *"work on D{N} from the deferred
 section of spec-improvement-notes.md"* or *"polish the v3 draft to
 address the deferred items"*. The full review text that produced
-this list is captured in the conversation that led to commit
+items D1–D11 is captured in the conversation that led to commit
 `e201654` (the "tighten v3 draft on six interoperability hazards"
 commit); the *fixed* items from that review are 1, 2, 3, 6, 7, 11,
-and 15, all already integrated into the draft.
+and 15, all already integrated into the draft. Items D12–D14 came
+from visual review of refs/v3-6b/ output.
+
+### D15. Per-edge gradient is invisible after v3 path transforms
+
+V3-6b's per-edge gradient renders effectively as a uniform color
+because the gradient endpoints are defined in *screen* coordinates,
+but the v3 shape `<path>` has its own `transform="translate(…) scale(…)`
+(plus optional rotate). SVG resolves `userSpaceOnUse` gradient coords
+in the *post-transform* local user space of the referencing element,
+so the gradient line ends up far outside the path's content area and
+the path renders with the gradient's start color uniformly.
+
+The fix is to redefine the gradient endpoints in **canonical 24×8
+coordinates** — e.g., `x1=12, y1=8, x2=12, y2=0` regardless of edge.
+The path's transform then applies to BOTH the path geometry AND the
+gradient, so the gradient ends up perpendicular to the edge in the
+correct direction after rotation. Since all edges share the same
+canonical inner→outer direction (y=8→y=0), the same gradient
+endpoint pair works for all edges; only the colors vary per edge.
+
+Currently this bug just removes the gradient visual; both stops'
+colors are still emitted, so the visual is a flat per-edge color
+(the gradient's start stop). Strictly speaking this means the spec
+guarantee "edge fill is a gradient" is not honored by the v3-6b
+renderer.
