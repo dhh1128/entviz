@@ -300,16 +300,20 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     smaller = half_diag
     larger = smaller * p["axis_ratio"]
     fill = _ellipse_fill_for_bg(bg_color)
+    # SVG quirk: when clip-path and transform live on the same element,
+    # the clip rectangle rotates along with the element (clip-path is
+    # resolved in post-transform user space). Wrap the ellipse in a
+    # non-rotated <g> that carries the clip-path; keep the rotate
+    # transform on the <ellipse> inside. The clip then stays in
+    # screen space while the ellipse rotates within it.
+    clipped = etree.SubElement(svg, 'g', **{"clip-path": f"url(#{clip_id})"})
     etree.SubElement(
-        svg, 'ellipse',
+        clipped, 'ellipse',
         cx=str(anchor.x), cy=str(anchor.y),
         rx=str(smaller), ry=str(larger),
         transform=f"rotate({p['rotation_deg']} {anchor.x} {anchor.y})",
         fill=fill,
-        **{
-            "fill-opacity": f"{p['opacity']}",
-            "clip-path": f"url(#{clip_id})",
-        },
+        **{"fill-opacity": f"{p['opacity']}"},
     )
 
 

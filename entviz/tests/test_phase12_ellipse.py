@@ -74,9 +74,12 @@ def test_clip_path_defined():
 
 
 def test_ellipse_uses_clip_path():
+    # clip-path lives on the parent <g> (see test_ellipse_clip_fix.py for
+    # why); the ellipse itself does not carry clip-path directly.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     e = _ellipse(svg)
-    cp = e.get("clip-path") or ""
+    parent = e.getparent()
+    cp = parent.get("clip-path") or ""
     assert cp.startswith("url(#")
 
 
