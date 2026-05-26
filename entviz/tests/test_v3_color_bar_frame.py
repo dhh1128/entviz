@@ -13,8 +13,10 @@ drawing region y in [1, bounding_h - 1] (top/bottom 1-px black borders
 cover the outermost pixel rows). The grid_rect shifts to (1 + edge_size
 + 1 + GM, 1 + GM).
 
-Four black border lines (all four sides) plus one interior separator
-between the color bar and the grid margin.
+Four gray border lines (#808080, all four sides) plus one interior
+separator between the color bar and the grid margin. All lines are
+centered on half-pixel coordinates with shape-rendering=crispEdges so a
+1-px stroke covers exactly one pixel column/row.
 """
 from lxml import etree
 
@@ -59,44 +61,60 @@ def test_uuid_canvas_size_matches_v3_formula():
     assert float(svg.get("height")) == 126
 
 
-def test_black_border_on_all_four_sides():
+def test_gray_border_on_all_four_sides():
     svg = _doc(render("deadbeef"))
     bw = float(svg.get("width"))
     bh = float(svg.get("height"))
     lines = svg.xpath('//*[local-name()="line"]')
-    blacks = [l for l in lines if l.get("stroke") == "#000000"]
-    # 4 outer borders + 1 interior separator = 5 black lines.
-    assert len(blacks) >= 5
+    grays = [l for l in lines if l.get("stroke") == "#808080"]
+    # 4 outer borders + 1 interior separator = 5 gray lines.
+    assert len(grays) >= 5
 
-    # Find each border by its endpoints.
+    # Find each border by its endpoints. Lines sit on half-pixel
+    # coordinates so a 1-px stroke covers exactly one pixel.
     def has_line(x1, y1, x2, y2):
         return any(
             float(l.get("x1")) == x1 and float(l.get("y1")) == y1
             and float(l.get("x2")) == x2 and float(l.get("y2")) == y2
-            for l in blacks
+            for l in grays
         )
 
-    assert has_line(0, 0, bw - 1, 0),               "missing top border"
-    assert has_line(bw - 1, 0, bw - 1, bh - 1),     "missing right border"
-    assert has_line(0, bh - 1, bw - 1, bh - 1),     "missing bottom border"
-    assert has_line(0, 0, 0, bh - 1),               "missing left border"
+    assert has_line(0, 0.5, bw, 0.5),               "missing top border"
+    assert has_line(bw - 0.5, 0, bw - 0.5, bh),     "missing right border"
+    assert has_line(0, bh - 0.5, bw, bh - 0.5),     "missing bottom border"
+    assert has_line(0.5, 0, 0.5, bh),               "missing left border"
 
 
 def test_interior_separator_between_color_bar_and_grid_margin():
-    # The interior separator runs vertically at x = 1 + edge_size = 9,
-    # from y=0 to y=bounding_h-1.
+    # The interior separator runs vertically at x = 1 + edge_size + 0.5
+    # = 9.5, from y=0 to y=bounding_h. (Half-pixel x so a 1-px stroke
+    # covers pixel column 9 cleanly.)
     svg = _doc(render("deadbeef"))
     bh = float(svg.get("height"))
     lines = svg.xpath('//*[local-name()="line"]')
     separator = [
         l for l in lines
-        if l.get("stroke") == "#000000"
-        and float(l.get("x1")) == float(l.get("x2")) == 1 + EDGE_SIZE
+        if l.get("stroke") == "#808080"
+        and float(l.get("x1")) == float(l.get("x2")) == 1 + EDGE_SIZE + 0.5
     ]
     assert len(separator) == 1
     s = separator[0]
     assert float(s.get("y1")) == 0
-    assert float(s.get("y2")) == bh - 1
+    assert float(s.get("y2")) == bh
+
+
+def test_border_lines_use_crisp_edges():
+    # shape-rendering=crispEdges disables antialiasing so 1-px strokes
+    # render as solid 1-px bands rather than blurry 2-px halos.
+    svg = _doc(render("deadbeef"))
+    grays = [
+        l for l in svg.xpath('//*[local-name()="line"]')
+        if l.get("stroke") == "#808080"
+    ]
+    for l in grays:
+        assert l.get("shape-rendering") == "crispEdges", (
+            f"line {l.attrib} missing shape-rendering=crispEdges"
+        )
 
 
 def test_color_bar_bands_at_x_1_width_edge_size():

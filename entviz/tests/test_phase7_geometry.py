@@ -37,12 +37,13 @@ def test_first_rect_is_white_bounding_rect():
     assert float(first.get("height")) == 94
 
 
-def test_black_borders_present():
-    # v3: borders on all 4 sides + interior separator → ≥ 5 black lines.
+def test_gray_borders_present():
+    # v3: borders on all 4 sides + interior separator → ≥ 5 gray lines.
+    # (Switched from #000000 to #808080 to soften the frame.)
     svg = _parse(render("deadbeef"))
     lines = svg.xpath('//*[local-name()="line"]')
-    blacks = [l for l in lines if l.get("stroke") == "#000000"]
-    assert len(blacks) >= 5, f"expected ≥5 black border lines, got {len(blacks)}"
+    grays = [l for l in lines if l.get("stroke") == "#808080"]
+    assert len(grays) >= 5, f"expected ≥5 gray border lines, got {len(grays)}"
 
 
 def test_grid_rect_offset_inside_bounding():

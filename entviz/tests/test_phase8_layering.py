@@ -103,7 +103,8 @@ def test_borders_last_in_document_order():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     elements = svg.xpath('//*')
     last_three = elements[-3:]
-    # Last three elements should be the 3 black border lines.
+    # Last three elements should be the 3 trailing border lines (now
+    # rendered in #808080).
     for el in last_three:
         assert el.tag.endswith("}line"), f"expected trailing line, got {el.tag}"
-        assert el.get("stroke") == "#000000"
+        assert el.get("stroke") == "#808080"

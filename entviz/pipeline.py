@@ -230,7 +230,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # Layer 5b: shape count summary right-justified to grid_rect's right
     # edge, on the nucleus-height line below the grid. Rendered at
-    # min(round(0.9 × reference), cell_text_pt) with #444 fill. For hex
+    # min(round(0.84 × reference), cell_text_pt) with #444 fill. For hex
     # inputs, cell_text_pt = round(0.75 × reference), so the min picks
     # cell_text_pt and the SCS matches the cell text size.
     _draw_shape_count_summary(
@@ -241,16 +241,20 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         shape_usage=renderer.shape_usage,
     )
 
-    # Black border lines on all four sides of the bounding rect, plus an
-    # interior vertical separator at x = 1 + edge_size (the color bar's
-    # right edge). The top, right, bottom, and left borders frame the
-    # whole entviz; the interior separator divides the color bar from
-    # the grid-margin column. All five lines are 1 px stroke #000000.
-    _draw_border_line(svg, 0, 0, bounding_w - 1, 0)                                  # top
-    _draw_border_line(svg, bounding_w - 1, 0, bounding_w - 1, bounding_h - 1)        # right
-    _draw_border_line(svg, 0, bounding_h - 1, bounding_w - 1, bounding_h - 1)        # bottom
-    _draw_border_line(svg, 0, 0, 0, bounding_h - 1)                                  # left
-    _draw_border_line(svg, 1 + edge_size, 0, 1 + edge_size, bounding_h - 1)          # interior separator
+    # Gray border lines (#808080) on all four sides of the bounding rect,
+    # plus an interior vertical separator at x = 1 + edge_size + 0.5 (the
+    # color bar's right edge). Each line is centered on a half-pixel so a
+    # 1-px stroke covers exactly one pixel column/row crisply; the four
+    # outer lines extend the full canvas width/height so the corner
+    # pixels are painted by both adjacent sides (no 1-px gap at corners).
+    # shape-rendering="crispEdges" disables antialiasing so the lines
+    # render as solid 1-px bands, not blurry 2-px halos.
+    _draw_border_line(svg, 0, 0.5, bounding_w, 0.5)                                  # top
+    _draw_border_line(svg, bounding_w - 0.5, 0, bounding_w - 0.5, bounding_h)        # right
+    _draw_border_line(svg, 0, bounding_h - 0.5, bounding_w, bounding_h - 0.5)        # bottom
+    _draw_border_line(svg, 0.5, 0, 0.5, bounding_h)                                  # left
+    _draw_border_line(svg, 1 + edge_size + 0.5, 0,
+                      1 + edge_size + 0.5, bounding_h)                               # interior separator
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
@@ -259,7 +263,7 @@ def _draw_border_line(svg, x1, y1, x2, y2):
     etree.SubElement(
         svg, 'line',
         x1=str(x1), y1=str(y1), x2=str(x2), y2=str(y2),
-        stroke='#000000', **{'stroke-width': '1'},
+        stroke='#808080', **{'stroke-width': '1', 'shape-rendering': 'crispEdges'},
     )
 
 
@@ -425,11 +429,10 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
 def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height,
                               reference_pt, cell_text_pt, dpi, shape_usage):
     """
-    V3-3a: SCS rendered font size = min(round(0.9 × reference_pt),
+    SCS rendered font size = min(round(0.84 × reference_pt),
     cell_text_pt). Fill = #444. The min keeps the SCS from rendering
-    larger than the cell text once V3-4 introduces per-token cell-text
-    shrinking; pre-V3-4 the min is a no-op because cell_text_pt ==
-    reference_pt.
+    larger than the cell text when cell text has been shrunk for hex
+    inputs.
     """
     # V3 SCS: format is `X##` where X is the shape's 1-digit slot index
     # (1, 2, 3) and ## is the zero-padded 2-digit count. Empty shapes
@@ -449,7 +452,7 @@ def _draw_shape_count_summary(svg, grid_rect, gm, nucleus_height,
     # dominant-baseline=central is half of nucleus_height down from that.
     y = grid_rect.bottom + gm + nucleus_height / 2
     # Compute rendered SCS font size in points, then convert to pixels.
-    scs_pt = min(round(0.9 * reference_pt), cell_text_pt)
+    scs_pt = min(round(0.84 * reference_pt), cell_text_pt)
     scs_px = scs_pt * dpi / 72
     el = etree.SubElement(
         svg, 'text',

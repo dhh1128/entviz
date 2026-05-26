@@ -11,8 +11,8 @@ At 12pt/96 DPI reference:
   4-char: 12pt → 16 px (unchanged)
   6-char: 9pt → 12 px
 
-This also propagates into the SCS via the min(0.9×ref, cell_text_pt)
-rule: for hex inputs SCS = min(11pt, 9pt) = 9pt = 12 px, matching
+This also propagates into the SCS via the min(0.84×ref, cell_text_pt)
+rule: for hex inputs SCS = min(10pt, 9pt) = 9pt = 12 px, matching
 the cell text.
 """
 import re
@@ -69,7 +69,7 @@ def test_non_hex_input_cell_text_rendered_at_16px():
 
 
 def test_hex_scs_matches_cell_text_size():
-    # For hex inputs: scs_pt = min(round(0.9×12), 9) = min(11, 9) = 9pt
+    # For hex inputs: scs_pt = min(round(0.84×12), 9) = min(10, 9) = 9pt
     # → 12 px. Cell text and SCS are the same size; the visual
     # hierarchy comes entirely from the #444 fill.
     svg = _doc(render("deadbeef" * 16))  # 22 hex tokens, big enough for SCS
@@ -81,7 +81,7 @@ def test_hex_scs_matches_cell_text_size():
 
 
 def test_non_hex_scs_smaller_than_cell_text():
-    # For non-hex inputs: scs_pt = min(11, 12) = 11pt → 14.67 px;
+    # For non-hex inputs: scs_pt = min(10, 12) = 10pt → 13.33 px;
     # cell text is at full reference = 16 px. (See test_v3_scs_styling
     # for the converse test on the SCS-only path.) Bitcoin address
     # (base58) exercises this branch post-alphabet-refactor.
@@ -89,7 +89,7 @@ def test_non_hex_scs_smaller_than_cell_text():
     cell_px = _cell_text_pxs(svg)[0]
     scs = _scs_px(svg)
     assert cell_px == 16
-    assert scs is not None and 14 < scs < 15
+    assert scs is not None and 13 < scs < 14
 
 
 def test_hex_text_fits_inside_nucleus():

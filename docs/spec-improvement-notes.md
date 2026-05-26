@@ -486,7 +486,14 @@ test today. A future revision should publish:
 - their expected SVG outputs (or hashes thereof)
 - tolerance rules for non-determinism (e.g., font rasterization)
 
-### D12. SCS font size: change percentage from 90% to 84%
+### D12. SCS font size: change percentage from 90% to 84% — RESOLVED
+
+Multiplier in `_draw_shape_count_summary` changed from 0.9 to 0.84.
+At 12pt reference, SCS now renders at 10pt = 13.33 px (vs cell text
+16 px), a 16.7% reduction that reads as clearly secondary. Spec
+docs/index.md and test assertions updated.
+
+
 
 The current spec rule `scs_pt = min(round(0.9 × reference_pt), cell_text_pt)`
 produces 11pt at the 12pt reference (= 14.67 px), which is only 8.3%
@@ -500,7 +507,26 @@ will visibly read as secondary. Update item 3 of this doc accordingly.
 For hex inputs (cell text already at 9pt), the min still picks
 cell_text_pt = 9pt and the SCS matches cell text size — unchanged.
 
-### D13. Border + interior-separator color: change from #000000 to #808080
+### D13. Border + interior-separator color: change from #000000 to #808080 — RESOLVED
+
+All five border lines (4 outer + 1 interior separator) now stroke
+#808080. Same commit also fixed three alignment bugs caught during
+high-magnification review of uuid-a.svg:
+
+- Color bar had a 1-px gap from the left border. Lines drawn at
+  integer coords with stroke-width=1 render as antialiased 2-px
+  halos centered on the coord; the left line at x=0 painted half on
+  pixel -1 (invisible) and half on pixel 0, leaving most of pixel 0
+  white. Fix: move all border lines to half-pixel coords (x=0.5,
+  y=0.5, x=bw-0.5, y=bh-0.5) and add `shape-rendering=crispEdges`
+  so they paint exactly one pixel each.
+- Interior separator looked 2-px wide for the same reason. Now at
+  x = 1 + edge_size + 0.5 = 9.5.
+- Right and bottom border lines didn't reach the bottom-right corner
+  (1-px gap). Outer lines now extend to the full canvas width/height
+  so corner pixels are painted by both adjacent sides.
+
+
 
 Currently the four bounding-rect borders and the interior separator
 between the color bar and the grid margin are drawn at #000000 (pure
@@ -616,7 +642,20 @@ The "tokenize pure-hex-content as hex" rule (option 2) seems most
 honest. Worth a visual A/B before deciding — the change shifts
 both token count and nucleus colors for every UUID-style input.
 
-### D15. Per-edge gradient is invisible after v3 path transforms
+### D15. Per-edge gradient is invisible after v3 path transforms — RESOLVED
+
+`_gradient_endpoints` now returns the canonical pair `(12, 8, 12, 0)`
+unconditionally. The `<use>`'s transform carries the gradient line
+through the same scale/rotate/translate as the path, so the inner
+stop (y=8) lands against the nucleus and the outer stop (y=0) at
+the far edge regardless of rotation. Confirmed visually with
+cairosvg: the gradient is smooth and correctly oriented on both
+horizontal and rotated (90°/180°/270°) edges. (ImageMagick/older
+librsvg renders the rotated cases incorrectly because it doesn't
+apply the use transform to the gradient; spec-compliant renderers
+handle it correctly.)
+
+
 
 V3-6b's per-edge gradient renders effectively as a uniform color
 because the gradient endpoints are defined in *screen* coordinates,

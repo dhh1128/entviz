@@ -15,28 +15,25 @@ _QUARTILE_CORNERS = [
 
 def _gradient_endpoints(edge_index: int, er: Rect):
     """
-    Return (x1, y1, x2, y2) for a gradient that runs from the inner
-    boundary (touching the nucleus) to the outer boundary of edge_rect
-    `er`, perpendicular to the shared edge. Coordinates are in user
-    space (i.e., the same coordinate system as the edge_rect itself).
+    Return (x1, y1, x2, y2) for a gradient that runs from canonical
+    inner (y=8, touching the nucleus) to canonical outer (y=0, far
+    from the nucleus) in the v3 24×8 edge-shape coordinate space.
 
-    Edge layout:
-      0,1: top horizontal — inner = bottom of edge_rect, outer = top.
-      2:   right vertical — inner = left edge_rect, outer = right.
-      3,4: bottom horizontal — inner = top, outer = bottom.
-      5:   left vertical — inner = right, outer = left.
+    Renderers resolve `userSpaceOnUse` for a gradient referenced via
+    `fill` on a `<use>` element in the post-transform local user space
+    of the referenced path — i.e., canonical 24×8 coordinates. So we
+    emit canonical endpoints and let the `<use>`'s transform carry
+    the gradient through the same scale/rotate/translate as the path.
+
+    All edges share the same canonical inner→outer direction (y=8 →
+    y=0); the per-edge rotation (0°/90°/180°/270°) handled in
+    v3_render._transform_for_edge rotates the gradient too, so the
+    inner stop ends up against the nucleus for every edge.
+
+    `edge_index` and `er` are accepted for legacy callers but no
+    longer affect the output.
     """
-    cx = (er.left + er.right) / 2
-    cy = (er.top + er.bottom) / 2
-    if edge_index in (0, 1):
-        return cx, er.bottom, cx, er.top
-    if edge_index in (3, 4):
-        return cx, er.top, cx, er.bottom
-    if edge_index == 2:
-        return er.left, cy, er.right, cy
-    if edge_index == 5:
-        return er.right, cy, er.left, cy
-    raise ValueError(f"bad edge index {edge_index}")
+    return 12, 8, 12, 0
 
 
 class Renderer:

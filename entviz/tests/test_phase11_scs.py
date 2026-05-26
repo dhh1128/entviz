@@ -78,8 +78,8 @@ def test_scs_right_justified_to_grid_right_edge():
 
 def test_scs_uses_v3_rendered_font_size():
     # UUID is now correctly tokenized as hex (post-alphabet refactor),
-    # so cell_text_pt = 9pt = 12 px, and SCS = min(round(0.9 × 12), 9)
-    # = min(11, 9) = 9pt = 12 px.
+    # so cell_text_pt = 9pt = 12 px, and SCS = min(round(0.84 × 12), 9)
+    # = min(10, 9) = 9pt = 12 px.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     scs = _scs_text(svg)
     style = scs.get("style") or ""

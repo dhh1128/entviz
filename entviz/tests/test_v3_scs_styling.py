@@ -1,15 +1,15 @@
 """
-V3-3a: SCS rendered font size = min(round(0.9 × reference_pt),
+SCS rendered font size = min(round(0.84 × reference_pt),
 cell_text_pt); fill = #444.
 
-The min keeps SCS from ever being larger than the cell text. Before
-V3-4 lands, cell_text_pt == reference_pt, so the min has no effect
-yet — but the formula is plumbed so V3-4's per-token cell-text
-shrinking just changes one argument.
+The min keeps SCS from ever being larger than the cell text. For
+non-hex inputs cell_text_pt == reference_pt so the min picks the
+0.84 branch; for hex inputs cell_text_pt = round(0.75 × ref), and
+the min picks cell_text_pt so SCS matches cell text size.
 
 At 12pt/96 DPI:
-  scs_pt = min(round(0.9 × 12), 12) = min(11, 12) = 11pt
-  scs_px = 11 × 96/72 ≈ 14.67 px
+  scs_pt = min(round(0.84 × 12), 12) = min(10, 12) = 10pt
+  scs_px = 10 × 96/72 ≈ 13.33 px
 """
 from lxml import etree
 
@@ -34,14 +34,13 @@ def test_scs_fill_is_dark_gray_not_black():
     assert fill in ("#444", "#444444"), f"SCS fill is {fill!r}; expected #444"
 
 
-def test_scs_font_size_at_90_percent_of_reference():
-    # Default reference is 12pt → 11pt rendered → 14.67 px.
+def test_scs_font_size_at_84_percent_of_reference():
+    # Default reference is 12pt → 10pt rendered → 13.33 px.
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     scs = _scs_text(svg)
     style = scs.get("style") or ""
-    # Match a couple of acceptable text forms ("14.67", "14.666...", "14.6").
-    assert any(s in style for s in ["font-size: 14.6", "font-size: 14.7"]), (
-        f"SCS font-size in style {style!r} is not ~14.67 px"
+    assert any(s in style for s in ["font-size: 13.3", "font-size: 13.4"]), (
+        f"SCS font-size in style {style!r} is not ~13.33 px"
     )
 
 
@@ -68,11 +67,10 @@ def test_scs_font_size_smaller_than_cell_text():
 
 
 def test_scs_at_larger_reference_size_scales_proportionally():
-    # 18pt reference → 0.9 × 18 = 16.2 → round to 16pt → 21.33 px.
+    # 18pt reference → 0.84 × 18 = 15.12 → round to 15pt → 20 px.
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", font_size_pt=18))
     scs = _scs_text(svg)
     style = scs.get("style") or ""
-    # 21.33 — accept the typical rendered prefixes.
-    assert any(s in style for s in ["font-size: 21.3", "font-size: 21.4"]), (
-        f"at 18pt reference, SCS font-size in style {style!r} is not ~21.33 px"
+    assert "font-size: 20" in style, (
+        f"at 18pt reference, SCS font-size in style {style!r} is not 20 px"
     )
