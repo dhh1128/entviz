@@ -14,10 +14,10 @@ def _doc(svg_str):
 
 
 def _color_bar_bands(svg):
-    """All rects at x=1 with width=edge_size=8 (the v3 color bar bands)."""
+    """All rects at x=1 with width=box_height=10 (the v4 color bar bands)."""
     return [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 8
+        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 10
     ]
 
 

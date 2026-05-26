@@ -26,15 +26,5 @@ def test_rect():
     assert_xml(rect(std_canvas(), std_square(), "red"), 
         "<rect", 'x="100', 'y="100', 'width="50', 'height="50', 'fill="red')
 
-def test_right_triangle():
-    def rt(rotation):
-        return right_triangle(std_canvas(), std_square(), rotation, "green")
-    assert_xml(rt(0), "<polygon", 'points="100,100 100,150 150,150"', 'fill="green')
-    assert_xml(rt(90), "<polygon", 'points="100,100 150,100 100,150"', 'fill="green')
-    assert_xml(rt(180), "<polygon", 'points="100,100 150,100 150,150"', 'fill="green')
-    assert_xml(rt(270), "<polygon", 'points="100,150 150,100 150,150"', 'fill="green')
-    try:
-        right_triangle(std_canvas(), std_square(), 45, "green")
-        assert False, "Expected ValueError"
-    except ValueError:
-        pass
+# right_triangle was retired in v4 (no longer needed once v3 edge shapes
+# went away). Test removed.

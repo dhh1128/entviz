@@ -69,28 +69,36 @@ class Rect:
 class Cell(Rect):
     def __init__(self, top_left: Point, size: Size):
         super().__init__(top_left, size)
-        # v4 cell aspect ratio is 15:8 (= 3.75·nucleus_height by 2·nucleus_height),
-        # not the old 2:1. Width = nucleus_width + 2·box_width = 7.5·box_height,
-        # height = 2·nucleus_height = 4·box_height. Tolerance covers float drift.
-        assert abs(size.width * 8 - size.height * 15) < (0.01 * size.width)
+        # v4 cell aspect ratio is 3:2 (= cell_width / cell_height = 60/40 at 12pt).
+        # Width = nucleus_width + 2·box_width = 10·box_width; height = nucleus_height
+        # + 2·box_height = 4·box_height; nucleus_width:nucleus_height = 48:20 = 12:5.
+        # Tolerance covers float drift.
+        assert abs(size.width * 2 - size.height * 3) < (0.01 * size.width)
         self._invalidate_cache()
     def _invalidate_cache(self):
         super()._invalidate_cache()
         self._nucleus = None
     @property
-    def box_height(self):
-        """Height of every surround box. Equals nucleus_height/2 = cell_height/4."""
-        return self.size.height / 4
-    @property
     def box_width(self):
-        """Width of every surround box. Equals 0.75·box_height."""
-        return 0.75 * self.box_height
+        """Width of every surround box. Equals cell_width/10 = nucleus_width/8.
+        Derived from the horizontal tiling: 10 top-row boxes span
+        nucleus_width + 2·box_width."""
+        return self.size.width / 10
+    @property
+    def box_height(self):
+        """Height of every surround box. Equals cell_height/4 = nucleus_height/2.
+        Derived from the vertical tiling: 2 side-column boxes stack to
+        nucleus_height."""
+        return self.size.height / 4
     @property
     def nucleus(self):
         if self._nucleus is None:
+            # nucleus_width = 8·box_width = cell_width × 4/5; the top row of
+            # 10 boxes spans nucleus_width + 2·box_width = 10·box_width = cell_width.
+            # nucleus_height = 2·box_height = cell_height / 2.
             self._nucleus = Rect(
                 Point(self.left + self.box_width, self.top + self.box_height),
-                Size(self.box_height * 6, self.box_height * 2),
+                Size(self.box_width * 8, self.box_height * 2),
             )
         return self._nucleus
     def box_origin(self, i: int) -> Point:

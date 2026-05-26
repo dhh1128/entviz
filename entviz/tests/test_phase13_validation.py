@@ -106,16 +106,16 @@ def test_large_input_grid_has_room_for_separator_plus_blanks():
     # For >512-bit input, the grid is sized to fit token_count + 4 extra
     # cells (3 possible median/quartile blanks + 1 separator). For
     # "deadbeef" * 18 → 22 tokens, grid_cells must be ≥ 26.
+    # v4 bounding-rect formulas:
+    #   bounding_w = 1 + box_height + 1 + GM + grid_w + GM + 1
+    #   bounding_h = 1 + GM + grid_h + GM + 1
     svg = _doc(render("deadbeef" * 18))
-    # Compute grid cells from bounding rect size:
-    #   bounding_w = GM + GM + grid_w + GM + 1  → grid_w = bounding_w - 3*GM - 1
-    # cells = (grid_w / cell_w) * (grid_h / cell_h)
     bw = float(svg.get("width"))
     bh = float(svg.get("height"))
-    GM = 4
-    cell_w, cell_h, nucleus_h = 64, 32, 16
-    grid_w = bw - 3 * GM - 1
-    grid_h = bh - 2 - 3 * GM - nucleus_h
+    GM, box_height = 5, 10
+    cell_w, cell_h = 60, 40
+    grid_w = bw - 3 - box_height - 2 * GM
+    grid_h = bh - 2 - 2 * GM
     cells = int(grid_w / cell_w) * int(grid_h / cell_h)
     assert cells >= 26, f"grid has only {cells} cells; need ≥ 26 for 22 tokens + 4 blanks"
 
@@ -131,16 +131,19 @@ def test_large_input_blank_separator_creates_a_gap():
     svg = _doc(render("deadbeef" * 18))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 16
+        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
     ]
     # Convert each nucleus (x, y) to its (col, row) and then cell_index.
     # nucleus.x = grid_rect.left + col*cell_w + edge_size = 8 + 64*col + 8.
     # nucleus.y = grid_rect.top  + row*cell_h + edge_size = 5 + 32*row + 8.
     # → col = (x - 16) / 64; row = (y - 13) / 32.
+    # v4 nucleus.x = grid_rect.left + col*cell_w + box_width = 17 + 60*col + 6.
+    # v4 nucleus.y = grid_rect.top  + row*cell_h + box_height = 6 + 40*row + 10.
+    # → col = (x - 23) / 60; row = (y - 16) / 40.
     indices = set()
     for n in nuclei:
-        col = int((float(n.get("x")) - 16) / 64)
-        row = int((float(n.get("y")) - 13) / 32)
+        col = int((float(n.get("x")) - 23) / 60)
+        row = int((float(n.get("y")) - 16) / 40)
         # cell_index = row * cols. We don't know cols from one cell; use
         # max col + 1 as approximation, but compute final indices once we
         # know cols.
@@ -159,7 +162,7 @@ def test_large_input_renders_exactly_token_count_nuclei():
     svg = _doc(render("deadbeef" * 18))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 16
+        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
     ]
     assert len(nuclei) == 22
 
@@ -171,6 +174,6 @@ def test_small_input_has_no_extra_separator():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 16
+        if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
     ]
     assert len(nuclei) == 6  # UUID → 6 tokens via hex path (post-refactor)

@@ -5,7 +5,8 @@ Entviz is a simple way to visualize values with high entropy &mdash; cryptograph
 
 * The v3 edge channel — 6 edge rects per cell, each filled with a cubist or polygon shape using a per-edge XOR rotation through a 4-color edge palette — is replaced by a **24-box surround** per cell. Bit *i* of the ftok's quant (LSB = bit 0) controls whether box *i* is filled or empty. The surround tiles the entire region around the nucleus with no corner rects.
 * Each cell has a **single edge color** chosen as the palette entry (one of the 4 non-bg colors) perceptually closest to that cell's nucleus background. Per-edge color rotation, `color_shift`, and `shape_shift` are gone.
-* **Cell aspect ratio** changes from 2:1 to 15:8. `cell_width` is now `nucleus_width + 2·box_width = 3.75·nucleus_height`, exactly enough to enclose the surround flush with cell boundaries so adjacent cells touch.
+* **Nucleus geometry** decouples from font size in the vertical direction: `nucleus_width = 3·font_size_px` (unchanged) but `nucleus_height = 1.25·font_size_px` (was equal to font_size_px). The 25% vertical extra makes room for the glyph descenders of monospace fonts whose bounding boxes extend below the em-box (most of them); v3 had this descender-protrusion latent but it was masked by sparsely-filled edge shapes. With v4's densely solid surround, descenders protruding into the surround region became visible.
+* **Cell aspect ratio** is therefore 3:2 (not v3's 2:1). cell_width = nucleus_width + 2·box_width = 10·box_width = 3.75·font_size_px; cell_height = nucleus_height + 2·box_height = 4·box_height = 2.5·font_size_px. Surround boxes are no longer square: `box_width = nucleus_width/8 = 0.375·font_size_px` (derived from the horizontal tiling — 10 top-row boxes span nucleus_width + 2·box_width); `box_height = nucleus_height/2 = 0.625·font_size_px` (derived from the vertical tiling — 2 side-column boxes stack to nucleus_height).
 * The **shape count summary** (SCS) is removed entirely; there are no shapes left to count. The bounding rect contracts by (nucleus_height + GM) on the bottom.
 * The **color bar's data source** changes: v3 tallied per-edge color usage; v4 tallies the four 2-bit patterns (00, 01, 10, 11) across the 256 disjoint 2-bit slices of the SHA-512 digest. The count⁴ skew, descending sort, and rendering geometry are unchanged.
 * A small **SVG-portability fix** for the ellipse overlay: the clipPath id is salted with the fingerprint and grid dimensions so that multiple entvizes embedded in the same HTML document do not collide on a shared id (which silently makes the browser resolve every `url(#…)` to the first matching id document-wide).
@@ -112,9 +113,9 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. The complete entropy is visualized as a rectangular **grid** consisting of a certain number of **cells**. Call this number of cells the **cell count**. Each token is rendered into one cell in the grid, and if the rectangle of the grid has more cells than *token count*, one or more cells will be empty.
 
-    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of **15:8** (= `cell_width` : `cell_height` = `3.75·nucleus_height` : `2·nucleus_height`). Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
+    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of **3:2** (= `cell_width` : `cell_height` = `3.75·font_size_px` : `2.5·font_size_px`). Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
 
-    >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·15):(2·8) = 90:16), 4 columns and 3 rows (60:24), 3 columns and 4 rows (45:32), or 2 columns and 6 rows (30:48). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
+    >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·3):(2·2) = 18:4 = 9:2), 4 columns and 3 rows (12:6 = 2:1), 3 columns and 4 rows (9:8), or 2 columns and 6 rows (6:12 = 1:2). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
 
     ![grid options](assets/grid-options.png)
 
@@ -132,22 +133,23 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. Choose a fixed-width font such as Courier, and an appropriate font size for reading. In our example, we will use 12 point, but the algorithm will work at any reasonable font size. The size of the font determines the scale of the entviz.
 
-1. Convert the point size of the font into pixels and call this value the **nucleus height**. Use the formula: pixels = (points * DPI) / 72. Most devices use 96 DPI, although other values are possible. At 96 DPI, a 12-point font = 16 pixels. This is the distance between the font's tallest ascender to its lowest descender, with a line height of 1.0, which allows some extra vertical space. It means that a 12-point font will render nicely, with appropriate extra space, in a rectangle that is 16 pixels high.
+1. Convert the point size of the font into pixels and call this value **font_size_px**. Use the formula: `pixels = (points · DPI) / 72`. Most devices use 96 DPI, although other values are possible. At 96 DPI, a 12-point font = 16 pixels. This is the em-size of the font; the actual glyph bounding box (ascender top to descender bottom) is typically slightly larger, which the cell geometry below accounts for.
 
-    The chosen point size is called the **reference font size**. Throughout this spec, all geometry — nucleus height, cell dimensions, grid dimensions, box dimensions, GM, bounding rect, color bar width — is derived from the reference font size. The reference is independent of the size actually applied to any specific piece of rendered text; some text elements are drawn at a smaller **rendered font size** (see the cell rendering algorithm below). The rendered font size never affects geometry.
+    The chosen point size is called the **reference font size**. Throughout this spec, all geometry — nucleus dimensions, cell dimensions, grid dimensions, box dimensions, GM, bounding rect, color bar width — is derived from `font_size_px`. The reference is independent of the size actually applied to any specific piece of rendered text; some text elements are drawn at a smaller **rendered font size** (see the cell rendering algorithm below). The rendered font size never affects geometry.
 
-1. Compute the geometry, all anchored on *nucleus height*:
+1. Compute the geometry, all anchored on `font_size_px`:
 
-    * **nucleus width** = `3·nucleus_height` (so the nucleus is a 3:1 rectangle)
-    * **box height** = `nucleus_height / 2` = `cell_height / 4`. This is the long-axis dimension of a surround box: the height of a top/bottom-row box and the length-along-side of a left/right-column box.
-    * **box width** = `0.75·box_height`. This is the short-axis dimension of a surround box: the width of a top/bottom-row box and the depth-from-nucleus of a left/right-column box.
-    * **cell height** = `2·nucleus_height`
-    * **cell width** = `nucleus_width + 2·box_width` = `3.75·nucleus_height`. Cell aspect is 15:8.
+    * **nucleus width** = `3·font_size_px` (so the nucleus is wide enough to hold 4 monospace glyphs at full reference size with horizontal margin)
+    * **nucleus height** = `1.25·font_size_px` (the 25% vertical extra accommodates the glyph descenders of typical monospace fonts, whose bounding box extends below the em-box by ~20–25%)
+    * **box width** = `nucleus_width / 8` = `0.375·font_size_px`. Derived from the horizontal tiling: 10 top-row boxes span `nucleus_width + 2·box_width`, so `10·box_width = nucleus_width + 2·box_width`, i.e. `8·box_width = nucleus_width`.
+    * **box height** = `nucleus_height / 2` = `0.625·font_size_px`. Derived from the vertical tiling: 2 side-column boxes stack to `nucleus_height`.
+    * **cell height** = `nucleus_height + 2·box_height` = `4·box_height` = `2.5·font_size_px`
+    * **cell width** = `nucleus_width + 2·box_width` = `10·box_width` = `3.75·font_size_px`. Cell aspect is 3:2.
     * **grid width** = `cell_width · cols`
     * **grid height** = `cell_height · rows`
     * **GM** (grid margin) = `box_height / 2`
 
-    At 96 DPI with a 12-point font: `nucleus_height` = 16, `nucleus_width` = 48, `box_height` = 8, `box_width` = 6, `cell_width` = 60, `cell_height` = 32, GM = 4.
+    At 96 DPI with a 12-point font: `font_size_px` = 16, `nucleus_width` = 48, `nucleus_height` = 20, `box_width` = 6, `box_height` = 10, `cell_width` = 60, `cell_height` = 40, GM = 5. Surround boxes are 6×10 (no longer square); the 3:5 width:height ratio of a box is *not* a fundamental constant — both dimensions are derived independently from their tiling constraints. If a future revision changes `nucleus_height` or `nucleus_width` independently, the box dimensions follow.
 
     ![basic measurements for cell and grid](assets/cell-layout.png)
 
@@ -172,7 +174,9 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. Inside the *grid rect*, render each token T into its appropriate cell in the grid, using its corresponding used ftok and the *edge palette*, according to the [cell rendering algorithm](#cell-rendering-algorithm) below.
 
-1. Draw a circle with diameter = *box height* / 2, centered vertically and horizontally, in a corner of each *quartile ftok*'s corresponding cell. For the first quartile ftok, place the circle in the top left corner of the cell, and use the first item in the *edge palette* as its fill color. For the second, place the circle in the top right, using the second palette entry. For the third, place the circle in the bottom right, using the third. For the fourth, in the bottom left, using the fourth.
+1. Draw a **quartile mark** on each *quartile ftok*'s corresponding cell. The mark is a small right triangle in one corner of the *nucleus rect*: both legs are `nucleus_height / 2` long, the right-angle vertex sits at the matching nucleus corner, and the legs run along the two nucleus edges meeting there. The clockwise corner assignment is: 1st = top-left, 2nd = top-right, 3rd = bottom-right, 4th = bottom-left. Quartile identity is carried by triangle *orientation* alone — there is no per-quartile color palette.
+
+    The triangle is filled in the **cell text foreground color** (`#ffffff` or `#000000`, picked by luminance contrast against the nucleus background — the same rule that picks the text color). The mark therefore reads as a small same-color flag in the nucleus corner without obscuring the cell text or requiring any compositing modes. Drawn after the nucleus rect and after the cell text.
 
 1. Draw the **color bar** in the inset rectangle described in the bounding-rect section above (left border at x = 1, right border at `x = 1 + box_height`, drawing height = `bounding_rect.height − 2`). Build a 4-element histogram by counting how many of the 256 disjoint 2-bit slices of the SHA-512 digest (64 bytes × 4 slices/byte = 256 slices) equal each of the four 2-bit patterns (00, 01, 10, 11). Map binary value *i* to *edge palette*[*i*]. For each palette color whose count is greater than zero, compute `count^4`. Divide the color bar's drawing height into horizontal bands, one per nonzero color, with each band's height proportional to that color's `count^4` value as a share of the sum of all four `count^4` values. The fourth-power skew amplifies the dominance of the most-frequent pattern so the bar reads as a clear pecking order rather than four near-equal stripes (which is what a raw-count distribution from a uniformly-random digest typically produces). Order the bands by descending count, most frequent at the top; break ties by the order of the color in the *edge palette*. Fill each band with its color. Total count is always 256 regardless of grid size, so band proportions stay comparable across small and large inputs.
 
@@ -246,4 +250,24 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
 
     Geometry (grid, nucleus, cell positions) does not change with the rendered font size — only the size of the glyphs drawn inside the nucleus does. Using the *foreground color*, write the text of the token on top of the *nucleus rect* at the rendered font size, centering it vertically and horizontally.
 
-1. **Blank cells** carry no token. For a blank cell, draw nothing — no nucleus, no text, no surround boxes. The grid_rect's background color shows through. (Quartile marks on blank cells, if the blank happens to land on a quartile ftok's position, follow the same corner placement rule as for non-blank cells.)
+1. **Blank cells** carry no token. For a blank cell, draw no nucleus, no text, and no surround boxes; the grid_rect's background color shows through. Then draw a **blank-cell marker**: a bicolor ring centered in the cell, plus a pair of small pointer markers indicating the *minftok* and *maxftok* cells (defined below).
+
+    Ring geometry — nominal_radius = `nucleus_width / 4`. The ring is built as two 1-pixel stroked circles at adjacent radii, both `fill = none`, `stroke-width = 1`:
+
+    1. **Outer 1-px white ring** at radius `nominal_radius + 0.5` (stroke paints `nominal_radius` to `nominal_radius + 1`), `stroke = #ffffff`.
+    2. **Inner 1-px black ring** at radius `nominal_radius − 0.5` (stroke paints `nominal_radius − 1` to `nominal_radius`), `stroke = #000000`.
+
+    The net visual is a 2-px-wide ring: 1 px of white outside, 1 px of black immediately inside. Whichever underlying bg color the cell sits on, one of the two strokes contrasts strongly and the other provides a hard edge. No blend mode required.
+
+    **Pointer markers.** Define:
+    * **minftok cell**: among the used ftoks, the one with the smallest 24-bit quant; tie-break = highest cell index of the corresponding cell.
+    * **maxftok cell**: among the used ftoks, the one with the largest 24-bit quant; tie-break = highest cell index.
+
+    For each blank cell, compute the angle `θ` from the ring's center to the center of the target cell (`θ = atan2(target.cy − ring.cy, target.cx − ring.cx)`). Draw two pointer markers along that line:
+
+    * **Maxftok marker**: small disc tangent to the *outside* of the ring at the angle toward the maxftok cell. Center at `(ring.cx + (nominal_radius + 3)·cos(θ_max), ring.cy + (nominal_radius + 3)·sin(θ_max))`.
+    * **Minftok marker**: same disc design, tangent to the *inside* of the ring at the angle toward the minftok cell. Center at `(ring.cx + (nominal_radius − 3)·cos(θ_min), ring.cy + (nominal_radius − 3)·sin(θ_min))`.
+
+    Each pointer marker is a `<circle>` with `r = 1.5`, `fill = #ffffff`, `stroke = #000000`, `stroke-width = 1` (a 4-px-diameter white disc with a 1-px black outline). The two markers are visually identical; position (inside vs outside the ring) alone disambiguates min from max. With nominal_radius = `nucleus_width / 4` and marker visible radius 2 (= path 1.5 + stroke half 0.5), the outside marker just fits within the cell at the worst angle (top/bottom direction).
+
+    Blank cells include both the up-to-3 algorithm-inserted blanks (median, ASCII-last, ASCII-first) and any trailing unfilled cells; the >512-bit separator blank also gets a marker. The whole blank-cell marker (ring + pointers) is drawn after the ellipse overlay so it sits on top of any overlay tint.

@@ -91,27 +91,35 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
                 cell_indices[t_idx] += 1
 
     # --- Pixel dimensions ---
-    # v4 cell width = nucleus_width + 2·box_width = 3.75·nucleus_height.
-    # cell_height = 2·nucleus_height. box_height = nucleus_height/2;
-    # box_width = 0.75·box_height. GM (grid margin) = box_height/2.
-    nucleus_height = (font_size_pt * _DPI) / 72
-    cell_width = nucleus_height * 3.75
-    cell_height = nucleus_height * 2
+    # font_size_px is the rendered text size for full-size cells (base64).
+    # nucleus is enlarged vertically (1.25·font_size_px) so descenders fit;
+    # nucleus width stays at 3·font_size_px. Surround box dimensions follow
+    # from the tiling constraints: 10 top-row boxes span nucleus_width +
+    # 2·box_width, so box_width = nucleus_width / 8 = font_size_px × 3/8;
+    # 2 side-column boxes stack to nucleus_height, so box_height =
+    # nucleus_height / 2 = font_size_px × 5/8. cell_width = 10·box_width
+    # = font_size_px × 3.75; cell_height = 4·box_height = font_size_px × 2.5.
+    # GM (grid margin) = box_height / 2.
+    font_size_px = (font_size_pt * _DPI) / 72
+    nucleus_width = font_size_px * 3
+    nucleus_height = font_size_px * 1.25
+    box_width = nucleus_width / 8
     box_height = nucleus_height / 2
+    cell_width = nucleus_width + 2 * box_width
+    cell_height = nucleus_height + 2 * box_height
     gm = box_height / 2
 
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
-    # Bounding rect dimensions per v3 spec:
+    # Bounding rect dimensions (v4 — no SCS):
     #   width  = 1 + box_height + 1 + GM + grid_width + GM + 1
-    #   height = 1 + GM + grid_height + GM + nucleus_height + GM + 1
+    #   height = 1 + GM + grid_height + GM + 1
     # Layout left→right: left border (1) | color bar (box_height) |
     #                    interior separator (1) | L margin (GM) | grid |
     #                    R margin (GM) | right border (1).
-    # Layout top→bottom unchanged from v2: top border (1) | margin (GM) |
-    #                    grid | margin (GM) | SCS line (nucleus_height)
-    #                    | margin (GM) | bottom border (1).
+    # Layout top→bottom: top border (1) | margin (GM) | grid | margin
+    #                    (GM) | bottom border (1).
     bounding_w = 1 + box_height + 1 + gm + grid_w + gm + 1
     bounding_h = 1 + gm + grid_h + gm + 1
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
@@ -206,8 +214,92 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     for token, ftok, cell, ci, _nucleus_bg in token_cells:
         renderer.render_nucleus(svg, token, cell, text_size_px=cell_text_px)
 
+    # Layer 3b: blank cells — every cell index in the grid that no token
+    # was placed at. Each blank cell shows a bicolor ring centered in
+    # the cell, plus two pointer markers indicating the minftok and
+    # maxftok cells (the used ftoks with smallest / largest 24-bit
+    # quant values; tie-break = highest cell index).
+    used_cell_indices = set(cell_indices.values())
+
+    def _cell_center(ci):
+        col = ci % grid.cols
+        row = ci // grid.cols
+        return (
+            grid_rect.left + col * cell_width + cell_width / 2,
+            grid_rect.top + row * cell_height + cell_height / 2,
+        )
+
+    # Identify minftok / maxftok cells. used_ftoks[i] corresponds to
+    # tokens[i] by index. Build (ftok, cell_index) pairs, then min/max
+    # by (quant, ±cell_index) for the tie-break.
+    used_ftok_cells = [
+        (used_ftoks[t.index], cell_indices[t.index]) for t in tokens
+    ]
+    # For min: smallest quant; tie-break = highest cell index
+    min_ftok_cell_idx = min(
+        used_ftok_cells, key=lambda fc: (fc[0].quant, -fc[1])
+    )[1]
+    # For max: largest quant; tie-break = highest cell index
+    max_ftok_cell_idx = max(
+        used_ftok_cells, key=lambda fc: (fc[0].quant, fc[1])
+    )[1]
+    min_target = _cell_center(min_ftok_cell_idx)
+    max_target = _cell_center(max_ftok_cell_idx)
+
+    # Ring geometry — reduced from v3 sizing to fit the outside pointer.
+    # nominal_radius = nucleus_width / 4 = 12 at 12pt (was 15).
+    # Marker visible radius = 2 (path r=1.5 + 1-px stroke half = 0.5).
+    # Tangent placement: outside marker_center = nominal_radius + 3;
+    # inside marker_center = nominal_radius − 3.
+    nominal_radius = nucleus_width / 4
+    marker_path_r = 1.5
+    marker_outside_distance = nominal_radius + 3
+    marker_inside_distance = nominal_radius - 3
+
+    for ci in range(grid.cols * grid.rows):
+        if ci in used_cell_indices:
+            continue
+        cx, cy = _cell_center(ci)
+        # Bicolor ring: 1-px white outer + 1-px black inner at adjacent radii.
+        etree.SubElement(
+            svg, 'circle',
+            cx=str(cx), cy=str(cy), r=str(nominal_radius + 0.5),
+            fill='none', stroke='#ffffff',
+            **{'stroke-width': '1'},
+        )
+        etree.SubElement(
+            svg, 'circle',
+            cx=str(cx), cy=str(cy), r=str(nominal_radius - 0.5),
+            fill='none', stroke='#000000',
+            **{'stroke-width': '1'},
+        )
+        # Maxftok pointer: small bicolor disc tangent OUTSIDE the ring,
+        # at the angle from ring center toward the maxftok cell's center.
+        angle_max = math.atan2(max_target[1] - cy, max_target[0] - cx)
+        etree.SubElement(
+            svg, 'circle',
+            cx=str(cx + marker_outside_distance * math.cos(angle_max)),
+            cy=str(cy + marker_outside_distance * math.sin(angle_max)),
+            r=str(marker_path_r),
+            fill='#ffffff', stroke='#000000',
+            **{'stroke-width': '1'},
+        )
+        # Minftok pointer: same design, tangent INSIDE the ring.
+        angle_min = math.atan2(min_target[1] - cy, min_target[0] - cx)
+        etree.SubElement(
+            svg, 'circle',
+            cx=str(cx + marker_inside_distance * math.cos(angle_min)),
+            cy=str(cy + marker_inside_distance * math.sin(angle_min)),
+            r=str(marker_path_r),
+            fill='#ffffff', stroke='#000000',
+            **{'stroke-width': '1'},
+        )
+
     # Layer 4: quartile marks at the cells of the four quartile ftoks
-    # (mapped through the 1:1 ftok→token→cell correspondence).
+    # (mapped through the 1:1 ftok→token→cell correspondence). The mark
+    # is drawn in the cell text's foreground color, so we look up the
+    # token for each quartile cell to recover its quant.
+    token_by_index = {t.index: t for t in tokens}
     for q_idx, q_ftok in enumerate(quartile_ftoks):
         if q_ftok is None:
             continue
@@ -217,7 +309,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         cell = cell_index_to_cell.get(ci)
         if cell is None:
             continue
-        renderer.draw_quartile_mark(svg, cell, q_idx)
+        token = token_by_index.get(q_ftok.index)
+        if token is None:
+            continue
+        _bg, fg_color = get_nucleus_colors(token.quant)
+        renderer.draw_quartile_mark(svg, cell, q_idx, fg_color)
 
     # Layer 5a: color bar inside its inset rect (x=1, width=box_height).
     # Bands proportional to count^4 of each edge color (V3-1); empty

@@ -130,15 +130,16 @@ def test_overlay_opacity_is_per_bg():
 
 
 def test_overlay_rx_ry_in_bounded_range():
-    # rx, ry should both lie in [cell_h, d_far − cell_w].
+    # rx, ry should both lie in [nucleus_height, d_far − cell_w].
+    # v4 r_min = nucleus_height (= 20 at 12pt), cell_w = 60.
     svg = _doc(render("deadbeefdeadbeef" * 8))
     e = _ellipse(svg)
     rx = float(e.get("rx"))
     ry = float(e.get("ry"))
-    cell_h, cell_w = 32, 64
-    # d_far depends on chosen anchor; just check both axes ≥ cell_h.
-    assert rx >= cell_h - 0.01
-    assert ry >= cell_h - 0.01
+    nucleus_h = 20
+    # d_far depends on chosen anchor; just check both axes ≥ r_min.
+    assert rx >= nucleus_h - 0.01
+    assert ry >= nucleus_h - 0.01
 
 
 def test_clip_path_targets_grid_rect_not_bounding_rect():
@@ -161,11 +162,11 @@ def test_overlay_anchor_is_interior_corner_position():
     svg = _doc(render("deadbeefdeadbeef" * 8))
     e = _ellipse(svg)
     cx, cy = float(e.get("cx")), float(e.get("cy"))
-    # For 22-token 4x6 grid at 12pt: grid_rect.left=14, grid_rect.top=5,
-    # cell_w=64, cell_h=32.
-    # Interior corners' x ∈ {14+64, 14+128, 14+192} = {78, 142, 206};
-    # y ∈ {5+32, 5+64, 5+96, 5+128, 5+160} = {37, 69, 101, 133, 165}.
-    valid_x = {78, 142, 206}
-    valid_y = {37, 69, 101, 133, 165}
+    # For 22-token 4x6 grid at 12pt in v4: grid_rect.left=17, grid_rect.top=6,
+    # cell_w=60, cell_h=40.
+    # Interior corners' x ∈ {17+60, 17+120, 17+180} = {77, 137, 197};
+    # y ∈ {6+40, 6+80, 6+120, 6+160, 6+200} = {46, 86, 126, 166, 206}.
+    valid_x = {77, 137, 197}
+    valid_y = {46, 86, 126, 166, 206}
     assert cx in valid_x, f"cx={cx} not in {valid_x}"
     assert cy in valid_y, f"cy={cy} not in {valid_y}"

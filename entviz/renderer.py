@@ -1,16 +1,6 @@
 from lxml import etree
-from .layout import Cell, Rect, Point, Size
+from .layout import Cell, Point
 from .colors import get_nucleus_colors, closest_palette_color, VisualStyle
-from .shapes import circle
-
-# Quartile mark corner: (x_fn, y_fn) as lambdas of (cell, r).
-# 1st=top-left, 2nd=top-right, 3rd=bottom-right, 4th=bottom-left.
-_QUARTILE_CORNERS = [
-    lambda cell, r: Point(cell.left + r, cell.top + r),
-    lambda cell, r: Point(cell.right - r, cell.top + r),
-    lambda cell, r: Point(cell.right - r, cell.bottom - r),
-    lambda cell, r: Point(cell.left + r, cell.bottom - r),
-]
 
 
 class Renderer:
@@ -59,11 +49,39 @@ class Renderer:
                                    **{"text-anchor": "middle", "dominant-baseline": "central"})
         text_el.text = token.text
 
-    def draw_quartile_mark(self, svg: etree.Element, cell: Cell, quartile_index: int):
-        """Quartile mark: small filled circle in a cell corner. The 4-color
-        non-bg palette (style.edge_colors) supplies the per-quartile color."""
-        r = cell.box_height / 4
-        fill_color = self.style.edge_colors[quartile_index]
-        center = _QUARTILE_CORNERS[quartile_index](cell, r)
-        mark_rect = Rect(Point(center.x - r, center.y - r), Size(r * 2, r * 2))
-        circle(svg, mark_rect, fill_color)
+    def draw_quartile_mark(self, svg: etree.Element, cell: Cell,
+                           quartile_index: int, fg_color: str):
+        """
+        v4 quartile mark: small right triangle in one corner of the nucleus.
+        Both legs = nucleus_height / 2; the right-angle vertex sits at the
+        nucleus corner matching the quartile (1st=TL, 2nd=TR, 3rd=BR,
+        4th=BL); each leg runs along one of the nucleus's two edges meeting
+        at that corner. Filled in the cell's text foreground color so the
+        mark sits on top of the nucleus_bg in the same color as the cell
+        text (black on light nuclei, white on dark) — small enough not to
+        intrude on text readability, but unambiguous as a corner marker.
+        Quartile identity comes from triangle orientation alone.
+        """
+        n = cell.nucleus
+        leg = n.size.height / 2
+        if quartile_index == 0:        # 1st: TL corner
+            pts = [n.top_left,
+                   Point(n.left + leg, n.top),
+                   Point(n.left, n.top + leg)]
+        elif quartile_index == 1:      # 2nd: TR corner
+            pts = [n.top_right,
+                   Point(n.right - leg, n.top),
+                   Point(n.right, n.top + leg)]
+        elif quartile_index == 2:      # 3rd: BR corner
+            pts = [n.bottom_right,
+                   Point(n.right, n.bottom - leg),
+                   Point(n.right - leg, n.bottom)]
+        else:                          # 4th: BL corner
+            pts = [n.bottom_left,
+                   Point(n.left, n.bottom - leg),
+                   Point(n.left + leg, n.bottom)]
+        etree.SubElement(
+            svg, 'polygon',
+            points=" ".join(f"{p.x},{p.y}" for p in pts),
+            fill=fg_color,
+        )

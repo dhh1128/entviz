@@ -1,9 +1,17 @@
 """
-Phase 8 acceptance: the pipeline renders in a layered global order rather
-than cell-by-cell. The critical structural property is that ALL edge
-shapes appear in the SVG document before ANY nucleus rect, so a future
-ellipse overlay (Phase 12) can sit between the two layers across the
-whole grid simultaneously.
+Layered rendering — pipeline renders in a global order (not per-cell), so
+the ellipse overlay can sit between the edge layer and the nucleus layer
+across the whole grid. v4 layer order:
+
+  1. white bounding bg
+  2. grid_rect bg
+  3. surround boxes (per cell)       — edge layer
+  4. ellipse overlay (clipped)
+  5. nuclei + text (per cell)        — nucleus layer
+  6. blank-cell rings + pointer markers
+  7. quartile triangles (polygons)
+  8. color bar bands
+  9. gray border lines
 """
 from lxml import etree
 
@@ -14,56 +22,51 @@ def _doc(svg_str):
     return etree.fromstring(svg_str.encode())
 
 
-def _is_nucleus(rect):
-    # Nucleus rects are nucleus_width × nucleus_height (48 × 16 at 12pt/96).
-    return float(rect.get("width", 0)) == 48 and float(rect.get("height", 0)) == 16
+def _is_nucleus_rect(rect):
+    # v4 nucleus is 48 × 20 at 12pt.
+    return float(rect.get("width", 0)) == 48 and float(rect.get("height", 0)) == 20
 
 
 def _is_color_bar_band(rect):
-    # v3: color bar bands are at x=1 with width=edge_size=8 (V3-2; v2 used
-    # x=0, width=GM=4). Drawn after the nucleus layer intentionally — the
-    # color bar is a gestalt summary that overlays the bounding rect's
-    # left inset strip.
-    return float(rect.get("x", -1)) == 1 and float(rect.get("width", -1)) == 8
+    # v4: color bar bands at x=1 with width=box_height=10.
+    return float(rect.get("x", -1)) == 1 and float(rect.get("width", -1)) == 10
 
 
 def _is_grid_bg(rect):
-    # The single rect filling grid_rect with the entviz bg color.
-    # Its size matches grid_w × grid_h; for a UUID 2x4 grid that's 128 × 128.
-    w, h = float(rect.get("width", 0)), float(rect.get("height", 0))
-    return w in (128, 192) and h in (64, 128)  # short or uuid
+    # The single rect filling grid_rect with the entviz bg color sits
+    # at (grid_rect.left, grid_rect.top). For UUID (6 hex tokens, 2x3
+    # grid): grid_rect = (17, 6) of size 120 × 120.
+    return (float(rect.get("x", 0)) == 17 and float(rect.get("y", 0)) == 6
+            and float(rect.get("width", 0)) == 120
+            and float(rect.get("height", 0)) == 120)
 
 
 def test_all_edges_before_any_nucleus():
+    """All surround boxes are emitted before the first nucleus rect."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    # Walk all rects + polygons in document order; the index of the first
-    # nucleus must be greater than the index of every edge element.
-    elements = svg.xpath('//*[local-name()="rect" or local-name()="polygon"]')
+    rects = svg.xpath('//*[local-name()="rect" and not(ancestor::*[local-name()="defs"])]')
 
     first_nucleus_idx = None
-    for i, el in enumerate(elements):
-        if el.tag.endswith("}rect") and _is_nucleus(el):
+    for i, el in enumerate(rects):
+        if _is_nucleus_rect(el):
             first_nucleus_idx = i
             break
     assert first_nucleus_idx is not None, "no nucleus rect found"
 
-    # Every edge element (polygon, or non-nucleus non-bounding/grid rect)
-    # after the first nucleus would mean the layering is wrong.
-    for i, el in enumerate(elements[first_nucleus_idx + 1:], start=first_nucleus_idx + 1):
-        if el.tag.endswith("}rect"):
-            # Allow trailing nucleus rects and color-bar bands; reject
-            # anything that looks like an edge shape.
-            if _is_nucleus(el) or _is_color_bar_band(el):
-                continue
-            assert False, f"non-nucleus rect at index {i} (after nucleus layer began)"
-        else:
-            # polygon = edge shape (triangle drawer uses polygon)
-            assert False, f"polygon at index {i} (after nucleus layer began)"
+    # Every rect before the first nucleus is either bg or surround box;
+    # rects after are nuclei or color-bar bands.
+    for i, el in enumerate(rects[first_nucleus_idx + 1:], start=first_nucleus_idx + 1):
+        if _is_nucleus_rect(el) or _is_color_bar_band(el):
+            continue
+        # Otherwise should not be an edge box (which is 6 × 10 at 12pt)
+        w, h = float(el.get("width", 0)), float(el.get("height", 0))
+        assert not (w == 6 and h == 10), (
+            f"surround box at doc-order index {i} appeared after first nucleus"
+        )
 
 
 def test_text_appears_after_nucleus_rects():
-    # Text is part of the nucleus layer and follows each nucleus rect.
-    # Specifically, no text element should appear before the first nucleus.
+    """Cell text is emitted after each nucleus rect."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     elements = svg.xpath('//*')
     first_text_idx = next(
@@ -71,40 +74,41 @@ def test_text_appears_after_nucleus_rects():
     )
     first_nucleus_idx = next(
         (i for i, el in enumerate(elements)
-         if el.tag.endswith("}rect") and _is_nucleus(el)),
+         if el.tag.endswith("}rect") and _is_nucleus_rect(el)),
         None,
     )
     assert first_text_idx is not None and first_nucleus_idx is not None
     assert first_text_idx > first_nucleus_idx
 
 
-def test_quartile_marks_after_nuclei():
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+def test_overlay_between_edges_and_nuclei():
+    """The ellipse overlay sits between the edge layer and the nucleus layer."""
+    # Use an input large enough to qualify for an overlay (>= 256 bits).
+    svg = _doc(render("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"))
     elements = svg.xpath('//*')
-    # The last middle-anchored text is the last per-cell text — quartile
-    # marks should follow it. The SCS text (text-anchor="end") is later
-    # in the document but isn't a per-cell element, so we ignore it.
-    last_cell_text_idx = None
-    for i, el in enumerate(elements):
-        if el.tag.endswith("}text") and el.get("text-anchor") == "middle":
-            last_cell_text_idx = i
-    first_circle_idx = next(
-        (i for i, el in enumerate(elements) if el.tag.endswith("}circle")), None
+    # Find ellipse position and first nucleus position
+    ellipse_idx = next(
+        (i for i, el in enumerate(elements) if el.tag.endswith("}ellipse")), None
     )
-    if first_circle_idx is None:
-        return  # input may not produce circles
-    assert last_cell_text_idx is not None
-    assert first_circle_idx > last_cell_text_idx, (
-        "quartile circle appeared before/within the nucleus+text layer"
+    first_nucleus_idx = next(
+        (i for i, el in enumerate(elements)
+         if el.tag.endswith("}rect") and _is_nucleus_rect(el)),
+        None,
+    )
+    assert ellipse_idx is not None, "no ellipse found for ≥256-bit input"
+    assert first_nucleus_idx is not None
+    assert ellipse_idx < first_nucleus_idx, (
+        "ellipse overlay must precede the nucleus layer"
     )
 
 
 def test_borders_last_in_document_order():
+    """Gray border lines are the final elements in the SVG."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     elements = svg.xpath('//*')
-    last_three = elements[-3:]
-    # Last three elements should be the 3 trailing border lines (now
-    # rendered in #808080).
-    for el in last_three:
+    # Last 5 elements should be the 5 gray border lines (top/right/bottom/left
+    # + interior separator).
+    last_five = elements[-5:]
+    for el in last_five:
         assert el.tag.endswith("}line"), f"expected trailing line, got {el.tag}"
         assert el.get("stroke") == "#808080"

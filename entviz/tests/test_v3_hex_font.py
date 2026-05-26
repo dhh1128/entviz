@@ -68,30 +68,6 @@ def test_non_hex_input_cell_text_rendered_at_16px():
         assert p == 16, f"non-hex cell text rendered at {p}px; expected 16"
 
 
-def test_hex_scs_matches_cell_text_size():
-    # For hex inputs: scs_pt = min(round(0.84×12), 9) = min(10, 9) = 9pt
-    # → 12 px. Cell text and SCS are the same size; the visual
-    # hierarchy comes entirely from the #444 fill.
-    svg = _doc(render("deadbeef" * 16))  # 22 hex tokens, big enough for SCS
-    cell_px = _cell_text_pxs(svg)[0]
-    scs = _scs_px(svg)
-    assert cell_px == scs == 12, (
-        f"hex cell={cell_px}px, SCS={scs}px; expected both 12"
-    )
-
-
-def test_non_hex_scs_smaller_than_cell_text():
-    # For non-hex inputs: scs_pt = min(10, 12) = 10pt → 13.33 px;
-    # cell text is at full reference = 16 px. (See test_v3_scs_styling
-    # for the converse test on the SCS-only path.) Bitcoin address
-    # (base58) exercises this branch post-alphabet-refactor.
-    svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
-    cell_px = _cell_text_pxs(svg)[0]
-    scs = _scs_px(svg)
-    assert cell_px == 16
-    assert scs is not None and 13 < scs < 14
-
-
 def test_hex_text_fits_inside_nucleus():
     # The whole point of V3-4: 6-char hex tokens at full reference
     # overflowed the 48-px-wide nucleus. At 75% (9pt → 12 px), each

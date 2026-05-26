@@ -57,14 +57,14 @@ def test_ellipse_fill_is_black_or_white():
 
 
 def test_clip_path_defined():
-    # V3-5: the grid_rect clipPath ("grid-clip") is for the ellipse.
-    # V3-6b adds additional per-edge clipPaths ("v3clip-N") for vertical
-    # edges where canonical content extends outside the tab window.
-    # We verify the grid_rect clipPath is present and correctly sized.
+    # v4: clipPath id is salted with the first 8 hex chars of the fingerprint
+    # and the grid dimensions (e.g. "grid-clip-deadbeef-4x6") to prevent
+    # multi-SVG document id collisions.
     svg = _doc(render(LARGE_INPUT))
-    cps = svg.xpath('//*[local-name()="clipPath"][@id="grid-clip"]')
-    assert len(cps) == 1
-    rect = cps[0].xpath('./*[local-name()="rect"]')[0]
+    cps = svg.xpath('//*[local-name()="clipPath"]')
+    grid_clips = [cp for cp in cps if (cp.get("id") or "").startswith("grid-clip-")]
+    assert len(grid_clips) == 1, f"expected one grid-clip-*, got {len(grid_clips)}"
+    rect = grid_clips[0].xpath('./*[local-name()="rect"]')[0]
     assert float(rect.get("width")) < float(svg.get("width"))
     assert float(rect.get("height")) < float(svg.get("height"))
 
@@ -84,16 +84,16 @@ def test_ellipse_between_edges_and_nuclei_in_doc_order():
     e_idx = next(
         i for i, el in enumerate(elements) if el.tag.endswith("}ellipse")
     )
+    # v4 nucleus rect: 48 × 20.
     first_nucleus_idx = next(
         i for i, el in enumerate(elements)
         if el.tag.endswith("}rect")
-        and float(el.get("width", 0)) == 48 and float(el.get("height", 0)) == 16
+        and float(el.get("width", 0)) == 48 and float(el.get("height", 0)) == 20
     )
     last_edge_idx = max(
         i for i, el in enumerate(elements)
-        if i < first_nucleus_idx and el.tag.endswith(("}polygon", "}rect"))
-        and not (el.tag.endswith("}rect") and float(el.get("width", 0)) == 48
-                 and float(el.get("height", 0)) == 16)
+        if i < first_nucleus_idx and el.tag.endswith("}rect")
+        and not (float(el.get("width", 0)) == 48 and float(el.get("height", 0)) == 20)
     )
     assert last_edge_idx < e_idx < first_nucleus_idx
 

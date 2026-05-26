@@ -339,6 +339,135 @@ Entviz = goal:
 
       children:
 
+        Blank Cell Min/Max Pointers = decision:
+          id: v4bptr12
+          why: >
+            On top of the bicolor ring (v4bl4nkc), each blank cell
+            also carries two small "pointer" markers: one tangent
+            outside the ring pointing toward the maxftok cell, one
+            tangent inside the ring pointing toward the minftok cell.
+
+            minftok/maxftok are defined over the USED ftoks (not the
+            full 22 ftoks of the fingerprint — for inputs under 512
+            bits some ftoks are unused). minftok = smallest 24-bit
+            quant; maxftok = largest. Tie-break = highest cell index
+            (visual reading order — last cell containing the tied
+            value).
+
+            These cells are independent of the quartile cells
+            (which sort the same used ftoks by mirrored ASCII text
+            rather than by 24-bit value). The two sortings rarely
+            coincide, so the pointers tend to flag two more
+            ftok-derived cells than the four already flagged by
+            quartile triangles.
+
+            Geometry: ring nominal_radius reduced from
+            (nucleus_height + box_height) / 2 to nucleus_width / 4
+            (12 at 12pt, was 15) so the outside marker has 3 px of
+            margin to the cell edge instead of touching it. Each
+            marker is a r=1.5 white-filled black-1-px-stroked disc
+            (4 px visible diameter). Outside marker center at
+            r = nominal_radius + 3; inside at nominal_radius − 3
+            (tangent to ring outer/inner extents).
+
+            The markers are identical in design — position alone
+            (inside vs outside the ring) tells the viewer which is
+            min and which is max. Memorable rule: "max bursts
+            outward".
+
+            Purpose: (a) every blank ring now encodes two
+            entropy-dependent angles, multiplying the CRC value of
+            each blank cell — two entvizes that differ should differ
+            in pointer angles across all rings; (b) creates a
+            visual "constellation" — all the rings' max markers
+            point at the same target, forming a geometric pattern
+            that varies with the fingerprint.
+
+        Blank Cell Bicolor Ring = decision:
+          id: v4bl4nkc
+          why: >
+            v3 left blank cells visually empty — just the grid_rect bg
+            color showing through. v4 adds a small ring centered in
+            each blank cell. Nominal radius = (nucleus_height +
+            box_height) / 2 (15 px at 12pt). Built as two adjacent
+            1-px stroked circles at radii nominal±0.5: outer white,
+            inner black. The result is a 2-px-wide bicolor ring —
+            1 px of white on the outside immediately adjacent to 1 px
+            of black on the inside. Whichever bg the cell sits on,
+            one of the two strokes contrasts and the other gives a
+            hard edge.
+
+            Dead ends along the way (preserved for institutional
+            memory):
+              1. Single 1-px white stroke under mix-blend-mode=
+                 difference. In theory inverts the bg pixel-by-pixel;
+                 in practice fails for mid-luminosity bgs (e.g. blue
+                 lightened by the 30% white overlay becomes ~#6e79d2,
+                 luminance ~0.22, whose difference-inverse #91862d
+                 is luminance ~0.23 — virtually identical luminance,
+                 invisible to human contrast perception).
+              2. Concentric outlined ring (3-px white outer + 1-px
+                 black inner at same radius). Visible but visually
+                 chunky and the black hairline ended up centered in
+                 a white halo rather than on an edge.
+            The adjacent-radii approach is the cleanest of the three:
+            no blend mode, no luminance calculation, no per-cell
+            logic, and the bicolor edge is naturally crisp.
+
+            Purpose: (a) make blank cells findable at a glance — they
+            were previously easy to miss against the surround-box
+            noise on either side; (b) serve as a redundant visual CRC
+            channel — the position and count of rings derives from
+            the median / ASCII-first / ASCII-last anchors plus the
+            large-input separator, so two entvizes that differ should
+            differ in ring layout. Applies to all blank cells
+            including algorithm-inserted blanks and any trailing
+            unfilled cells.
+
+        Quartile Marks as Corner Triangles = decision:
+          id: v4qtri4ng
+          why: >
+            v3 used small filled circles in the corner of each quartile
+            ftok's cell, color-coded by quartile (1st = edge_colors[0]
+            in the top-left corner, etc.). v4 replaces the circle with
+            a small right triangle in the nucleus corner: both legs =
+            nucleus_height / 2, right-angle vertex at the nucleus
+            corner, legs along the two nucleus edges. Fill = the cell
+            text foreground color (white on dark nuclei, black on
+            light). Quartile identity is encoded by triangle
+            orientation alone — the per-quartile palette is retired.
+
+            Earlier prototype (briefly): triangles with full
+            nucleus_height legs filled white under mix-blend-mode=
+            difference for pixel inversion. That worked visually but
+            interfered with cell text legibility (half the glyphs got
+            inverted). Smaller fg-colored triangles preserve text and
+            keep quartile marks unambiguous.
+
+        Taller Nucleus for Descenders = decision:
+          id: v4nuc1ht
+          why: >
+            v3 set nucleus_height = font_size_px (16 at 12pt), assuming
+            the em-box equals the glyph bounding box. It does not:
+            typical monospace fonts (Consolas, Courier, etc.) have
+            glyph bboxes that extend ~20-25% below the em-box for
+            descender depth, plus line-gap. In v3 the descenders
+            protruded into the bottom edge_rects, but those edges held
+            sparsely-filled shape paths with lots of bg color showing
+            through, so descenders blended in visually. In v4 the
+            surround is densely solid-filled palette color, and
+            protruding descenders became obvious — visible in every
+            base64 cell containing g/j/p/q/y.
+
+            Fix: nucleus_height = 1.25·font_size_px (was 1.0). Width
+            stays at 3·font_size_px. Surround box dimensions follow
+            from tiling: box_width = nucleus_width/8 (unchanged),
+            box_height = nucleus_height/2 (was 0.75·box_width; the 0.75
+            ratio is retired — box dimensions are now derived
+            independently). cell_width = 3.75·font_size_px (unchanged),
+            cell_height = 2.5·font_size_px (was 2.0). Cell aspect
+            changes from 15:8 to 3:2.
+
         24-Box Surround = decision:
           id: v4b0xsur
           why: >
@@ -382,23 +511,37 @@ Entviz = goal:
             collapses to just the bottom GM margin and 1-px gray
             border.
 
-        Overlay as Pre-Rotated Path = decision:
-          id: v4ovrpat
+        Clip-Path Id Uniqueness = decision:
+          id: v4ovr1d1
           why: >
-            v3 emitted the rotated ellipse as <ellipse transform=rotate>
-            wrapped in a non-rotated <g clip-path>. The strict SVG spec
-            says the clip rect stays in the g's coordinate system and
-            the ellipse rotates inside it — and cairosvg / librsvg
-            implement that. Chrome, Firefox, and Edge do NOT: they
-            rotate the clip rect along with the ellipse's transform,
-            slicing the visible region with a rotated rectangle and
-            producing a partial-ellipse arc that looks "clipped wrong".
-            v4 fixes this by emitting the rotated geometry as a
-            pre-rotated SVG <path> (two A arcs with the rotation baked
-            into the x-axis-rotation argument). With no transform
-            attribute anywhere in the overlay subtree, the clip-vs-
-            transform interaction never arises and every renderer
-            produces the same result.
+            v3's overlay structure (<g clip-path><ellipse transform>)
+            works correctly when each SVG stands alone. It breaks when
+            multiple entvizes are embedded in a single HTML document
+            (e.g., the gallery): every clipPath uses id="grid-clip", and
+            browsers resolve url(#…) to the *first* matching id in the
+            entire HTML document, so every entviz after the first gets
+            silently clipped to the first one's grid_rect. Symptom:
+            overlays look "clipped wrong" in non-leading positions —
+            spurious axis-aligned cut-offs at the wrong column/row.
+
+            Fix: salt the clipPath id with the first 8 hex chars of the
+            fingerprint AND the grid dimensions (cols x rows). The
+            grid dimensions component handles same-input/different-AR
+            cases (e.g., the gallery's "same input, different aspect
+            ratios" set). For multi-entviz HTML embeds beyond the
+            gallery generator, callers should additionally per-instance
+            namespace ids if they expect the same input rendered
+            twice; the gallery generator rewrites every id and
+            url(#…) reference per entry as a belt-and-suspenders.
+
+            Dead end on the way: emitted the rotated ellipse as a
+            pre-rotated <path> (two A arcs, rotation baked in), under
+            the misdiagnosis that the issue was clip-vs-transform
+            interaction. The path approach also failed to fix the bug
+            in the browser — confirming the actual cause was id
+            collision, not the transform. Reverted to v3's
+            <ellipse transform=rotate> structure once the id salt was
+            in place.
 
         V4 Color Bar from Digest Histogram = decision:
           id: v4c1rbar
