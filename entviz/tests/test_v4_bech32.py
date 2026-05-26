@@ -86,7 +86,7 @@ def test_bitcoin_segwit_parses_as_bech32():
     addr = "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
     p = parse(addr)
     assert p is not None
-    assert p.type == "Bitcoin SegWit"
+    assert p.type == "BTC SegWit"
     assert p.alphabet is BECH32
     # Core = address minus the "bc1" prefix
     assert p.core == "qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
@@ -97,7 +97,7 @@ def test_bitcoin_segwit_p2wsh_parses():
     addr = "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"
     p = parse(addr)
     assert p is not None
-    assert p.type == "Bitcoin SegWit"
+    assert p.type == "BTC SegWit"
     assert p.alphabet is BECH32
 
 
@@ -107,7 +107,7 @@ def test_cardano_shelley_parses_as_bech32():
     addr = "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"
     p = parse(addr)
     assert p is not None
-    assert p.type == "Cardano Shelley"
+    assert p.type == "ADA Shelley"
     assert p.alphabet is BECH32
 
 

@@ -37,7 +37,7 @@ def test_ethereum_preserves_eip55_mixed_case():
     """Ethereum core preserves EIP-55 checksum case (mixed case meaningful)."""
     p = parse("0x742d35Cc6634C0532925a3b844Bc454e4438f44e")
     assert p is not None
-    assert p.type == "Ethereum"
+    assert p.type == "ETH"
     # The full 40-char body is in `core`, normalized to EIP-55 mixed case.
     has_upper = any(c.isupper() for c in p.core if c.isalpha())
     has_lower = any(c.islower() for c in p.core if c.isalpha())

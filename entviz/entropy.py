@@ -237,20 +237,20 @@ def parse_bitcoin_address(text) -> Parsed:
     """
     m = BITCOIN_LEGACY_REGEX.match(text)
     if m:
-        return Parsed("Bitcoin legacy", BASE58, m.group(1), m.group(2), m.group(3))
+        return Parsed("BTC legacy", BASE58, m.group(1), m.group(2), m.group(3))
     m = BITCOIN_SEGWIT_REGEX.match(text)
     if m:
         # Bitcoin SegWit uses bech32 (BIP-173).
-        return Parsed("Bitcoin SegWit", BECH32, m.group(1).lower(), m.group(2).lower(), None)
+        return Parsed("BTC SegWit", BECH32, m.group(1).lower(), m.group(2).lower(), None)
 
 def parse_ripple_address(text) -> Parsed:
     """
     See if we can parse text as a Ripple address.
-    If yes, return Parsed("Ripple", prefix, body, None).
+    If yes, return Parsed("XRP", prefix, body, None).
     """
     m = RIPPLE_REGEX.match(text)
     if m:
-        return Parsed("Ripple", BASE58, m.group(1), m.group(2), None)
+        return Parsed("XRP", BASE58, m.group(1), m.group(2), None)
 
 def to_EIP55_address(address: str) -> str:
     # Remove the '0x' prefix if present
@@ -297,7 +297,7 @@ def parse_ethereum_address(text) -> Parsed:
     # the last 8 chars as a fake suffix, which silently dropped them
     # from tokenization and the fingerprint.)
     eip55_format = to_EIP55_address(body)
-    return Parsed("Ethereum", HEX, "0x", eip55_format[2:], None)
+    return Parsed("ETH", HEX, "0x", eip55_format[2:], None)
 
 def parse_litecoin_address(text) -> Parsed:
     """
@@ -306,11 +306,11 @@ def parse_litecoin_address(text) -> Parsed:
     """
     m = LITECOIN_LEGACY_REGEX.match(text)
     if m:
-        return Parsed("Litecoin legacy", BASE58, m.group(1), m.group(2), None)
+        return Parsed("LTC legacy", BASE58, m.group(1), m.group(2), None)
     m = LITECOIN_REGEX.match(text)
     if m:
         # Modern Litecoin "ltc1..." uses bech32.
-        return Parsed("Litecoin", BECH32, m.group(1).lower(), m.group(2).lower(), None)
+        return Parsed("LTC", BECH32, m.group(1).lower(), m.group(2).lower(), None)
 
 def parse_bitcoin_cash_address(text) -> Parsed:
     """
@@ -322,7 +322,7 @@ def parse_bitcoin_cash_address(text) -> Parsed:
         # Bitcoin Cash uses CashAddr, which despite being commonly called
         # "base32" actually uses the bech32 alphabet (BIP-173 char set),
         # NOT RFC 4648 base32. Token alignment uses 5 bits/char either way.
-        return Parsed("Bitcoin Cash", BECH32, m.group(1), m.group(2).lower(), None)
+        return Parsed("BCH", BECH32, m.group(1), m.group(2).lower(), None)
 
 def parse_cardano_address(text) -> Parsed:
     """
@@ -331,14 +331,14 @@ def parse_cardano_address(text) -> Parsed:
     """
     m = CARDANO_SHORT_BYRON_REGEX.match(text)
     if m:
-        return Parsed("Cardano Byron", BASE58, m.group(1), m.group(2), m.group(3))
+        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2), m.group(3))
     m = CARDANO_LONG_BYRON_REGEX.match(text)
     if m:
-        return Parsed("Cardano Byron", BASE58, m.group(1), m.group(2), m.group(3))
+        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2), m.group(3))
     m = CARDANO_SHELLEY_REGEX.match(text)
     if m:
         # Cardano Shelley uses bech32.
-        return Parsed("Cardano Shelley", BECH32, m.group(1), m.group(2).lower(), m.group(3).lower())
+        return Parsed("ADA Shelley", BECH32, m.group(1), m.group(2).lower(), m.group(3).lower())
 
 def parse_eos_address(text) -> Parsed:
     """
@@ -360,7 +360,7 @@ def parse_stellar_address(text) -> Parsed:
     m = STELLAR_REGEX.match(text)
     if m:
         # Stellar uses base32 (RFC 4648).
-        return Parsed("Stellar", BASE32, m.group(1).upper(), m.group(2).upper(), None)
+        return Parsed("XLM", BASE32, m.group(1).upper(), m.group(2).upper(), None)
     
 def parse_uuid(text) -> Parsed:
     """

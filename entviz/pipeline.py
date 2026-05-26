@@ -33,15 +33,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     Render entropy as an SVG entviz and return the SVG as a UTF-8 string.
     """
     # --- Normalize and tokenize the entropy ---
-    parsed = parse(entropy_text.strip())
+    raw_input = entropy_text.strip()
+    parsed = parse(raw_input)
     if parsed is None:
         import base64
         from .entropy import BASE64URL
-        core = base64.urlsafe_b64encode(entropy_text.encode()).decode().rstrip('=')
-        # "txt->b64url" surfaces in the per-entviz top label so the
+        core = base64.urlsafe_b64encode(raw_input.encode()).decode().rstrip('=')
+        # "txt(N)->b64url" surfaces in the per-entviz top label so the
         # viewer knows the input wasn't directly tokenizable in any
-        # known alphabet and we re-encoded it as bytes.
-        type_name = "txt->b64url"
+        # known alphabet and we re-encoded it as bytes. N = input chars.
+        type_name = f"txt({len(raw_input)})->b64url"
         alphabet = BASE64URL  # fallback always produces urlsafe base64
         prefix = None
         suffix = None
@@ -51,10 +52,26 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         alphabet = parsed.alphabet
         prefix = parsed.prefix
         suffix = parsed.suffix
+        # Length-bearing labels for the variable-length plain-alphabet
+        # types (hex / b64 / b64url). Rename base64* → b64* for
+        # consistency with the txt->b64url fallback shortening.
+        if type_name == "hex":
+            type_name = f"hex({len(core)})"
+        elif type_name == "base64":
+            type_name = f"b64({len(core)})"
+        elif type_name == "base64url":
+            type_name = f"b64url({len(core)})"
 
     tokens, is_truncated = tokenize_entropy(core, alphabet)
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
+
+    # When the input exceeds 512 bits, tokenize_entropy keeps only the
+    # head-256 and tail-256 bits and elides the middle. Flag this in the
+    # top label with a language-neutral '^…$' (regex start + end anchors)
+    # so viewers know the cells aren't the whole input.
+    if is_truncated:
+        type_name = f"^…$ {type_name}"
 
     # is_truncated means the input was > 512 bits. Spec requires a blank
     # separator cell between the first 11 tokens (head) and the last 11
@@ -220,6 +237,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         if alphabet.name == "hex" else font_size_pt
     )
     cell_text_px = cell_text_pt * _DPI / 72
+    label_text_px = round(font_size_pt * 0.75) * _DPI / 72
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
@@ -342,7 +360,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     _draw_label_strips(
         svg, grid_rect, gm, nucleus_height,
         type_name=type_name, prefix=prefix, suffix=suffix,
-        text_size_px=cell_text_px,
+        text_size_px=label_text_px,
     )
 
     # Gray border lines (#808080) on all four sides of the bounding rect,

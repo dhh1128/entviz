@@ -72,7 +72,7 @@ def test_stellar_address_parses_as_base32():
     addr = "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM"
     p = parse(addr)
     assert p is not None
-    assert p.type == "Stellar"
+    assert p.type == "XLM"
     assert p.alphabet is BASE32
 
 
@@ -92,7 +92,7 @@ def test_bitcoin_cash_address_parses_as_bech32_not_base32():
     addr = "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
     p = parse(addr)
     assert p is not None
-    assert p.type == "Bitcoin Cash"
+    assert p.type == "BCH"
     assert p.alphabet is BECH32  # NOT BASE32, despite the name
 
 

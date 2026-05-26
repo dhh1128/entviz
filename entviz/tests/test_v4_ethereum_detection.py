@@ -15,21 +15,21 @@ def test_0x_prefix_with_40_hex_is_ethereum():
     """The canonical Ethereum address form."""
     p = parse("0x742d35cc6634c0532925a3b844bc454e4438f44e")
     assert p is not None
-    assert p.type == "Ethereum"
+    assert p.type == "ETH"
 
 
 def test_0x_prefix_with_40_hex_uppercase_is_ethereum():
     """Uppercase hex with 0x prefix is still Ethereum."""
     p = parse("0X742D35CC6634C0532925A3B844BC454E4438F44E")
     assert p is not None
-    assert p.type == "Ethereum"
+    assert p.type == "ETH"
 
 
 def test_eip55_mixed_case_without_prefix_is_ethereum():
     """40 hex chars with EIP-55 mixed-case checksum, no prefix → Ethereum."""
     p = parse("742d35Cc6634C0532925a3b844Bc454e4438f44e")
     assert p is not None
-    assert p.type == "Ethereum"
+    assert p.type == "ETH"
 
 
 def test_40_hex_all_lowercase_no_prefix_is_NOT_ethereum():

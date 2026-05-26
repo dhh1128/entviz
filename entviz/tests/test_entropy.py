@@ -150,7 +150,7 @@ def test_stellar_normalization():
         answer = parse(input)
         assert answer.prefix == 'G'
         assert answer.core == "DFW2Z2IWGRJAJH5UNZ5B4PL5JY2X2BTHXVD5J7P64ICBRQJXP6VXABM"
-        assert answer.type == "Stellar"
+        assert answer.type == "XLM"
 
 def test_hex_multihash_normalization():
     for input in [
@@ -171,7 +171,7 @@ def test_etherereum_normalization():
         answer = parse(input)
         assert answer.core == 'C932Be343b94f860124dc4FEe278fDcBd38c102d'
         assert not answer.suffix
-        assert answer.type == "Ethereum"
+        assert answer.type == "ETH"
 
 def test_UUID_normalization():
     for input in [

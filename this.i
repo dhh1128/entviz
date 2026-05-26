@@ -540,18 +540,42 @@ Entviz = goal:
 
             Strips are nucleus_height tall, separated from the grid
             and from the borders by GM on each side. Text uses the
-            same monospace font family and rendered font size as
-            cell text, filled in #666 so it reads as a quiet
-            secondary label. Top is left-aligned to grid_rect.left;
-            bottom right-aligned to grid_rect.right — the ellipses
-            on each point inward toward the cell grid.
+            same monospace font family as cell text, filled in #666
+            so it reads as a quiet secondary label. Rendered font
+            size is always the hex-equivalent size (round(font_pt
+            * 0.75) px) regardless of cell text size, so labels
+            stay visually consistent across input types instead of
+            jumping between big/small. Top is left-aligned to
+            grid_rect.left; bottom right-aligned to grid_rect.right
+            — the ellipses on each point inward toward the cell
+            grid.
+
+            For variable-length plain-alphabet types, the label
+            embeds a parenthesized count of the *body* characters
+            so the viewer immediately knows the input's size:
+            "hex(40)", "b64(12)", "b64url(8)". For the UTF-8 →
+            base64url re-encode fallback, the count is the original
+            input's byte length (not the re-encoded core), so
+            "hello world" → "txt(11)->b64url:". "base64" is
+            displayed as "b64" and "base64url" as "b64url" to keep
+            labels narrow.
 
             For the disproof fallback (no specific parser matched
             but the input fits some alphabet), parse() returns
-            type = alphabet name ("base32", "bech32", etc.); for
-            the UTF-8 → base64url re-encode fallback, the pipeline
-            uses type "text as base64url" so the viewer sees the
-            distinction.
+            type = alphabet name ("base32", "bech32", etc.).
+
+            When the input exceeds 512 bits and tokenize_entropy
+            elides the middle, the top label is prefixed with the
+            language-neutral marker "^…$ " (regex start anchor +
+            ellipsis + end anchor), e.g. "^…$ hex(200):" or
+            "^…$ ETH: 0x...", so the viewer knows the cells show
+            only the first and last 256 bits of the original.
+            The fingerprint-driven visualization channels still
+            cover the entire input. Chose ^…$ over English
+            ("head+tail of") so the marker reads the same in any
+            locale — the regex anchors are programmer-universal
+            and the ellipsis between them visually conveys
+            elision.
 
             Bounding rect height grows by nucleus_height + GM
             always (top strip) and another nucleus_height + GM
