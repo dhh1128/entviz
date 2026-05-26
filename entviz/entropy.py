@@ -36,6 +36,16 @@ HEX_ALPHABET = "0123456789ABCDEF"
 # to reduce visual ambiguity (and '1' doubles as the bech32 separator).
 BECH32_ALPHABET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l"
 BECH32_ALPHABET_EITHER_CASE = BECH32_ALPHABET + BECH32_ALPHABET.upper()
+# Crockford base32: 32 chars, intentionally excludes I/L/O/U for visual
+# disambiguation. Used by ULIDs. The ULID/Crockford spec additionally
+# accepts I->1, L->1, O->0 as case-insensitive INPUT aliases; canonical
+# OUTPUT form is upper-case from this alphabet.
+CROCKFORD32_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
+# Base36: digits then uppercase letters. Used by GLEIF LEI (ISO 17442).
+# Case-insensitive (LEI normalizes to upper). 36 isn't a power of 2; for
+# token-alignment purposes we treat it like BASE58 — 6 effective bits/char,
+# 4 chars per 24-bit token (true entropy is ~5.17 bits/char).
+BASE36_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
 # Named alphabet singletons. BASE32 is still deferred — types whose core
 # uses base32 (Bitcoin Cash CashAddr, Stellar, IPFS CID v1) still
@@ -50,6 +60,10 @@ BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)
 # overshoot the 24-bit quant budget.
 BASE32    = Alphabet("base32",    BASE32_ALPHABET,     5)
 BECH32    = Alphabet("bech32",    BECH32_ALPHABET,     5)
+CROCKFORD32 = Alphabet("crockford32", CROCKFORD32_ALPHABET, 5)
+# base36 is used only by GLEIF LEI today. 6 bits/char for token alignment
+# (mirrors BASE58); true entropy is ~5.17 bits/char.
+BASE36    = Alphabet("base36",    BASE36_ALPHABET,     6)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
 
@@ -71,11 +85,76 @@ ETHEREUM_REGEX = re.compile(r'^(0x)?([0-9a-f]{40})$', re.I)
 RIPPLE_REGEX = re.compile(r'^(r)([' + BASE58_ALPHABET + ']{33})$')
 BITCOIN_LEGACY_REGEX = re.compile(r'^([123mn])([' + BASE58_ALPHABET + ']{21,30})([' + BASE58_ALPHABET + ']{4})$')
 BITCOIN_SEGWIT_REGEX = re.compile(r'^(bc1|tb1)([' + BECH32_ALPHABET_EITHER_CASE + ']{39,69})$', re.I)
+# SSH public-key wire format (base64-decoded):
+#   length(4 BE) + type_string + length + field1 [+ length + field2 + ...]
+# Each known type has a base64 prefix that encodes structural overhead
+# (length-prefixed type-string, plus constant subsequent fields). The
+# prefix is extended to cover the leading bytes of the next length-prefix
+# field too — those bytes are structural zeros that would otherwise render
+# as identical `AAA…` cells on every key of the same type.
+#
+# Entry shape: (short_name, match_str, prefix_length).
+#   * match_str is the prefix's leading constant portion used to identify
+#     the key type.
+#   * prefix_length is how many chars are consumed (≥ len(match_str)). When
+#     greater, the extra chars are bytes whose values vary per key (e.g.
+#     ssh-rsa's modulus-length) but are still structural — pulling them
+#     into the prefix region keeps the cells starting on per-key entropy.
+#
+# Order matters: prefixes that are substrings of others would shadow them
+# if checked first. Longer/more-specific prefixes come first.
+SSH_KEY_TYPES = [
+    # ecdsa: 52-char prefix = type-string-field + curve-name-field +
+    # key-length-field (39 bytes total, cleanly aligns to 52 base64 chars).
+    # Each curve has its own constant key-length encoding.
+    ("ecdsa-nistp256", "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABB", 52),
+    ("ecdsa-nistp384", "AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABh", 52),
+    ("ecdsa-nistp521", "AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACF", 52),
+    # rsa: 24-char structural match (type-string + exponent fields), then
+    # consume 4 more chars covering 3 of 4 modulus-length bytes. The high
+    # 2 bytes of modulus-length are always 0x00 for any realistic RSA
+    # key; the 3rd byte is 0x00/0x01/0x02/0x04 depending on key size.
+    # That 3rd byte varies per key size, so we can't include it in the
+    # match string, but it's still structural data, not entropy.
+    ("rsa",            "AAAAB3NzaC1yc2EAAAADAQAB", 28),
+    # ed25519: 24-char prefix = type-string-field (15 bytes) + first 3 of
+    # 4 key-length-field bytes (0x000000 of the always-32 length).
+    ("ed25519",        "AAAAC3NzaC1lZDI1NTE5AAAA", 24),
+    # dss: just the type-string field — p/q/g/y lengths and values are
+    # variable, nothing more is structurally constant.
+    ("dss",            "AAAAB3NzaC1kc3M",         15),
+]
+# Generic fallback: any AAAA-prefixed base64 blob.
 SSH_KEY_REGEX = re.compile(r'(AAAA)([0-9A-Za-z+/]+={0,3})')
+# Full openssh-format line:  <type-string> <base64-payload> [<comment>]
+# When present, the leading "<type-string> " is stripped before matching the
+# payload, and a trailing " <comment>" is captured as the suffix.
+SSH_LINE_REGEX = re.compile(
+    r'^(?:(?:ssh-(?:ed25519|rsa|dss)|ecdsa-sha2-nistp(?:256|384|521))\s+)?'
+    r'(AAAA[0-9A-Za-z+/]+={0,3})'
+    r'(?:\s+(\S.*))?$'
+)
 HEX_REGEX = re.compile(r'^[a-fA-F0-9]+$')
 BASE64URL_NO_PAD_REGEX = re.compile(r'^[A-Za-z0-9-_]+$') # used by CESR
 BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_'
 BASE64URL = Alphabet("base64url", BASE64URL_ALPHABET, 6)
+
+# ULID: 26 chars of Crockford base32 (case-insensitive). The Crockford
+# spec accepts I, L (-> 1) and O (-> 0) as input aliases, so they appear
+# in the regex character class even though the canonical alphabet
+# excludes them. U is NOT an alias (excluded to dodge profanity) and
+# remains forbidden — hence A-T and V-Z, skipping U.
+ULID_REGEX = re.compile(r'^[0-9A-TV-Za-tv-z]{26}$')
+LEI_REGEX = re.compile(r'^[0-9A-Z]{20}$', re.I)
+
+# Crockford input-alias translation table: I/L -> 1, O -> 0 (in either
+# case). Applied during parse_ulid after the regex match, before
+# upper-casing the rest of the string to canonical form.
+_CROCKFORD_ALIASES = str.maketrans({
+    'I': '1', 'i': '1',
+    'L': '1', 'l': '1',
+    'O': '0', 'o': '0',
+})
 
 MULTIHASH_HASH_FUNCS = {
     0x11: "sha1",
@@ -223,12 +302,49 @@ def parse_cesr(text) -> Parsed:
 
 def parse_ssh_key(text) -> Parsed:
     """
-    See if we can parse text as an SSH key.
-    If yes, return Parsed("SSH", "AAAA", body, None).
+    See if we can parse text as an SSH public key.
+
+    Accepts either:
+      * a bare base64 payload (`AAAA...`), optionally followed by a
+        space-separated comment (e.g., `user@host`); or
+      * the full openssh single-line form `<type> <base64> [<comment>]`
+        — the leading `<type> ` token is stripped before matching.
+
+    When the base64 prefix matches one of the known type-string encodings
+    (ed25519, rsa, dss, ecdsa-nistp256/384/521), the parser returns that
+    specific type-name in `type` and the type-string portion as `prefix`
+    (so visualization can distinguish per-key entropy from structural
+    overhead). For ssh-rsa the prefix also includes the small public
+    exponent (`AAAADAQAB` for the universal value 65537), and for
+    ecdsa-nistpXXX it includes the redundant curve-name field — both of
+    these carry no per-key entropy.
+
+    The trailing comment (if any) is returned as `suffix`.
+
+    Falls back to a generic `AAAA`-prefix match (legacy behavior) when no
+    known type-string is recognized.
     """
-    m = SSH_KEY_REGEX.match(text)
-    if m:
-        return Parsed(f"SSH key", BASE64, m.group(1), m.group(2), None)
+    m = SSH_LINE_REGEX.match(text)
+    if not m:
+        m = SSH_KEY_REGEX.match(text)
+        if m:
+            return Parsed("SSH key", BASE64, m.group(1), m.group(2), None)
+        return None
+    payload = m.group(1)
+    suffix = m.group(2)
+    for short_name, match_str, prefix_length in SSH_KEY_TYPES:
+        if payload.startswith(match_str) and len(payload) >= prefix_length:
+            return Parsed(
+                f"SSH {short_name} pubkey",
+                BASE64,
+                payload[:prefix_length],
+                payload[prefix_length:],
+                suffix,
+            )
+    legacy = SSH_KEY_REGEX.match(payload)
+    if legacy:
+        return Parsed("SSH key", BASE64, legacy.group(1), legacy.group(2), suffix)
+    return None
 
 def parse_bitcoin_address(text) -> Parsed:
     """
@@ -374,6 +490,70 @@ def parse_uuid(text) -> Parsed:
         # the tokenizer reads each char as 4 bits with the correct
         # alphabet, not as a base64-position lookup.
         return Parsed("UUID", HEX, None, body, None)
+
+def parse_ulid(text) -> Parsed:
+    """
+    See if we can parse text as a ULID — 26 chars of Crockford base32
+    (case-insensitive), per the ULID spec.
+
+    Crockford accepts I, L (-> 1) and O (-> 0) as input aliases for
+    visually-similar canonical chars; this parser normalizes them, then
+    upper-cases the result to canonical Crockford form. U is NOT an
+    alias and is rejected.
+
+    Registered BEFORE parse_hex so that a 26-char string of pure
+    [0-9A-F] (which is valid both as hex and as Crockford32) is
+    recognized as a ULID, not as plain hex.
+    """
+    if text is None:
+        return None
+    m = ULID_REGEX.match(text)
+    if not m:
+        return None
+    normalized = text.translate(_CROCKFORD_ALIASES).upper()
+    return Parsed("ULID", CROCKFORD32, None, normalized, None)
+
+def _lei_checksum_ok(lei: str) -> bool:
+    """
+    Validate a 20-char uppercase LEI candidate against the ISO/IEC 7064
+    MOD 97-10 check. Replace each letter with its base36 numeric value
+    (A=10..Z=35), interpret the resulting digit string as a base-10
+    integer, and require it ≡ 1 (mod 97). Same algorithm IBAN uses, but
+    without the country-code rotation.
+    """
+    digits = []
+    for c in lei:
+        if c.isdigit():
+            digits.append(c)
+        elif 'A' <= c <= 'Z':
+            digits.append(str(ord(c) - ord('A') + 10))
+        else:
+            return False
+    return int(''.join(digits)) % 97 == 1
+
+def parse_lei(text) -> Parsed:
+    """
+    See if we can parse text as a GLEIF Legal Entity Identifier (ISO 17442).
+    20 chars total: 4-char LOU + "00" reserved + 12-char entity body +
+    2-char MOD 97-10 checksum. Case-insensitive; normalized to upper.
+
+    Returns the ISO 17442 split:
+      * prefix = 4-char LOU issuer code + "00" reserved (6 chars, structural)
+      * core   = 12-char entity body (the per-entity entropy)
+      * suffix = 2-char MOD 97-10 checksum
+    Mirrors how Bitcoin legacy reports its version byte and base58 checksum.
+    """
+    if not text:
+        return None
+    m = LEI_REGEX.match(text)
+    if not m:
+        return None
+    upper = text.upper()
+    if upper[4:6] != "00":
+        return None
+    if not _lei_checksum_ok(upper):
+        return None
+    return Parsed("LEI", BASE36, upper[:6], upper[6:18], upper[18:])
 
 def parse_did(text) -> Parsed:
     """

@@ -38,7 +38,9 @@ expected_parsers = [
     ("0x60124dC4fEe278FDCBD38C102D", parse_hex),
     ("0x601", parse_hex),
     ("32Be343B94f860124dC4fEe278FDCBD38C102D", parse_hex),
-    ("60124dC4fEe278FDCBD38C102D", parse_hex),
+    # v4: 26 hex chars would now parse as ULID (since 26 hex chars is a
+    # valid ULID Crockford32 shape). Use 28 chars to avoid the overlap.
+    ("60124dC4fEe278FDCBD38C102Dab", parse_hex),
     ("BlJbbpxQMJUPE_BaZVxi8jsHuxNM5HEDt-JSyvOTm6U6", parse_cesr),
     ("did:peer:abc123", parse_did),
     ("did:tdw:abc123swoeireulf?arg=val", parse_did),
@@ -50,7 +52,8 @@ expected_parsers = [
     ("AAAAB3NzaC1kc3MAAACBAKGcEm/5P2PSlg6+Vj8NTlR4elcBzhVgegS3zgpJ7WdzhC857ggkAs9M/KHQVcEDbg3BiRk2r4cRMqPUZ2i61u9lL63WuhkY/eaMdkqR7Df5ZdoRsduKP0ENpciAFhHnaUlvDbujDPSxSNRJq5+zQuzoJxIJRbLCbAnp/jPBAqWTAAAAFQDjDPh4NhNLDneMFFPSDrLC7NJR1QAAAIBDfQ+Yuufm2W19Oafm6ei/XyTskVYwx/rPp+H/m3Jczt47DzTsjzzVLgQS2GPLcu3Ms6XLP9/ko4aEK2dgTox1SV4T//NOrSIgJM3u/UbXaacY9g3C9wAHwOKV9iondUL+Qn+pJ/fphLStqmyIpXqmjXKqT+gv1uJFQZuPq1oh1QAAAIAxbOZot7HRRA9QX7kayXv7o00w9St7LrxhOjIAudU6IBsigqpNeIPXcK74mOotZ2OhMLMfggsUZUkNQ1oMH+isJF7gEVMcatdPpTCa2AFQFKJRWpVNmKGueQ44Sl5l4mrNfSdW1IOf7Z5pHKzjrSgJGO9KRcm1N9sYow7GCEdP9Q==", parse_ssh_key), # DSA
     ("AAAAB3NzaC1yc2EAAAADAQABAAABgQDSD+oM4kLidAptE5pjRA8OBIWNysc9reQJjKegek2jATA3bSvKdq/wdQtpbihEx5OlKMo//V/8QpAIjCSsBaMb6G/e/D5kC9wCjnYJJ68+34L+H5Fx1Ofuiz3BidgssINw/qbV0u1vrCop+ggs6lkl+pIwa+9kPriD9xdowCOQABMVl4todcojY8gZK/Zs5XTwKi9Z8MRS/37FEPxlvpRExMmQU8v2tnP/TDqhR13NSyCZWqiH2ojMNDm2jWR+W65gIjFz4kNsu4EaSNOfKY4U7VRBLXg7om3pvIoarhBFMZvTPQ9FqJU/08BJ/A1tCjCIAY0+zGAAvfRHQt5R2wZXl83n9Xh+9IukW5r/pynpdLx1+WyAOKLxIUKflTWaIcYKBqmfaxz64Gm2lDbF0+9r/0Xf//P8TFDWFo9bo4loIukgjtwQmp8Kn6ngEKj8gS3vLApZ3wN18q3emtglyQEmO+9VXckK4NPOqAzwOu7rQbr7oEPS6HrnY3PKe9JD570=", parse_ssh_key), # RSA
     ("QmInvalidAddress12345",  None), # Invalid CIDv0
-    ("bInvalidBase32Address12345", None), # Invalid CIDv1
+    # 27 chars so it can't accidentally match the 26-char ULID shape.
+    ("bInvalidBase32Address123456", None), # Invalid CIDv1
     ("notAValidAddress12345", None),
     ("601", None),
     ("", None)
@@ -104,7 +107,16 @@ def test_parsing():
                     if answer.core.lower().endswith(answer.suffix.lower()): 
                         fail("expected suffix to not be in the core")
                 # roughly, cut off some stuff that should never be in the body
-                min_core = input[input.rfind(':') + 1:] if ':' in input else input[5:]
+                if ':' in input:
+                    min_core = input[input.rfind(':') + 1:]
+                else:
+                    # Default heuristic: skip a short generic prefix (5 chars).
+                    # If the parser reports a longer prefix (e.g. the SSH
+                    # per-type prefixes, which fold in the structural-overhead
+                    # type-string field and can be 15-47 chars), use that to
+                    # slice instead.
+                    skip = max(5, len(answer.prefix)) if answer.prefix else 5
+                    min_core = input[skip:]
                 # If we have a suffix, cut that off from the body, too
                 if answer.suffix: min_core = min_core[:-len(answer.suffix)]
                 # If we're doing a UUID, do normalization.
@@ -128,7 +140,9 @@ def test_hex_normalization():
         "0x60124dC4fEe278FDCBD38C102D",
         "0x601", 
         "32Be343B94f860124dC4fEe278FDCBD38C102D",
-        "60124dC4fEe278FDCBD38C102D",
+        # v4: 26-char unprefixed hex now parses as ULID (Crockford32). Use
+        # 28 chars here to test hex-without-prefix normalization.
+        "60124dC4fEe278FDCBD38C102Dab",
         ]:
         answer = parse(input)
         assert answer

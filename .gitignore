@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# AI
+.claude
+
 # Intellij and OSX stuff
 .idea
 .DS_Store

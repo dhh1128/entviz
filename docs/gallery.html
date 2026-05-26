@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>entviz v4 gallery</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    margin: 2em;
+    color: #222;
+    background: #fafafa;
+  }
+  h1 { margin-bottom: 0; }
+  .sub { color: #666; margin-top: 0.25em; margin-bottom: 2em; }
+  h2 { border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2.5em; }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 1.5em;
+    padding: 1em 0;
+    border-bottom: 1px dotted #ddd;
+  }
+  .meta { flex: 0 0 28em; }
+  .input {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85em;
+    color: #555;
+    word-break: break-all;
+    background: #f0f0f0;
+    padding: 0.4em 0.6em;
+    border-radius: 4px;
+    line-height: 1.4;
+  }
+  .viz { flex: 0 0 auto; }
+  .viz img { display: block; }
+</style>
+</head>
+<body>
+<h1>entviz v4 gallery</h1>
+<p class="sub">24-box surround, nucleus-color fill, digest-histogram color bar. Rendered at 12pt unless noted.</p>
+
+<h2>UUIDs</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">550e8400-e29b-41d4-a716-446655440000</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/01-Random-UUID-v4.svg" alt="entviz of Random UUID v4"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">00000000-0000-0000-0000-000000000000</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/02-Nil-UUID.svg" alt="entviz of Nil UUID"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">ffffffff-ffff-ffff-ffff-ffffffffffff</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/03-Max-UUID.svg" alt="entviz of Max UUID"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">00000000-0000-0000-0000-000000000001</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/04-Sequential-ends-in-01.svg" alt="entviz of Sequential, ends in …01"></div>
+</div>
+
+
+<h2>Avalanche: single-character differences</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">550e8400-e29b-41d4-a716-446655440000</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/05-UUID-A.svg" alt="entviz of UUID A"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">550e8400-e29b-41d4-a716-446655440001</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/06-UUID-A-with-last-char-flipped.svg" alt="entviz of UUID A with last char flipped"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">550e8400-e29b-41d5-a716-446655440000</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/07-UUID-A-with-mid-char-flipped.svg" alt="entviz of UUID A with mid char flipped"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">450e8400-e29b-41d4-a716-446655440000</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/08-UUID-A-with-first-char-flipped.svg" alt="entviz of UUID A with first char flipped"></div>
+</div>
+
+
+<h2>Hex of various sizes</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">a1b2c3d4e5f6a7b8</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/09-64-bit-hex.svg" alt="entviz of 64-bit hex"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">0123456789abcdef0123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/10-128-bit-hex.svg" alt="entviz of 128-bit hex"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/11-256-bit-hex.svg" alt="entviz of 256-bit hex"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/12-512-bit-hex.svg" alt="entviz of 512-bit hex"></div>
+</div>
+
+
+<h2>ULIDs (Crockford base32)</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">01ARZ3NDEKTSV4RRFFQ69G5FAV</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/13-Canonical-ULID.svg" alt="entviz of Canonical ULID"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">01arz3ndektsv4rrffq69g5fav</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/14-Lowercase-ULID-normalized-up.svg" alt="entviz of Lowercase ULID (normalized up)"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">01ARZ3NDEKTSV4RRFFQ69G5FaI</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/15-ULID-with-I-L-O-aliases.svg" alt="entviz of ULID with I/L/O aliases"></div>
+</div>
+
+
+<h2>Blockchain addresses</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">0x742d35cc6634c0532925a3b844bc454e4438f44e</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/16-Ethereum.svg" alt="entviz of Ethereum"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/17-Bitcoin-legacy.svg" alt="entviz of Bitcoin legacy"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">1NSUpdRFAbn3Y2ZjN8nfNfJTpVTMo6gxa6</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/18-Bitcoin-Satoshi-genesis.svg" alt="entviz of Bitcoin (Satoshi genesis)"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/19-Ripple.svg" alt="entviz of Ripple"></div>
+</div>
+
+
+<h2>Bech32 addresses</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/20-Bitcoin-SegWit-P2WPKH.svg" alt="entviz of Bitcoin SegWit P2WPKH"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/21-Bitcoin-SegWit-P2WSH.svg" alt="entviz of Bitcoin SegWit P2WSH"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/22-Litecoin-ltc1.svg" alt="entviz of Litecoin (ltc1)"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/23-Bitcoin-Cash-CashAddr.svg" alt="entviz of Bitcoin Cash CashAddr"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/24-Cardano-Shelley.svg" alt="entviz of Cardano Shelley"></div>
+</div>
+
+
+<h2>SSH public keys</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY+0nKlS5pTkkXY user@example.com</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/25-ssh-ed25519-with-comment.svg" alt="entviz of ssh-ed25519 (with comment)"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSD+oM4kLidAptE5pjRA8OBIWNysc9reQJjKegek2jATA3bSvKdq/wdQtpbihEx5OlKMo//V/8QpAIjCSsBaMb6G/e/D5kC9wCjnYJJ68+34L+H5Fx1Ofuiz3BidgssINw/qbV0u1vrCop+ggs6lkl+pIwa+9kPriD9xdowCOQABMVl4todcojY8gZK/Zs5XTwKi9Z8MRS/37FEPxlvpRExMmQU8v2tnP/TDqhR13NSyCZWqiH2ojMNDm2jWR+W65gIjFz4kNsu4EaSNOfKY4U7VRBLXg7om3pvIoarhBFMZvTPQ9FqJU/08BJ/A1tCjCIAY0+zGAAvfRHQt5R2wZXl83n9Xh+9IukW5r/pynpdLx1+WyAOKLxIUKflTWaIcYKBqmfaxz64Gm2lDbF0+9r/0Xf//P8TFDWFo9bo4loIukgjtwQmp8Kn6ngEKj8gS3vLApZ3wN18q3emtglyQEmO+9VXckK4NPOqAzwOu7rQbr7oEPS6HrnY3PKe9JD570= alice@workstation</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/26-ssh-rsa-3072-bit-with-comment.svg" alt="entviz of ssh-rsa 3072-bit (with comment)"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNSBA0Md9M/Cwp0J32Rvk/aiElw77t6l9YQbMmJSP4PfybRxeGP4fqsrIvr6ckdRms5N8Bp/kvug/iAgX6OK59E=</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/27-ecdsa-sha2-nistp256-no-comment.svg" alt="entviz of ecdsa-sha2-nistp256 (no comment)"></div>
+</div>
+
+
+<h2>Base32 addresses (RFC 4648)</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/28-Stellar-account.svg" alt="entviz of Stellar account"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/29-IPFS-CID-v1.svg" alt="entviz of IPFS CID v1"></div>
+</div>
+
+
+<h2>GLEIF LEI (ISO 17442, MOD 97-10 checksum)</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">5493001KJTIIGC8Y1R12</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/30-Bloomberg-L.P..svg" alt="entviz of Bloomberg L.P."></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">529900T8BM49AURSDO55</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/31-Goldman-Sachs-Group-Inc..svg" alt="entviz of Goldman Sachs Group, Inc."></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">213800wavvops85n2205</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/32-JPMorgan-Chase-lowercase-input.svg" alt="entviz of JPMorgan Chase (lowercase input)"></div>
+</div>
+
+
+<h2>Base64 / arbitrary text</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">hello world</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/33-Short-ASCII.svg" alt="entviz of Short ASCII"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/34-Lorem-ipsum-chunk.svg" alt="entviz of Lorem ipsum chunk"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">SGVsbG8sIHRoaXMgaXMgYSB0ZXN0IG9mIHRoZSBlbnR2aXogYWxnb3JpdGhtIQ</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/35-Base64-blob.svg" alt="entviz of Base64 blob"></div>
+</div>
+
+
+<h2>Larger inputs (&gt;512 bits → truncated text channel)</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvkLpZUVjlW8zG3p4G7m7Q1xQfP8aZ8WUEpiE8WxC8mTLg3aN8gqK2y1zGfKbXc9p2YtNvJ5h0sX</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/36-RSA-style-key-fragment.svg" alt="entviz of RSA-style key fragment"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/37-1024-bit-hex.svg" alt="entviz of 1024-bit hex"></div>
+</div>
+
+
+<h2>Same input, different aspect ratios</h2>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/38-256-bit-hex-1-1.svg" alt="entviz of 256-bit hex @ 1:1"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/39-256-bit-hex-2-1.svg" alt="entviz of 256-bit hex @ 2:1"></div>
+</div>
+
+<div class="row">
+  <div class="meta">
+    <div class="input">deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef</div>
+  </div>
+  <div class="viz"><img src="assets/gallery/40-256-bit-hex-1-2.svg" alt="entviz of 256-bit hex @ 1:2"></div>
+</div>
+
+
+</body>
+</html>

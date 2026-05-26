@@ -1,3 +1,4 @@
+import math
 import pytest
 from entviz.layout import choose_grid, Grid
 
@@ -11,10 +12,34 @@ def test_choose_grid_11_tokens_1to1():
 
 
 def test_choose_grid_exact_match():
-    # 8 tokens, 1:1 target → 2x4 (4:4 = 1:1).
+    # 8 tokens, 1:1 target. v4 cells are 3:2 (not 2:1), so candidates are:
+    #   2x4 → 6:8 = 0.75 (below 1.0, rejected)
+    #   3x3 → 9:6 = 1.5  (above 1.0 → picked: closest from above)
+    #   4x2 → 12:4 = 3.0
     grid = choose_grid(8, 1.0)
-    assert grid.cols == 2
-    assert grid.rows == 4
+    assert grid.cols == 3
+    assert grid.rows == 3
+
+
+def test_choose_grid_never_picks_taller_than_target():
+    """Spec: chosen grid AR must NOT be less than the target (unless no
+    above-target candidate exists, in which case the widest is picked).
+    With v4 cell AR 3:2, grid AR = (cols * 3) / (rows * 2)."""
+    for n in range(3, 23):
+        for target in [0.5, 1.0, 1.5, 2.0]:
+            grid = choose_grid(n, target)
+            grid_ar = (grid.cols * 3) / (grid.rows * 2)
+            # Build the set of all valid 2x2+ candidate ratios for n.
+            candidate_ars = []
+            for rows in range(2, n + 1):
+                cols = math.ceil(n / rows)
+                if cols >= 2:
+                    candidate_ars.append((cols * 3) / (rows * 2))
+            if any(ar >= target for ar in candidate_ars):
+                assert grid_ar >= target, (
+                    f"n={n} target={target} → {grid} (AR {grid_ar:.3f}) "
+                    f"is below target but an above-target candidate exists"
+                )
 
 
 def test_choose_grid_high_ar_falls_back_to_widest():

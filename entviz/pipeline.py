@@ -276,49 +276,67 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     min_target = _cell_center(min_ftok_cell_idx)
     max_target = _cell_center(max_ftok_cell_idx)
 
-    # Ring geometry — reduced from v3 sizing to fit the outside pointer.
-    # nominal_radius = nucleus_width / 4 = 12 at 12pt (was 15).
-    # Marker visible radius = 2 (path r=1.5 + 1-px stroke half = 0.5).
-    # Tangent placement: outside marker_center = nominal_radius + 3;
-    # inside marker_center = nominal_radius − 3.
-    nominal_radius = nucleus_width / 4
-    marker_path_r = 1.5
-    marker_outside_distance = nominal_radius + 3
-    marker_inside_distance = nominal_radius - 3
+    # Ring geometry: white disc with 1-px black outline at
+    # nucleus_width/4 + 5 = 17 at 12pt. Direction is conveyed by two
+    # clock hands from the ring center:
+    #   * Long hand (radius + 1, white stroke + mix-blend-mode: difference)
+    #     → angle of maxftok cell. The white stroke inverts to black on
+    #     the white disc interior and to a single white pixel where it
+    #     crosses the black rim — that "notch" is the angle marker.
+    #   * Short hand (radius / 2, black stroke) → angle of minftok cell,
+    #     terminated by a small white-filled black-stroked tip circle so
+    #     the tip reads as a distinct "circle with white dot inside".
+    nominal_radius = nucleus_width / 4 + 5
+    long_hand_len = nominal_radius + 1
+    short_hand_len = nominal_radius / 2
+    tip_radius = 1.5
 
+    # Decoration rule: render the ring + clock-hands stack only on the
+    # FIRST cell of each run of consecutive blank cells (in reading
+    # order). A trailing run of N blanks shows just one decorated cell;
+    # the rest are truly empty. This keeps larger entropies from
+    # looking cluttered with repeated identical decorations.
+    prev_was_blank = False
     for ci in range(grid.cols * grid.rows):
         if ci in used_cell_indices:
+            prev_was_blank = False
             continue
+        if prev_was_blank:
+            continue  # mid-run blank — leave truly empty
+        prev_was_blank = True
         cx, cy = _cell_center(ci)
-        # Ring: a solid white disc at nominal_radius with a 1-px black
-        # outline. Replaces the earlier two-adjacent-strokes design
-        # (1-px white outer + 1-px black inner) — same colors but now
-        # an opaque disc, so anything underneath (grid_rect bg, overlay
-        # tint) is occluded inside the ring.
         etree.SubElement(
             svg, 'circle',
             cx=str(cx), cy=str(cy), r=str(nominal_radius),
             fill='#ffffff', stroke='#000000',
             **{'stroke-width': '1'},
         )
-        # Maxftok pointer: small bicolor disc tangent OUTSIDE the ring,
-        # at the angle from ring center toward the maxftok cell's center.
+        # Long hand → maxftok direction.
         angle_max = math.atan2(max_target[1] - cy, max_target[0] - cx)
         etree.SubElement(
-            svg, 'circle',
-            cx=str(cx + marker_outside_distance * math.cos(angle_max)),
-            cy=str(cy + marker_outside_distance * math.sin(angle_max)),
-            r=str(marker_path_r),
-            fill='#ffffff', stroke='#000000',
+            svg, 'line',
+            x1=str(cx), y1=str(cy),
+            x2=str(cx + long_hand_len * math.cos(angle_max)),
+            y2=str(cy + long_hand_len * math.sin(angle_max)),
+            stroke='#ffffff',
+            style='mix-blend-mode: difference',
             **{'stroke-width': '1'},
         )
-        # Minftok pointer: same design, tangent INSIDE the ring.
+        # Short hand → minftok direction.
         angle_min = math.atan2(min_target[1] - cy, min_target[0] - cx)
+        tip_x = cx + short_hand_len * math.cos(angle_min)
+        tip_y = cy + short_hand_len * math.sin(angle_min)
+        etree.SubElement(
+            svg, 'line',
+            x1=str(cx), y1=str(cy),
+            x2=str(tip_x), y2=str(tip_y),
+            stroke='#000000',
+            **{'stroke-width': '1'},
+        )
+        # Tip circle at the short hand's end.
         etree.SubElement(
             svg, 'circle',
-            cx=str(cx + marker_inside_distance * math.cos(angle_min)),
-            cy=str(cy + marker_inside_distance * math.sin(angle_min)),
-            r=str(marker_path_r),
+            cx=str(tip_x), cy=str(tip_y), r=str(tip_radius),
             fill='#ffffff', stroke='#000000',
             **{'stroke-width': '1'},
         )

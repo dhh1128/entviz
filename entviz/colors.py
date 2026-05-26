@@ -72,30 +72,50 @@ def closest_palette_color(target: str, palette) -> str:
     return min(palette, key=lambda c: weighted_rgb_distance(c, target))
 
 
+def _srgb_to_linear(c):
+    """sRGB component (0..1) → linear-light component."""
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def oklab_lightness(rgb):
+    """
+    Perceptual lightness L from Oklab (Björn Ottosson, 2020) — a modern
+    perceptually-uniform color space that handles saturated colors
+    (especially greens) better than CIELAB L*. Returns L in [0, 1] where
+    0 = pure black and 1 = pure white. Inputs are an (R, G, B) triple
+    with components in 0..255.
+    """
+    r = _srgb_to_linear(rgb[0] / 255)
+    g = _srgb_to_linear(rgb[1] / 255)
+    b = _srgb_to_linear(rgb[2] / 255)
+    l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
+    m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
+    s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
+    lp = l ** (1 / 3)
+    mp = m ** (1 / 3)
+    sp = s ** (1 / 3)
+    return 0.2104542553 * lp + 0.7936177850 * mp - 0.0040720468 * sp
+
+
+# Threshold above the rigorous Oklab midpoint (0.5). Past 0.5, the math
+# nominally favors black text by perceptual lightness gap; the +0.1 bias
+# accounts for the eye's better acuity with small light marks on
+# darker-than-mid fields. Bgs with Oklab L in roughly 0.5–0.6 (mostly
+# saturated dark colors like dark green, plus mid-grays) get white text;
+# above 0.6 (everything from medium tones up) gets black.
+_OKLAB_BLACK_WHITE_THRESHOLD = 0.6
+
+
 def get_nucleus_colors(quant: int):
-    """Convert a 24-bit quant to its (bg_color, fg_color) pair. Red is the
-    low-order byte, then green, then blue (CSS order). Foreground is white
-    or black, picked to maximize WCAG-style luminance contrast against the
-    bg. The crossover (where black contrast equals white contrast) sits at
-    Y ≈ 0.179, NOT 0.5:
-
-        (1 + 0.05) / (Y + 0.05) = (Y + 0.05) / (0 + 0.05)
-      → (Y + 0.05)² = 0.0525
-      → Y = √0.0525 − 0.05 ≈ 0.1791
-
-    A naive 0.5 threshold mis-paired medium-luminance backgrounds with
-    white, producing WCAG contrast ratios of 2-3:1 (fails AA) where
-    black would have given 6-12:1.
+    """Convert a 24-bit quant to its (bg_color, fg_color) pair. Red is
+    the low-order byte, then green, then blue (CSS order). Foreground is
+    white or black, picked by Oklab perceptual lightness against a
+    threshold of 0.6 — see _OKLAB_BLACK_WHITE_THRESHOLD for the rationale.
     """
     r = quant & 0xFF
     g = (quant >> 8) & 0xFF
     b = (quant >> 16) & 0xFF
     bg_color = f"#{r:02x}{g:02x}{b:02x}"
-    lum = relative_luminance((r, g, b))
-    fg_color = "#ffffff" if lum < _WCAG_BLACK_WHITE_CROSSOVER else "#000000"
+    L = oklab_lightness((r, g, b))
+    fg_color = "#ffffff" if L < _OKLAB_BLACK_WHITE_THRESHOLD else "#000000"
     return bg_color, fg_color
-
-
-# sqrt(1.05 * 0.05) - 0.05 — luminance at which white-on-bg has equal
-# WCAG contrast to bg-on-black. Below: prefer white. Above: prefer black.
-_WCAG_BLACK_WHITE_CROSSOVER = (0.0525) ** 0.5 - 0.05

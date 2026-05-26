@@ -339,49 +339,89 @@ Entviz = goal:
 
       children:
 
-        Blank Cell Min/Max Pointers = decision:
+        Blank Cell Clock Hands = decision:
           id: v4bptr12
           why: >
-            On top of the bicolor ring (v4bl4nkc), each blank cell
-            also carries two small "pointer" markers: one tangent
-            outside the ring pointing toward the maxftok cell, one
-            tangent inside the ring pointing toward the minftok cell.
+            On top of the white-disc ring (v4r1ng3v2), each blank
+            cell carries two "clock hands" drawn from the ring
+            center, encoding the angles to two cells of interest.
+            Final shape after two iterations:
 
-            minftok/maxftok are defined over the USED ftoks (not the
-            full 22 ftoks of the fingerprint — for inputs under 512
-            bits some ftoks are unused). minftok = smallest 24-bit
-            quant; maxftok = largest. Tie-break = highest cell index
-            (visual reading order — last cell containing the tied
-            value).
+              * Long hand → maxftok direction. Length = ring
+                radius + 1 (= 18 at 12pt), so the hand crosses
+                the ring's black rim by exactly 1 px. Drawn as
+                a white stroke with mix-blend-mode: difference.
+                On the white disc interior the white stroke
+                inverts to black (visible as a black hand); on
+                the 1-px black rim it inverts to a single white
+                pixel breaking the rim. That tiny "notch" in
+                the rim is the visual cue marking the maxftok
+                angle.
+              * Short hand → minftok direction. Length = ring
+                radius / 2 (= 8.5 at 12pt), drawn as a plain
+                black stroke. Terminated by a small white-filled
+                black-stroked circle (r=1.5) centered at the
+                hand's end point — visually a "circle with a
+                white dot inside" that makes the tip readable
+                as distinct from the long hand's notch.
 
-            These cells are independent of the quartile cells
-            (which sort the same used ftoks by mirrored ASCII text
-            rather than by 24-bit value). The two sortings rarely
-            coincide, so the pointers tend to flag two more
-            ftok-derived cells than the four already flagged by
-            quartile triangles.
+            Ring radius simultaneously enlarged: started at
+            nucleus_width/4 = 12, grew to /4 + 3 = 15 in the
+            first clock-hand redesign (to absorb the outside
+            tangent marker's space), and now /4 + 5 = 17 in
+            this revision (to give the long hand more length
+            and the difference-blend notch more visual presence).
 
-            Geometry: ring nominal_radius reduced from
-            (nucleus_height + box_height) / 2 to nucleus_width / 4
-            (12 at 12pt, was 15) so the outside marker has 3 px of
-            margin to the cell edge instead of touching it. Each
-            marker is a r=1.5 white-filled black-1-px-stroked disc
-            (4 px visible diameter). Outside marker center at
-            r = nominal_radius + 3; inside at nominal_radius − 3
-            (tangent to ring outer/inner extents).
+            minftok/maxftok are defined over the USED ftoks
+            (not the full 22 ftoks of the fingerprint — for
+            inputs under 512 bits some ftoks are unused).
+            minftok = smallest 24-bit quant; maxftok = largest.
+            Tie-break for min = highest cell index (preserving
+            the earlier convention).
 
-            The markers are identical in design — position alone
-            (inside vs outside the ring) tells the viewer which is
-            min and which is max. Memorable rule: "max bursts
-            outward".
+            Why difference blend for the long hand: it lets a
+            single drawn element render as black where the
+            entviz wants a black hand AND simultaneously as
+            white where it wants to break the rim — without
+            needing to clip or split the line into multiple
+            colored segments. Modern browsers (Chrome, Brave,
+            Safari, Firefox) all support mix-blend-mode on SVG
+            elements; cairosvg historically does not honor it
+            cleanly, which is acceptable since the gallery is
+            rendered for browser viewing.
 
-            Purpose: (a) every blank ring now encodes two
-            entropy-dependent angles, multiplying the CRC value of
-            each blank cell — two entvizes that differ should differ
-            in pointer angles across all rings; (b) creates a
-            visual "constellation" — all the rings' max markers
-            point at the same target, forming a geometric pattern
-            that varies with the fingerprint.
+            Why the short hand carries a tip ornament: the two
+            hands now share the same color (black, by the time
+            the long hand's difference-blend renders), so they
+            need to be distinguishable by shape, not color.
+            The long hand reads as a plain line ending in a
+            "notch through the rim"; the short hand reads as a
+            line ending in a "circle with a white dot". That
+            asymmetry (notch vs. ringed-tip) is what tells the
+            viewer which direction is min vs. max.
+
+            Purpose: every blank ring encodes two entropy-
+            dependent angles, multiplying the CRC value of each
+            blank cell — two entvizes that differ should differ
+            in hand angles across all rings, and the angles
+            also form a visual "constellation" where every
+            ring's long hand points to the same maxftok cell
+            and every short hand to the same minftok cell.
+
+            Run-based decoration: only the FIRST cell of each
+            run of consecutive blank cells (in reading order)
+            gets the full ring + hands + tip stack. Subsequent
+            cells in the same blank run are truly empty (no
+            ring, no hands). The rule was added because at
+            larger entropy a long trailing run of blank cells
+            otherwise repeated the same decoration N times,
+            which both cluttered the design and lost
+            information (every ring in a run is necessarily
+            identical, because they all point to the same
+            min/max cells). A non-decorated trailing blank
+            still carries angular information indirectly — the
+            FIRST cell of the run is decorated and its position
+            anchors the run's location.
 
         Blank Cell Ring as White-Filled Disc = decision:
           id: v4r1ng3v2
@@ -581,7 +621,7 @@ Entviz = goal:
             always (top strip) and another nucleus_height + GM
             when suffix exists (bottom strip).
 
-        WCAG Contrast Crossover = decision:
+        WCAG Contrast Crossover (superseded by v4oklab) = decision:
           id: v4wcagxr
           why: >
             v3 used the naive rule `relative_luminance(bg) < 0.5 →
@@ -591,12 +631,48 @@ Entviz = goal:
             giving WCAG contrast 2.0:1 (fails AA) where black would
             have given 10.4:1.
 
-            v4 uses the true black-vs-white crossover: the Y at
-            which contrast(white, Y) = contrast(Y, black). Solving
-              (1 + 0.05) / (Y + 0.05) = (Y + 0.05) / 0.05
-            gives Y = sqrt(0.0525) - 0.05 ≈ 0.1791. Below: pair
-            with white; above: pair with black. Every bg ends up
-            with its higher-contrast partner.
+            v4 first replaced this with the true WCAG black-vs-white
+            crossover at Y ≈ 0.1791 (the Y at which contrast(white,
+            Y) equals contrast(Y, black)). That fixed beige and
+            similar bright bgs, but exposed a second problem on
+            saturated dark greens: WCAG Y heavily weights green
+            (0.7152·G), so a "looks dark" green like #55841c lands
+            at Y = 0.185 — just past the crossover, so paired with
+            black even though the eye expects white. See [[v4oklab]]
+            for the resolution.
+
+        Oklab Perceptual Threshold = decision:
+          id: v4oklab
+          why: >
+            Replaces the WCAG-equal-contrast crossover (v4wcagxr)
+            with Oklab perceptual lightness L, threshold L > 0.6 →
+            black, else white.
+
+            Why Oklab and not WCAG Y? sRGB Y is photometric, not
+            perceptual: it over-weights green so saturated dark
+            greens read as "dark" to the eye but sit just past the
+            WCAG crossover by number. Oklab (Björn Ottosson, 2020)
+            is a modern perceptually-uniform color space whose L
+            handles saturated colors — greens in particular —
+            better than CIELAB L*. For #55841c: Y = 0.185 (just
+            past WCAG threshold 0.179 → black), but Oklab L = 0.559.
+
+            Why 0.6 and not the rigorous Oklab midpoint 0.5? At
+            L = 0.5 the perceptual lightness gap to black equals
+            the gap to white, but small dark glyphs on mid-gray
+            fields read less crisply than small light glyphs of
+            the same gap — the eye handles light-on-darker better
+            than dark-on-mid for fine detail. A +0.1 bias past the
+            midpoint flips dark-green-class colors (L ≈ 0.54–0.59)
+            to white where they read more comfortably.
+
+            Cases at the threshold (L just above/below 0.6):
+              * #55841c dark green → L=0.559 → white ✓
+              * rgb(125) mid-gray → L=0.590 → white
+              * rgb(160) mid-gray → L=0.685 → black
+              * #ff3f2f red       → L=0.657 → black
+              * #c3b2a1 beige     → L=0.773 → black
+              * #ffd966 gold      → L=0.896 → black
 
         Ethereum Detection & Full-Body Core = decision:
           id: v4eth4ddr
@@ -722,6 +798,51 @@ Entviz = goal:
             which gives 6 / 4 / 4 chars for hex / base58/64 / bech32
             respectively — all under or equal to the 24-bit budget.
 
+        ULID & Crockford Base32 = decision:
+          id: v4cr0ckf
+          why: >
+            Add a ULID parser and a CROCKFORD32 alphabet entry.
+
+            ULID format: 26 chars of Crockford base32 (5 bits/char,
+            alphabet "0123456789ABCDEFGHJKMNPQRSTVWXYZ" — excludes
+            I, L, O, U to reduce visual ambiguity). The ULID/Crockford
+            spec also accepts I, L (-> 1) and O (-> 0) as
+            case-insensitive INPUT aliases; U is not an alias. The
+            parser regex matches [0-9A-TV-Z]{26} (skipping U)
+            case-insensitively; on match it translates the aliases
+            and upper-cases the rest to canonical Crockford form
+            before declaring CROCKFORD32 as the alphabet.
+
+            Token length is 4 chars (20 bits, extended to 24) under
+            the existing bits_per_char=5 rule, identical to BASE32
+            and BECH32 mechanics — the only difference is the
+            character lookup table. The same 26-char text under
+            CROCKFORD32 vs BASE32 vs BECH32 produces three different
+            quant sequences because each alphabet maps chars to
+            different bit values.
+
+            Parser dispatch order: parse_ulid auto-registers via
+            register_parse_funcs() before parse_hex is appended last.
+            A 26-char string made up of only [0-9A-F] (e.g. an
+            unprefixed mid-length hex blob) is therefore classified
+            as a ULID rather than as plain hex — an intentional
+            precedence shift since ULID is the more specific format.
+            Two pre-existing test fixtures (a 26-char hex string in
+            test_parsing / test_hex_normalization, and
+            "bInvalidBase32Address12345" which happens to be 26
+            chars of valid Crockford) were extended to 27/28-char
+            lengths to remove the overlap.
+
+            Disproof chain unchanged: CROCKFORD32 is NOT added to
+            detect_alphabet_by_disproof. Reasoning — the specific
+            26-char ULID parser already catches the only canonical
+            shape; for arbitrary-length inputs Crockford is not
+            more restrictive than RFC 4648 base32 in a useful way
+            (both are 32-char alphabets and the character-set
+            difference, I/L/O/U vs 0/1/8/9, is arbitrary), and
+            adding it would force a precedence ranking that doesn't
+            reflect any real input-source distinguishability.
+
         Hybrid Ellipse Anchoring = decision:
           id: v4hybell
           why: >
@@ -802,6 +923,120 @@ Entviz = goal:
             the existing 1-px gray frame (top/bottom borders + left
             border + interior separator at x = 1 + box_height + 0.5)
             encloses the bar on all four sides.
+
+        SSH Public-Key Type Detection = decision:
+          id: v4sshkey
+          why: >
+            The v3 parser matched any AAAA-prefixed base64 blob with a
+            generic "SSH key" type and a 4-char "AAAA" prefix. That
+            under-reported structural overhead: every SSH key carries a
+            fixed length-prefixed type-string at the front (and, for
+            ssh-rsa, a fixed exponent field; for ecdsa-sha2-nistpXXX,
+            a redundant curve-name field) that contributes no per-key
+            entropy.
+
+            v4 detects six specific key types by a base64 prefix
+            (`match_str`) and consumes a possibly-longer `prefix_length`
+            from the payload. The extra chars (when prefix_length >
+            len(match_str)) are non-constant structural bytes — usually
+            the high bytes of the next length-prefix field — that vary
+            per key but carry no entropy. Pulling them into the prefix
+            region keeps the cells starting on per-key entropy:
+              ssh-ed25519           → match "AAAAC3NzaC1lZDI1NTE5AAAA"        (24, prefix_length=24)
+              ssh-rsa               → match "AAAAB3NzaC1yc2EAAAADAQAB"        (24, prefix_length=28; extra covers 3 of 4 modulus-length bytes)
+              ssh-dss               → match "AAAAB3NzaC1kc3M"                 (15, prefix_length=15)
+              ecdsa-sha2-nistp256   → match "AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABB" (52, prefix_length=52; cleanly captures the always-constant key-length 0x00000041)
+              ecdsa-sha2-nistp384   → match "AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABh" (52, prefix_length=52)
+              ecdsa-sha2-nistp521   → match "AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEAAAAIbmlzdHA1MjEAAACF" (52, prefix_length=52)
+
+            For ssh-rsa the prefix folds in the second wire field (the
+            public exponent), because real-world keys universally use
+            65537 (0x010001, length 3, encoded `AAAADAQAB`). The body
+            therefore starts at the modulus length-prefix.
+
+            For ecdsa-sha2-nistpXXX the prefix folds in the curve-name
+            field (`AAAAIbmlzdHAyNTY` etc.), because the curve name is
+            fully redundant with the type-string — both encode "256"
+            (or 384/521).
+
+            For ed25519 the prefix extends 4 chars past the
+            type-string field to sweep up the high 3 zero bytes
+            (`AAAA`) of the always-constant key-length field
+            (0x00000020 = 32). Without that extension the first
+            cell of the core would render as `AAAA` on every
+            ed25519 key — pure structural noise. The 4th byte of
+            the key-length field (0x20) still leaks into the
+            first character of the core (deterministically encoded
+            as `I`), but the remaining 3 chars of the first cell
+            encode 16 bits of the actual ed25519 public key, so
+            the cell varies per-key. Trade-off: keeping the prefix
+            string constant (so the `payload.startswith(prefix)`
+            lookup still works) means we can't capture the full
+            key-length field without leaking entropy bytes into
+            the prefix; 24 chars is the cleanest cell-boundary
+            stop short of that trade-off.
+
+            For dss the prefix is just the length-prefixed type-string
+            (no exponent equivalent — the four DSA parameters p,q,g,y
+            are all per-key entropy).
+
+            The parser also handles the full openssh single-line form:
+                <type-string> <base64-payload> [<comment>]
+            The leading "<type-string> " token is matched and consumed
+            (it's redundant with the type detected from the base64
+            prefix). A trailing space-separated comment (e.g.
+            "user@host") is captured as `suffix`.
+
+            Unknown type-strings (a future SSH key algorithm, or a
+            non-SSH blob that happens to start with AAAA) fall back to
+            the generic behavior: type "SSH key", prefix "AAAA".
+
+        GLEIF LEI (ISO 17442) = decision:
+          id: v4le1gle
+          why: >
+            Add `parse_lei` for GLEIF Legal Entity Identifiers (ISO
+            17442). Shape: exactly 20 characters from base36
+            (0-9, A-Z); structure is 4-char LOU prefix + "00" reserved +
+            12-char entity body + 2-char ISO/IEC 7064 MOD 97-10
+            checksum. Same checksum algorithm IBAN uses, minus the
+            country-code rotation: replace each letter with its base36
+            numeric value (A=10..Z=35), interpret the resulting digit
+            string as a base-10 integer, and require it ≡ 1 (mod 97).
+            Input is case-insensitive; the parser normalizes to upper.
+
+            ISO 17442 split mirrors Bitcoin legacy's treatment of its
+            version byte + base58 checksum:
+              * prefix = 6 chars (4-char LOU issuer code + "00"
+                reserved) — structural, identifies the issuer
+              * core   = 12 chars (entity-specific body — the actual
+                per-entity entropy that the visualization should
+                emphasize)
+              * suffix = 2 chars (MOD 97-10 checksum)
+            Top label thus reads e.g. `LEI: 549300...`, bottom label
+            reads e.g. `...12`.
+
+            The MOD 97-10 validation matters. Without it, the LEI
+            parser would claim every 20-char base36 string — a huge
+            false-positive surface that would mis-label random tokens,
+            short hex blobs (when interpreted upper-cased), and many
+            base32/base64 fragments. The checksum reduces the false
+            positive rate to ~1/97 ≈ 1% of arbitrary 20-char base36
+            strings, and the additional "positions 5-6 = 00" structural
+            check filters out a further ~99% of the survivors.
+
+            BASE36 alphabet is new: 0-9 then A-Z, 36 chars. 36 isn't a
+            power of 2, so true entropy is ~5.17 bits/char. For
+            token-alignment purposes we declare bits_per_char=6 — the
+            same trick BASE58 uses (also non-power-of-2): 4 chars per
+            24-bit token. A 20-char LEI tokenizes to exactly 5 tokens.
+
+            BASE36 is intentionally NOT added to
+            detect_alphabet_by_disproof. A bare 20-char base36 string
+            without a checksum carries no positive signal vs hex,
+            base32 (RFC 4648), or base58 — all of which already appear
+            earlier in the disproof order. The specific LEI parser
+            with its checksum is the only place base36 carries
+            information.
 
     Reference and Rendered Font Sizes = decision:
           id: r3fr3nfn

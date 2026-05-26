@@ -126,7 +126,8 @@ def choose_grid(token_count: int, target_ar: float = 1.0) -> Grid:
     """
     Select the grid layout with at least 2 columns and 2 rows whose overall
     aspect ratio is closest to target_ar without being less than it. Each
-    cell has an aspect ratio of 2:1, so grid AR = (cols * 2) / rows.
+    v4 cell has an aspect ratio of 3:2 (cell_width:cell_height = 60:40 at
+    12pt), so grid AR = (cols * 3) / (rows * 2).
 
     If no 2x2+ layout achieves the target ratio (e.g., target_ar=20 with
     only 11 tokens), fall back to the widest available layout. If
@@ -147,7 +148,7 @@ def choose_grid(token_count: int, target_ar: float = 1.0) -> Grid:
             tightest_cols_for_rows[rows] = cols
 
     candidates = [
-        (cols, rows, (cols * 2) / rows)
+        (cols, rows, (cols * 3) / (rows * 2))
         for rows, cols in tightest_cols_for_rows.items()
     ]
 

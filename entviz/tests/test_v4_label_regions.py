@@ -215,7 +215,8 @@ def test_canvas_height_grows_with_both_labels():
     Canvas grows by 2·(nucleus_height + GM) = 50 over the no-label v4."""
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     # Bitcoin Legacy: 34 chars - 1 prefix - 4 suffix = 29-char body →
-    # 8 base58 tokens (29/4 rounding up). choose_grid(8, 1.0) → 2x4 grid.
-    # No labels: bounding_h = 1+5+(4·40)+5+1 = 172. With both labels:
-    # 172 + 50 = 222.
-    assert float(svg.get("height")) == 222
+    # 8 base58 tokens. choose_grid(8, 1.0) → 3x3 (v4 cell AR 3:2 means
+    # 2x4 = 0.75 is below 1.0; 3x3 = 1.5 is the closest from above).
+    # No labels: bounding_h = 1+5+(3·40)+5+1 = 132. With both labels:
+    # 132 + 50 = 182.
+    assert float(svg.get("height")) == 182

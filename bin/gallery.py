@@ -1,18 +1,22 @@
 """
-Generate a single-file HTML gallery of v4 entvizes across a curated set
-of input types and avalanche pairs. Inline SVGs, no external assets.
+Generate an HTML gallery of v4 entvizes across a curated set of input
+types and avalanche pairs. SVGs are written as standalone files under
+docs/assets/gallery/ and referenced from docs/gallery.html.
 
 Run from the repo root:
-    python bin/gallery.py -o gallery.html
+    python bin/gallery.py
 """
 import argparse
 import html
 import os
+import re
+import shutil
 import sys
 
 # Allow running directly from the source tree.
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.normpath(os.path.join(HERE, '..')))
+REPO_ROOT = os.path.normpath(os.path.join(HERE, '..'))
+sys.path.insert(0, REPO_ROOT)
 
 from entviz.pipeline import render
 
@@ -36,6 +40,11 @@ SAMPLES = [
         ("256-bit hex", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
         ("512-bit hex", "0123456789abcdef" * 8),
     ]),
+    ("ULIDs (Crockford base32)", [
+        ("Canonical ULID",                 "01ARZ3NDEKTSV4RRFFQ69G5FAV"),
+        ("Lowercase ULID (normalized up)", "01arz3ndektsv4rrffq69g5fav"),
+        ("ULID with I/L/O aliases",        "01ARZ3NDEKTSV4RRFFQ69G5FaIlO"[:26]),
+    ]),
     ("Blockchain addresses", [
         ("Ethereum",        "0x742d35cc6634c0532925a3b844bc454e4438f44e"),
         ("Bitcoin legacy",  "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
@@ -50,9 +59,30 @@ SAMPLES = [
         ("Cardano Shelley",
          "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"),
     ]),
+    ("SSH public keys", [
+        ("ssh-ed25519 (with comment)",
+         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY+0nKlS5pTkkXY user@example.com"),
+        ("ssh-rsa 3072-bit (with comment)",
+         "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSD+oM4kLidAptE5pjRA8OBIWNysc9reQJjK"
+         "egek2jATA3bSvKdq/wdQtpbihEx5OlKMo//V/8QpAIjCSsBaMb6G/e/D5kC9wCjnYJ"
+         "J68+34L+H5Fx1Ofuiz3BidgssINw/qbV0u1vrCop+ggs6lkl+pIwa+9kPriD9xdowC"
+         "OQABMVl4todcojY8gZK/Zs5XTwKi9Z8MRS/37FEPxlvpRExMmQU8v2tnP/TDqhR13N"
+         "SyCZWqiH2ojMNDm2jWR+W65gIjFz4kNsu4EaSNOfKY4U7VRBLXg7om3pvIoarhBFMZ"
+         "vTPQ9FqJU/08BJ/A1tCjCIAY0+zGAAvfRHQt5R2wZXl83n9Xh+9IukW5r/pynpdLx1"
+         "+WyAOKLxIUKflTWaIcYKBqmfaxz64Gm2lDbF0+9r/0Xf//P8TFDWFo9bo4loIukgjt"
+         "wQmp8Kn6ngEKj8gS3vLApZ3wN18q3emtglyQEmO+9VXckK4NPOqAzwOu7rQbr7oEPS"
+         "6HrnY3PKe9JD570= alice@workstation"),
+        ("ecdsa-sha2-nistp256 (no comment)",
+         "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNSBA0Md9M/Cwp0J32Rvk/aiElw77t6l9YQbMmJSP4PfybRxeGP4fqsrIvr6ckdRms5N8Bp/kvug/iAgX6OK59E="),
+    ]),
     ("Base32 addresses (RFC 4648)", [
         ("Stellar account",     "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM"),
         ("IPFS CID v1",         "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
+    ]),
+    ("GLEIF LEI (ISO 17442, MOD 97-10 checksum)", [
+        ("Bloomberg L.P.",                       "5493001KJTIIGC8Y1R12"),
+        ("Goldman Sachs Group, Inc.",            "529900T8BM49AURSDO55"),
+        ("JPMorgan Chase (lowercase input)",     "213800wavvops85n2205"),
     ]),
     ("Base64 / arbitrary text", [
         ("Short ASCII",       "hello world"),
@@ -96,7 +126,6 @@ PAGE = """<!doctype html>
     border-bottom: 1px dotted #ddd;
   }}
   .meta {{ flex: 0 0 28em; }}
-  .label {{ font-weight: 600; margin-bottom: 0.35em; }}
   .input {{
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 0.85em;
@@ -108,7 +137,7 @@ PAGE = """<!doctype html>
     line-height: 1.4;
   }}
   .viz {{ flex: 0 0 auto; }}
-  .viz svg {{ display: block; }}
+  .viz img {{ display: block; }}
 </style>
 </head>
 <body>
@@ -129,38 +158,33 @@ ROW = """
   <div class="meta">
     <div class="input">{input}</div>
   </div>
-  <div class="viz">{svg}</div>
+  <div class="viz"><img src="{svg_path}" alt="entviz of {alt}"></div>
 </div>
 """
 
 
-def _strip_xml_decl(svg: str) -> str:
-    # Inline SVGs in HTML must not carry an XML prolog. Our render() already
-    # uses xml_declaration=False but a stray BOM or leading whitespace would
-    # also be ugly; strip defensively.
-    return svg.lstrip().removeprefix('<?xml version="1.0"?>').lstrip()
-
-
-def _uniquify_ids(svg: str, suffix: str) -> str:
-    """
-    Re-namespace every `id="…"` and matching `url(#…)` reference in the SVG
-    by appending a per-entry suffix. Embedding multiple SVGs in one HTML
-    document collides on shared IDs (clipPath, gradient, etc.) because the
-    browser resolves url(#…) to the FIRST matching id in the entire HTML
-    document — not the nearest enclosing SVG. Salting per entry isolates
-    them.
-    """
-    import re
-    suffix = f"-g{suffix}"
-    svg = re.sub(r'id="([^"]+)"', lambda m: f'id="{m.group(1)}{suffix}"', svg)
-    svg = re.sub(r'url\(#([^)]+)\)', lambda m: f'url(#{m.group(1)}{suffix})', svg)
-    return svg
+def _slugify(text: str) -> str:
+    """Filesystem-safe slug for the SVG filename."""
+    s = re.sub(r'[^a-zA-Z0-9._-]+', '-', text)[:60].strip('-')
+    return s or 'entry'
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('-o', '--output', default='gallery.html')
+    ap.add_argument('--html-out', default=os.path.join(REPO_ROOT, 'docs', 'gallery.html'))
+    ap.add_argument('--svg-dir', default=os.path.join(REPO_ROOT, 'docs', 'assets', 'gallery'))
     args = ap.parse_args()
+
+    # Wipe the SVG output dir each run so renamed/removed entries don't
+    # leave orphaned files behind.
+    if os.path.isdir(args.svg_dir):
+        shutil.rmtree(args.svg_dir)
+    os.makedirs(args.svg_dir, exist_ok=True)
+
+    # SVGs are referenced from the HTML via a path relative to the HTML
+    # file's directory. Compute that once.
+    html_dir = os.path.dirname(os.path.abspath(args.html_out))
+    rel_svg_dir = os.path.relpath(args.svg_dir, html_dir).replace(os.sep, '/')
 
     sections = []
     entry_seq = 0
@@ -174,27 +198,37 @@ def main():
             else:
                 label, entropy, target_ar = sample
                 kwargs = {"target_ar": target_ar}
+            filename = f"{entry_seq:02d}-{_slugify(label)}.svg"
+            svg_path = os.path.join(args.svg_dir, filename)
             try:
                 svg = render(entropy, **kwargs)
+                with open(svg_path, 'w', encoding='utf-8') as f:
+                    f.write(svg)
+                rel_path = f"{rel_svg_dir}/{filename}"
+                row_html = ROW.format(
+                    input=html.escape(entropy),
+                    svg_path=html.escape(rel_path, quote=True),
+                    alt=html.escape(label, quote=True),
+                )
             except Exception as e:
                 # Parser corner cases (e.g. hex-multihash trying to decode
                 # an unrelated hex blob) shouldn't abort the whole gallery.
-                svg = (f'<div style="color:#900;font-family:monospace;'
+                err = (f'<div style="color:#900;font-family:monospace;'
                        f'padding:0.5em;background:#fee;border-radius:4px;">'
                        f'render failed: {html.escape(str(e))}</div>')
-            if svg.startswith('<svg'):
-                svg_inline = _uniquify_ids(_strip_xml_decl(svg), str(entry_seq))
-            else:
-                svg_inline = svg
-            rows.append(ROW.format(
-                input=html.escape(entropy),
-                svg=svg_inline,
-            ))
+                row_html = (
+                    f'<div class="row"><div class="meta">'
+                    f'<div class="input">{html.escape(entropy)}</div></div>'
+                    f'<div class="viz">{err}</div></div>'
+                )
+            rows.append(row_html)
         sections.append(SECTION.format(title=html.escape(title), rows="".join(rows)))
 
-    with open(args.output, 'w', encoding='utf-8') as f:
+    os.makedirs(html_dir, exist_ok=True)
+    with open(args.html_out, 'w', encoding='utf-8') as f:
         f.write(PAGE.format(body="".join(sections)))
-    print(f"wrote {args.output}")
+    print(f"wrote {args.html_out}")
+    print(f"wrote {entry_seq} SVGs under {args.svg_dir}")
 
 
 if __name__ == '__main__':
