@@ -134,14 +134,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # document scannable.
     defs = etree.SubElement(svg, 'defs')
 
-    # clipPath spans the entire bounding rect; used to confine the
-    # ellipse overlay (which is sized to overflow) to the entviz outline.
-    clip_id = "bounding-clip"
+    # V3-5: clipPath spans the grid_rect (not the bounding rect).
+    # The ellipse overlay clips to the cells-only area; the bounding-rect
+    # margins, color bar, and SCS row stay overlay-free.
+    clip_id = "grid-clip"
     cp = etree.SubElement(defs, 'clipPath', id=clip_id)
     etree.SubElement(
         cp, 'rect',
-        x=str(bounding_rect.left), y=str(bounding_rect.top),
-        width=str(bounding_rect.size.width), height=str(bounding_rect.size.height),
+        x=str(grid_rect.left), y=str(grid_rect.top),
+        width=str(grid_rect.size.width), height=str(grid_rect.size.height),
     )
 
     draw_rect(svg, bounding_rect, '#ffffff')
@@ -288,17 +289,52 @@ def enumerate_perimeter_points(cols, rows, cell_w, cell_h, origin: Point) -> lis
     return points
 
 
+def enumerate_interior_corners(cols, rows, cell_w, cell_h, origin: Point) -> list:
+    """
+    V3-5: enumerate strictly-interior corners of an N-cols × M-rows grid.
+    These are the cell-corner points that lie inside the grid_rect — not
+    on its outer boundary. There are exactly (cols - 1) × (rows - 1) such
+    points. Returned in row-major order (left to right, top to bottom),
+    offset by `origin`.
+    """
+    return [
+        Point(origin.x + c * cell_w, origin.y + r * cell_h)
+        for r in range(1, rows)
+        for c in range(1, cols)
+    ]
+
+
 def ellipse_params_from_digest(digest: bytes) -> dict:
     """
-    Map raw digest bytes 60-63 onto the ellipse's four parameters.
-    Returns a dict with anchor_index (caller mods by point count),
-    axis_ratio (1.0 .. 2.5), rotation_deg (0 .. 180), opacity (0.10 .. 0.30).
+    v2 mapping (kept for backwards-compatible test imports). v3 uses
+    v3_ellipse_params_from_digest below.
     """
     return {
         "anchor_index": digest[60],
         "axis_ratio": 1.0 + (digest[61] / 255.0) * 1.5,
         "rotation_deg": (digest[62] / 255.0) * 180.0,
         "opacity": 0.10 + (digest[63] / 255.0) * 0.20,
+    }
+
+
+def v3_ellipse_params_from_digest(digest: bytes) -> dict:
+    """
+    V3-5: map raw digest bytes 60-63 to the v3 ellipse parameters.
+
+    - anchor_index: digest[60] (full byte; caller mods by pool size)
+    - rx_step, ry_step, rotation_step: each digest byte mod 16 → 0..15
+      discretization. Caller maps to ranges:
+        rx       = r_min + rx_step/15 × (r_max − r_min)
+        ry       = r_min + ry_step/15 × (r_max − r_min)
+        rotation = rotation_step/15 × 180°
+      with r_min = cell_h and r_max = d_far(anchor) − cell_w.
+    - opacity is fixed at 0.20 (no digest byte consumed for it).
+    """
+    return {
+        "anchor_index": digest[60],
+        "rx_step": digest[61] % 16,
+        "ry_step": digest[62] % 16,
+        "rotation_step": digest[63] % 16,
     }
 
 
@@ -311,23 +347,55 @@ def _ellipse_fill_for_bg(bg_color: str) -> str:
     return '#000000' if l > 0.5 else '#ffffff'
 
 
+_V3_OVERLAY_MIN_INTERIOR_CORNERS = 6  # 3x4 / 4x3 and larger
+_V3_OVERLAY_OPACITY = 0.20
+
+
 def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
                           cell_w, cell_h, bg_color, clip_id):
-    points = enumerate_perimeter_points(
-        cols=int(grid_rect.size.width / cell_w),
-        rows=int(grid_rect.size.height / cell_h),
-        cell_w=cell_w, cell_h=cell_h,
+    """
+    V3-5 ellipse overlay:
+      - skip if grid has < 6 interior corners (~< 256 bits of input)
+      - anchor: strictly-interior corner of the grid
+      - rx, ry: independent, each in [cell_h, d_far − cell_w] with
+        16-level discretization
+      - rotation: [0°, 180°), 16-level
+      - opacity: fixed 20%
+      - clip target: grid_rect (passed in via clip_id)
+    """
+    cols = int(round(grid_rect.size.width / cell_w))
+    rows = int(round(grid_rect.size.height / cell_h))
+    if (cols - 1) * (rows - 1) < _V3_OVERLAY_MIN_INTERIOR_CORNERS:
+        return  # grid too small for the overlay to read
+
+    points = enumerate_interior_corners(
+        cols=cols, rows=rows, cell_w=cell_w, cell_h=cell_h,
         origin=Point(grid_rect.left, grid_rect.top),
     )
     if not points:
         return
-    p = ellipse_params_from_digest(digest)
+
+    p = v3_ellipse_params_from_digest(digest)
     anchor = points[p["anchor_index"] % len(points)]
-    # Smaller semi-axis ≥ half the diagonal of the bounding rect, so the
-    # ellipse always overflows and clips to an arc.
-    half_diag = math.hypot(bounding_rect.size.width, bounding_rect.size.height) / 2
-    smaller = half_diag
-    larger = smaller * p["axis_ratio"]
+
+    # d_far = distance from anchor to the farthest of the grid_rect's
+    # four outer corners.
+    corners = [
+        (grid_rect.left, grid_rect.top),
+        (grid_rect.right, grid_rect.top),
+        (grid_rect.left, grid_rect.bottom),
+        (grid_rect.right, grid_rect.bottom),
+    ]
+    d_far = max(math.hypot(c[0] - anchor.x, c[1] - anchor.y) for c in corners)
+    r_min = cell_h
+    r_max = d_far - cell_w
+    if r_max <= r_min:
+        return  # degenerate radius range — shouldn't trigger past the >=6
+                # interior-corners gate, but defensive
+
+    rx = r_min + (p["rx_step"] / 15.0) * (r_max - r_min)
+    ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)
+    rotation_deg = (p["rotation_step"] / 15.0) * 180.0
     fill = _ellipse_fill_for_bg(bg_color)
     # SVG quirk: when clip-path and transform live on the same element,
     # the clip rectangle rotates along with the element (clip-path is
@@ -339,10 +407,10 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     etree.SubElement(
         clipped, 'ellipse',
         cx=str(anchor.x), cy=str(anchor.y),
-        rx=str(smaller), ry=str(larger),
-        transform=f"rotate({p['rotation_deg']} {anchor.x} {anchor.y})",
+        rx=str(rx), ry=str(ry),
+        transform=f"rotate({rotation_deg} {anchor.x} {anchor.y})",
         fill=fill,
-        **{"fill-opacity": f"{p['opacity']}"},
+        **{"fill-opacity": f"{_V3_OVERLAY_OPACITY}"},
     )
 
 

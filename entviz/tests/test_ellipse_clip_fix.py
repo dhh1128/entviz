@@ -18,9 +18,9 @@ from entviz.pipeline import render
 
 def test_ellipse_is_inside_a_clipping_group():
     # Render any input large enough to produce an ellipse overlay.
-    svg = etree.fromstring(render("550e8400-e29b-41d4-a716-446655440000").encode())
+    svg = etree.fromstring(render("deadbeefdeadbeef" * 8).encode())
     ellipses = svg.xpath('//*[local-name()="ellipse"]')
-    assert ellipses, "no ellipse rendered for the UUID input"
+    assert ellipses, "no ellipse rendered for the large input"
     ellipse = ellipses[0]
 
     # The ellipse must NOT carry clip-path directly.
@@ -40,7 +40,7 @@ def test_ellipse_is_inside_a_clipping_group():
 
 
 def test_ellipse_still_has_rotation_transform():
-    svg = etree.fromstring(render("550e8400-e29b-41d4-a716-446655440000").encode())
+    svg = etree.fromstring(render("deadbeefdeadbeef" * 8).encode())
     ellipse = svg.xpath('//*[local-name()="ellipse"]')[0]
     transform = ellipse.get("transform") or ""
     assert transform.startswith("rotate("), (
