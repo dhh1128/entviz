@@ -78,7 +78,7 @@ EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
 CARDANO_SHORT_BYRON_REGEX = re.compile(r'^(Ae2)([' + BASE58_ALPHABET + ']{50})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_LONG_BYRON_REGEX = re.compile(r'^(DdzFF)([' + BASE58_ALPHABET + ']{65})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_ALPHABET_EITHER_CASE + ']{50,100})([' + BECH32_ALPHABET_EITHER_CASE + ']{6})$')
-BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})', re.I)
+BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})$', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
 LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)
 ETHEREUM_REGEX = re.compile(r'^(0x)?([0-9a-f]{40})$', re.I)
@@ -125,7 +125,11 @@ SSH_KEY_TYPES = [
     ("dss",            "AAAAB3NzaC1kc3M",         15),
 ]
 # Generic fallback: any AAAA-prefixed base64 blob.
-SSH_KEY_REGEX = re.compile(r'(AAAA)([0-9A-Za-z+/]+={0,3})')
+# Anchored ^…$ as defense-in-depth (review F4): currently only reached as
+# a fallback inside parse_ssh_key after SSH_LINE_REGEX (which IS anchored)
+# fails, but a future refactor that calls SSH_KEY_REGEX on whole input
+# directly would otherwise inherit a silent-truncation bug.
+SSH_KEY_REGEX = re.compile(r'^(AAAA)([0-9A-Za-z+/]+={0,3})$')
 # Full openssh-format line:  <type-string> <base64-payload> [<comment>]
 # When present, the leading "<type-string> " is stripped before matching the
 # payload, and a trailing " <comment>" is captured as the suffix.
@@ -225,8 +229,13 @@ def parse_hex_multihash(text) -> Parsed:
     If yes, return Parsed("hex multihash...", prefix (2 bytes), body, None).
     """
     if text and len(text) >= 6:
+        # bytes.fromhex requires even-length input; an odd-length all-hex
+        # string would raise ValueError and abort the whole dispatch
+        # chain before parse_hex (which DOES check parity) gets a turn.
+        # See review F3 in reviews/adversarial-2026-05-27.md.
+        if len(text) % 2: return None
         m = HEX_REGEX.match(text)
-        if m: 
+        if m:
             answer = _parse_multihash(bytes.fromhex(text))
             if answer:
                 return Parsed(f"hex {answer.type}", HEX, bytes.hex(answer.prefix).lower(), bytes.hex(answer.core).lower(), None)
@@ -579,12 +588,20 @@ def parse_ipfs_cid(text) -> Parsed:
         # IPFS CID v1 uses base32 (RFC 4648).
         return Parsed("IPFS CID v1 256", BASE32, m.group(1), m.group(2).upper(), None)
     
-# Register all the functions that do parsing (with one exception below).
+# Register all the functions that do parsing (with two exceptions below:
+# parse_hex is appended at the end, and parse_eos_address is moved to run
+# AFTER parse_hex so that lowercase pure-hex inputs are not silently
+# misclassified as EOS addresses — the EOS alphabet [a-z1-5.] is a
+# superset of the lowercase hex digits for many short strings, so the
+# narrow/checksumed format must lose the race against the strict hex
+# parser. See review F1 in reviews/adversarial-2026-05-27.md.
 def register_parse_funcs():
     g = globals()
     parse_funcs = []
     for name, value in g.items():
         if name.startswith("parse_") and callable(value):
+            if name == "parse_eos_address":
+                continue  # re-appended after parse_hex below
             parse_funcs.append(value)
     return parse_funcs
 parse_funcs = register_parse_funcs()
@@ -609,11 +626,16 @@ def parse_hex(text) -> Parsed:
             # the checksum).
             return Parsed("hex", HEX, prefix, text.lower(), None)
 
-# We put parse_hex at the end so it won't be attempted until after
+# We put parse_hex near the end so it won't be attempted until after
 # we try many other parsers -- especially the Ethereum one, which
 # starts with "0x" and consists of pure hex, and the hex_multihash
 # one, which is also pure hex.
 parse_funcs.append(parse_hex)
+# parse_eos_address runs AFTER parse_hex (see register_parse_funcs note
+# above and review F1): genuine hex inputs that happen to lie inside the
+# EOS character class must classify as hex, not as a speculative EOS
+# short-form match.
+parse_funcs.append(parse_eos_address)
 
 def parse(entropy: str) -> Parsed:
     """
@@ -634,8 +656,13 @@ def parse(entropy: str) -> Parsed:
     detected = detect_alphabet_by_disproof(entropy)
     if detected is not None:
         # Normalize case for case-insensitive alphabets so the
-        # tokenizer's per-char lookup is consistent.
-        core = entropy.lower() if detected in (BECH32,) else entropy
+        # tokenizer's per-char lookup is consistent AND so the SHA-512
+        # fingerprint (computed over `core.encode()`) is case-invariant
+        # for those alphabets. HEX is redundant when parse_hex runs but
+        # defensive: the disproof path also resolves HEX for short
+        # strings that bypass parse_hex's odd-length guard. See review
+        # F2 in reviews/adversarial-2026-05-27.md.
+        core = entropy.lower() if detected in (BECH32, HEX, BASE32) else entropy
         # type name = alphabet name (e.g., "base32:", "bech32:"), so
         # the per-entviz top label can show what was detected.
         return Parsed(detected.name, detected, None, core, None)
