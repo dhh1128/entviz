@@ -753,7 +753,19 @@ def parse(entropy: str) -> Parsed:
 # tuples are (alphabet, valid-char-set-string). Case-insensitive
 # matching is applied uniformly — input "abc" and "ABC" both match
 # HEX, BASE32, etc.
-_DISPROOF_ORDER = None  # populated after all alphabets are declared
+#
+# Built eagerly at module import time (review F-A1) so concurrent first
+# calls from multiple threads (e.g. a server-side parse() loop) cannot
+# race on lazy mutation of a module global. Every alphabet constant
+# referenced here is already declared above; no forward reference.
+_DISPROOF_ORDER = [
+    (HEX,       set(HEX_ALPHABET.lower())),
+    (BASE32,    set(BASE32_ALPHABET.lower())),
+    (BECH32,    set(BECH32_ALPHABET.lower())),
+    (BASE58,    set(BASE58_ALPHABET)),  # base58 is case-sensitive
+    (BASE64,    set(BASE64_ALPHABET)),  # base64 is case-sensitive
+    (BASE64URL, set(BASE64URL_ALPHABET)),
+]
 
 
 def detect_alphabet_by_disproof(text: str):
@@ -764,19 +776,6 @@ def detect_alphabet_by_disproof(text: str):
     """
     if not text:
         return None
-    global _DISPROOF_ORDER
-    if _DISPROOF_ORDER is None:
-        # Build (alphabet, char_set) tuples. Char sets are case-
-        # insensitive (we test the lower form against the lowered text)
-        # because every alphabet here can be written in either case.
-        _DISPROOF_ORDER = [
-            (HEX,       set(HEX_ALPHABET.lower())),
-            (BASE32,    set(BASE32_ALPHABET.lower())),
-            (BECH32,    set(BECH32_ALPHABET.lower())),
-            (BASE58,    set(BASE58_ALPHABET)),  # base58 is case-sensitive
-            (BASE64,    set(BASE64_ALPHABET)),  # base64 is case-sensitive
-            (BASE64URL, set(BASE64URL_ALPHABET)),
-        ]
     # For each alphabet in order, check whether every input char fits.
     # Use case-sensitive comparison for base58/base64/base64url (which
     # really are case-sensitive); for hex/base32/bech32 use lowered.

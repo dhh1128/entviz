@@ -1393,14 +1393,23 @@ Entviz = goal:
 
         FA2 Ethereum Prefix Case Normalization = decision:
           id: fa2pf1xc
+          status: nonissue
           why: >
-            Inputs `0xDEAD…` and `0XDEAD…` previously followed
-            different parser paths and got different
-            `type_name` labels (`ETH` vs `hex(N)`) despite
-            producing identical cells. Minor user-visible
-            inconsistency. Fixed in code: both prefix cases
-            normalize to the same parser dispatch and the same
-            label.
+            The adversarial review predicted that `0xDEAD…`
+            and `0XDEAD…` would follow different parser paths
+            and produce different `type_name` labels (`ETH`
+            vs `hex(N)`). On investigation this prediction
+            did NOT match the current code: `ETHEREUM_REGEX`
+            already uses `re.I`, and `parse_ethereum_address`
+            already runs before `parse_hex` in dispatch
+            order, so both prefix cases route through the
+            Ethereum parser and produce identical labels.
+            The review's F-A2 was a speculative finding the
+            author did not verify by running. No code change
+            needed; pinned via regression tests in
+            test_adversarial_additional.py so the property
+            remains stable against future parser-order
+            refactors.
 
         FA3 Wider ClipPath Salt = decision:
           id: fa3cl1p1

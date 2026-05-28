@@ -1,9 +1,13 @@
 """
 v4 clip-path id uniqueness: each render() emits a clipPath id salted
-with first 8 hex chars of the fingerprint + grid dimensions, so multiple
+with first 16 hex chars of the fingerprint + grid dimensions, so multiple
 entvizes embedded in one HTML document don't collide. Browsers resolve
 url(#…) to the first matching id document-wide, so without this fix,
 every entviz after the first is clipped to the first one's grid rect.
+
+Salt width was 8 hex chars (32 bits) through v4 and was widened to 16
+hex chars (64 bits) following adversarial review F-A3 — birthday-bound
+collision moved from ~65k to ~4 billion entvizes on a single page.
 """
 import re
 
@@ -15,8 +19,8 @@ def test_clip_id_includes_fingerprint_prefix():
     m = re.search(r'<clipPath id="([^"]+)"', svg)
     assert m
     cid = m.group(1)
-    # Expect format: grid-clip-{8 hex chars}-{cols}x{rows}
-    assert re.match(r'grid-clip-[0-9a-f]{8}-\d+x\d+$', cid), f"clip id {cid!r}"
+    # Expect format: grid-clip-{16 hex chars}-{cols}x{rows}
+    assert re.match(r'grid-clip-[0-9a-f]{16}-\d+x\d+$', cid), f"clip id {cid!r}"
 
 
 def test_different_inputs_produce_different_clip_ids():

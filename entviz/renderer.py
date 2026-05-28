@@ -3,6 +3,19 @@ from .layout import Cell, Point
 from .colors import get_nucleus_colors, closest_palette_color, VisualStyle
 
 
+# Pinned monospace fallback chain. The maintainer chose this exact order
+# (DejaVu Sans Mono first because it ships with most Linux distributions
+# and Matplotlib; Consolas on Windows; Menlo on macOS; Liberation Mono
+# as the metric-compatible substitute on Linux systems missing DejaVu;
+# bare monospace as the last resort). Bare `monospace` alone was the
+# pre-fix value and left glyph metrics, ligatures, and homoglyph
+# behavior up to each viewer's OS — a real cross-viewer hazard for the
+# text channel (review F-A5).
+MONOSPACE_FONT_FAMILY = (
+    '"DejaVu Sans Mono", "Consolas", "Menlo", "Liberation Mono", monospace'
+)
+
+
 class Renderer:
     def __init__(self, style: VisualStyle, grid):
         self.style = style
@@ -45,7 +58,7 @@ class Renderer:
         text_el = etree.SubElement(svg, 'text',
                                    x=str(n.center.x), y=str(n.center.y),
                                    fill=fg_color,
-                                   style=f"font-family: monospace; font-size: {text_size_px}px;",
+                                   style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;",
                                    **{"text-anchor": "middle", "dominant-baseline": "central"})
         text_el.text = token.text
 

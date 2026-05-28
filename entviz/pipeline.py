@@ -22,7 +22,7 @@ from .fingerprint import (
     get_quartile_ftoks,
     tokenize_fingerprint,
 )
-from .renderer import Renderer
+from .renderer import Renderer, MONOSPACE_FONT_FAMILY
 from .shapes import canvas, rect as draw_rect
 
 _DPI = 96
@@ -194,13 +194,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # clipPath spans the grid_rect (not the bounding rect). The ellipse
     # overlay clips to the cells-only area; the bounding-rect margins
     # and color bar stay overlay-free. The id is salted with the first
-    # 8 hex chars of the fingerprint so that multiple SVGs embedded in
-    # the same HTML document (e.g. the gallery page) don't collide on
-    # `#grid-clip` — when two clipPaths share an id, the browser
-    # resolves url(#…) to the FIRST one document-wide, silently
-    # clipping every other entviz to the first one's rectangle.
+    # 16 hex chars (64 bits) of the fingerprint so that multiple SVGs
+    # embedded in the same HTML document (e.g. the gallery page) don't
+    # collide on `#grid-clip` — when two clipPaths share an id, the
+    # browser resolves url(#…) to the FIRST one document-wide, silently
+    # clipping every other entviz to the first one's rectangle. 64-bit
+    # salt gives ~4 billion entvizes before birthday-bound collision;
+    # the pre-fix 32-bit salt birthday-bounded at ~65k (review F-A3).
     digest_hex = compute_fingerprint(core).hex()
-    clip_id = f"grid-clip-{digest_hex[:8]}-{grid.cols}x{grid.rows}"
+    clip_id = f"grid-clip-{digest_hex[:16]}-{grid.cols}x{grid.rows}"
     cp = etree.SubElement(defs, 'clipPath', id=clip_id)
     etree.SubElement(
         cp, 'rect',
@@ -499,7 +501,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     elements inside the label-top group so the styling cleanly differs
     while the line still reads left-to-right.
     """
-    style = f"font-family: monospace; font-size: {text_size_px}px;"
+    style = f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;"
     # Top strip — always.
     top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
     rest_text = f"{type_name}:"
@@ -897,7 +899,7 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
                 band_g, 'text',
                 x=str(bar_cx), y=str(cy),
                 fill=fg,
-                style=f"font-family: monospace; font-size: {font_size}px;",
+                style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
                 **{
                     "text-anchor": "middle",
                     "dominant-baseline": "central",
