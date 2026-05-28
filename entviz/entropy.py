@@ -1,6 +1,7 @@
 import collections
 import re
 import hashlib
+import time
 
 from .keccak import keccak256
 
@@ -70,6 +71,12 @@ CROCKFORD32_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 # token-alignment purposes we treat it like BASE58 — 6 effective bits/char,
 # 4 chars per 24-bit token (true entropy is ~5.17 bits/char).
 BASE36_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+# Decimal: used only by snowflake IDs today. Not a power of 2; treated as
+# 4 bits/char for token alignment (6 chars per 24-bit token, matching HEX).
+# True entropy density is log2(10) ≈ 3.32 bits/char — the slight overshoot
+# from 3.32 to 4 leaves a few low-order quant bits as zero-padding instead
+# of entropy. See `this.i:sn0wfl4k` for the design rationale.
+DECIMAL_ALPHABET = "0123456789"
 
 # Named alphabet singletons. BASE32 is still deferred — types whose core
 # uses base32 (Bitcoin Cash CashAddr, Stellar, IPFS CID v1) still
@@ -88,6 +95,10 @@ CROCKFORD32 = Alphabet("crockford32", CROCKFORD32_ALPHABET, 5)
 # base36 is used only by GLEIF LEI today. 6 bits/char for token alignment
 # (mirrors BASE58); true entropy is ~5.17 bits/char.
 BASE36    = Alphabet("base36",    BASE36_ALPHABET,     6)
+# decimal is used only by snowflake IDs today. 4 bits/char for token
+# alignment (mirrors HEX — 6 chars per 24-bit token); true entropy is
+# ~3.32 bits/char.
+DECIMAL   = Alphabet("decimal",   DECIMAL_ALPHABET,    4)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
 
@@ -174,6 +185,25 @@ BASE64URL = Alphabet("base64url", BASE64URL_ALPHABET, 6)
 # remains forbidden — hence A-T and V-Z, skipping U.
 ULID_REGEX = re.compile(r'^[0-9A-TV-Za-tv-z]{26}$')
 LEI_REGEX = re.compile(r'^[0-9A-Z]{20}$', re.I)
+# Snowflake: 17-20 ASCII decimal digits. We use [0-9] (NOT \d) so Unicode
+# digits like Arabic-Indic ٠-٩ are rejected. Discord/Twitter/Mastodon IDs
+# encode a 64-bit integer; 17-20 digits covers everything from the early
+# years through near-future IDs. The length filter alone is insufficient
+# to disambiguate from arbitrary long decimals — parse_snowflake adds a
+# plausible-timestamp range check on the top 42 bits.
+SNOWFLAKE_REGEX = re.compile(r'^[0-9]{17,20}$')
+# Discord epoch: 2015-01-01T00:00:00.000Z = 1420070400000 ms since UNIX
+# epoch. Twitter's snowflake epoch is earlier (2010-11-04T01:42:54.657Z)
+# but we use Discord's epoch as the lower bound because (a) it is the
+# more conservative filter — anything decoding to a pre-2015 timestamp
+# under Discord's epoch is rejected even if it would be a valid Twitter
+# ID, and (b) Twitter snowflakes from 2010-2014 are increasingly rare in
+# entropy-comparison use cases. See `this.i:sn0wfl4k`.
+DISCORD_EPOCH_MS = 1420070400000
+# Future-acceptance window: 5 years past the current wall clock. Wide
+# enough to absorb clock skew and "future" test snowflakes, narrow enough
+# to keep false-positive rate on random 18-digit decimals around 3.6%.
+_SNOWFLAKE_FUTURE_WINDOW_MS = 5 * 365 * 86400 * 1000
 
 # Crockford input-alias translation table: I/L -> 1, O -> 0 (in either
 # case). Applied during parse_ulid after the regex match, before
@@ -602,6 +632,44 @@ def parse_ulid(text) -> Parsed:
         return None
     normalized = text.translate(_CROCKFORD_ALIASES).upper()
     return Parsed("ULID", CROCKFORD32, None, normalized, None)
+
+def parse_snowflake(text) -> Parsed:
+    """
+    See if we can parse text as a Twitter/Discord/Mastodon-style snowflake
+    ID — a 64-bit integer serialized as 17-20 ASCII decimal digits, with
+    the top 42 bits encoding a millisecond timestamp relative to a
+    platform-specific epoch.
+
+    Detection requires two filters together:
+      1. Length 17-20 and ASCII digits only (SNOWFLAKE_REGEX).
+      2. The implied timestamp (top 42 bits + Discord epoch) decodes to a
+         date in [2015-01-01, today + 5y]. This rejects almost all
+         non-snowflake decimals (bank accounts, phone numbers, random
+         integers): random 18-digit decimals fall inside the 5-year
+         window about 3.6% of the time, and longer or shorter decimals
+         are rejected by length first.
+
+    The integer must fit in 64 bits — a 20-digit decimal can overflow
+    (max uint64 = 18446744073709551615, 20 digits). We reject the
+    overflow case explicitly.
+
+    Returns Parsed("snowflake", DECIMAL, None, text, None) on a match.
+    The core is the verbatim decimal string the user typed — see
+    `this.i:sn0wfl4k` for why we deliberately do NOT re-encode to hex.
+    """
+    if not text:
+        return None
+    if not SNOWFLAKE_REGEX.match(text):
+        return None
+    n = int(text)
+    if n.bit_length() > 64:
+        return None
+    ts_ms = (n >> 22) + DISCORD_EPOCH_MS
+    now_ms = int(time.time() * 1000)
+    if ts_ms < DISCORD_EPOCH_MS or ts_ms > now_ms + _SNOWFLAKE_FUTURE_WINDOW_MS:
+        return None
+    return Parsed("snowflake", DECIMAL, None, text, None)
+
 
 def _lei_checksum_ok(lei: str) -> bool:
     """

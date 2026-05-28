@@ -1603,3 +1603,73 @@ Entviz = goal:
             least one non-hex character, but that is a
             separate decision with its own legitimate-input
             test surface; deferred.
+
+    Snowflake Support = decision:
+      id: sn0wfl4k
+      status: drafted
+      why: >
+        Add support for Twitter/Discord/Mastodon "snowflake"
+        IDs — 64-bit integers serialized as 17-20 decimal
+        digits. Snowflakes carry a known bit layout (42-bit
+        timestamp || 10-bit machine || 12-bit sequence) but
+        are exchanged as opaque decimals; users comparing
+        them today fall back to character-by-character which
+        is exactly the failure mode entviz exists to solve.
+
+        Three design choices recorded here so they survive a
+        future re-read of the parser code:
+
+        (1) DECIMAL alphabet, verbatim rendering. The cell
+            text shows the original decimal digits, not a
+            hex re-encoding of the underlying 64-bit value.
+            Token alignment uses 4 bits/char (token_len = 6,
+            matching HEX) even though decimal's true entropy
+            density is ~3.32 bits/char. This is the same
+            modeling shortcut already used for BASE36 and
+            BASE58 (whose true densities are ~5.17 and ~5.86
+            respectively): the bits_per_char field controls
+            token packing, not quant accuracy, and a slight
+            overshoot just means a few low-order bits of the
+            quant are zero-padding instead of entropy. The
+            tradeoff was considered against re-encoding to
+            hex (cleaner bit alignment, but the user pasted
+            decimal and would see hex in the cells — a
+            surprise that defeats the verbatim-text guarantee
+            in the spec's Guarantees section).
+
+        (2) Plausible-timestamp range check. A bare 17-20
+            digit decimal is ambiguous (bank account, phone,
+            tracking number, random integer). Detection
+            requires that the top 42 bits, interpreted as a
+            Discord-epoch timestamp (2015-01-01 UTC), decode
+            to a date in [2015-01-01, today + 5 years]. The
+            5-year future window absorbs clock skew, fake
+            future IDs, and the slow drift of "today" as the
+            codebase ages without weakening the filter
+            meaningfully. Twitter snowflakes from 2010-2014
+            (Twitter epoch is earlier) are rejected; a
+            future broadening to Twitter's epoch is possible
+            but no current entropy-comparison use case
+            warrants the wider false-positive surface.
+
+        (3) Parser ordering: parse_snowflake must precede
+            parse_hex in the dispatch chain because every
+            decimal string is also a valid hex string. The
+            parse_funcs list registration loop walks
+            globals() in definition order and parse_hex is
+            explicitly appended at the end (see the comment
+            block above `parse_funcs.append(parse_hex)`), so
+            any parser defined in the module body wins. This
+            decision documents the dependency for any future
+            refactor that changes parser registration.
+
+        DECIMAL is intentionally NOT added to the disproof-
+        fallback order: pure-digit strings outside the
+        snowflake length/timestamp window correctly fall
+        through to HEX (which contains all decimal digits)
+        and are visualized as hex. Adding DECIMAL to the
+        disproof set would steal those inputs from HEX with
+        no benefit — the resulting entviz would be identical
+        in the text channel and would differ only in the
+        type label, which is not a user-visible improvement
+        for arbitrary decimal blobs.

@@ -295,11 +295,13 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         cell_groups[ci] = etree.SubElement(nuclei_g, 'g', **attrs)
 
     # V3-4: per-token cell-text rendered size. Reference drives all
-    # geometry; rendered size shrinks for hex (6-char tokens) so the
-    # text fits inside the 3×nucleus_height-wide nucleus.
+    # geometry; rendered size shrinks for 6-char tokens (4-bit alphabets:
+    # hex, decimal) so the text fits inside the 3×nucleus_height-wide
+    # nucleus. Per spec: 4-char tokens render at reference size; 6-char
+    # tokens render at 0.75× reference.
     cell_text_pt = (
         round(font_size_pt * 0.75)
-        if alphabet.name == "hex" else font_size_pt
+        if alphabet.bits_per_char == 4 else font_size_pt
     )
     cell_text_px = cell_text_pt * _DPI / 72
     label_text_px = round(font_size_pt * 0.75) * _DPI / 72
