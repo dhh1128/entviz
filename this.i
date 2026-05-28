@@ -1363,3 +1363,234 @@ Entviz = goal:
             `bitcoincash:` prefix, SSH key `ssh-ed25519` type
             strings — have different semantics and are not
             governed by this decision.)
+
+    Additional-Patterns Triage = goal:
+      id: fa1tr14g
+      status: drafted
+      why: >
+        Adversarial review of 2026-05-27 listed twelve
+        "Additional Patterns Noted" below the top-7 finding
+        threshold (F-A1 through F-A12). This node records the
+        maintainer's disposition of each: which were fixed in
+        code, which were accepted as documented limitations,
+        which were classified as permanent non-issues, and
+        which were deferred for later revisit.
+
+      children:
+
+        FA1 Thread Safety Of Disproof Order = decision:
+          id: fa1thrd1
+          why: >
+            `entviz/entropy.py` previously rebuilt the
+            `_DISPROOF_ORDER` cache lazily by mutating a
+            module-level global. Safe in the CLI's single-
+            threaded use; a race in any multi-threaded server
+            context (the planned cross-repo React component
+            will likely call `parse()` from a backend pool).
+            Fixed in code: the order is computed eagerly at
+            module import or guarded by a lock — see the
+            implementation. Cheap insurance.
+
+        FA2 Ethereum Prefix Case Normalization = decision:
+          id: fa2pf1xc
+          why: >
+            Inputs `0xDEAD…` and `0XDEAD…` previously followed
+            different parser paths and got different
+            `type_name` labels (`ETH` vs `hex(N)`) despite
+            producing identical cells. Minor user-visible
+            inconsistency. Fixed in code: both prefix cases
+            normalize to the same parser dispatch and the same
+            label.
+
+        FA3 Wider ClipPath Salt = decision:
+          id: fa3cl1p1
+          why: >
+            v4's `grid-clip-{first_8_hex}-{cols}x{rows}` id
+            had a 32-bit salt — birthday-bound collision
+            around ~65k entvizes on one HTML page. v5 widens
+            to `first_16_hex` (64-bit salt → ~4B headroom).
+            Future-proof for galleries, demo pages, and the
+            planned spot-check React component. Spec updated
+            (docs/spec.md SVG implementation notes); code
+            change lands alongside.
+
+        FA4 ViewBox For Responsive Embedding = decision:
+          id: fa4v1wbx
+          why: >
+            v4 root `<svg>` had only `width`/`height` and no
+            `viewBox`. Consumers setting `width="100%"` got
+            fixed-pixel sizing instead of proportional
+            scaling. v5 mandates
+            `viewBox="0 0 {bounding_width} {bounding_height}"`
+            on the root SVG so the entviz scales cleanly when
+            embedded responsively (relevant for the React
+            component and for any HTML embedding generally).
+
+        FA5 Font Fallback Chain = decision:
+          id: fa5f0nt1
+          why: >
+            v4 used a bare `style="font-family: monospace"`,
+            letting each viewer's OS pick its own monospace
+            with materially different glyph metrics and
+            homoglyph behavior (Menlo on macOS, Consolas on
+            Windows, DejaVu/Liberation/Ubuntu on Linux). This
+            is security-relevant: an entviz's text channel
+            depends on the user reliably distinguishing
+            characters like 0/O, 1/l/I, 5/S, -/_, and font
+            substitution can flip distinguishability.
+            v5 pins the fallback chain to
+            `"DejaVu Sans Mono", "Consolas", "Menlo",
+            "Liberation Mono", monospace` — explicit named
+            fonts on Linux/Windows/macOS with `monospace` as
+            the final safety net. Not bundling a webfont
+            (avoids licensing complications). The spec's
+            font-choice section now documents the homoglyph
+            risk for implementations that deviate from the
+            chain.
+
+        FA6 Mix-Blend-Mode Render-Environment Dependence = decision:
+          id: fa6m1xbl
+          why: >
+            The long hand on the blank-cell marker uses
+            `mix-blend-mode: difference` to invert against
+            the white disc and black rim. Well-supported in
+            all major browsers but silently ignored by
+            `cairosvg` (the common server-side PNG renderer),
+            making the maxftok direction indicator invisible
+            in cairosvg PNG output. This is a real but
+            bounded limitation: the maxftok direction is
+            still conveyed via the short hand's terminator
+            circle (the maxftok orientation, not the minftok,
+            is the encoded direction — short hand is the
+            one that doesn't depend on mix-blend-mode).
+            Decision: document the dependence in
+            docs/spec.md (cell-rendering section) and offer
+            two consumer-side workarounds (use a browser-
+            based renderer like Playwright/Puppeteer, or
+            post-process the SVG to substitute a directly-
+            stroked dark hand before rasterizing). No code
+            change; no fallback path in the renderer itself
+            because the browser path is the canonical
+            rendering surface.
+
+        FA7 CLI Output File Validation = decision:
+          id: fa7c11ut
+          status: nonissue
+          why: >
+            `app.py --output` accepts an arbitrary user-
+            supplied path and overwrites without prompting.
+            Standard CLI behavior; the user invokes the tool,
+            names the file, owns the consequence. Recorded
+            as a permanent non-issue so future reviews don't
+            re-flag it. (If a `--force`/`-f` confirmation
+            gate is ever wanted, it would be additive, not a
+            change of contract.)
+
+        FA8 sys.path.insert In Bin Script = decision:
+          id: fa8sysp1
+          status: nonissue
+          why: >
+            `bin/entviz.py` does `sys.path.insert(0, …)` to
+            find the local `entviz` package. In an
+            adversarial multi-user setup where another user
+            can write to the script's directory, this would
+            allow shadow-importing a malicious `entviz`
+            package. Bounded by filesystem permissions; it is
+            the standard Python script idiom for in-tree
+            development. Permanent non-issue. If entviz ever
+            ships as an installed wheel via `pip install`,
+            the script-installer path replaces this entirely.
+
+        FA9 Background Color Is 2 Bits = decision:
+          id: fa9bg2b1
+          status: accepted
+          why: >
+            The entviz background color is chosen from 4
+            candidates by the 2 low-order bits of the median
+            ftok's quant. A T1 grinder matches the
+            background in an expected 4 trials. This is
+            acknowledged in the spec as a *hint* channel —
+            its job is to make two unrelated entvizes look
+            unrelated at a glance, not to provide
+            independent collision resistance. Serious
+            collision resistance lives in the surround
+            pattern, the color bar histogram, the ellipse
+            overlay, the blank-cell positions, and the
+            quartile marks. v5 spec now quantifies the bg's
+            attacker cost explicitly so an implementer
+            doesn't mis-rely on it. No widening of the
+            bg-bit budget: that would invalidate every v4
+            golden render for a hint-only channel.
+
+        FA10 Bech32 Separator Disproof Limitation = decision:
+          id: f4d1sp10
+          status: deferred
+          why: >
+            Bech32's alphabet excludes `1` (it's the separator
+            character), so a bare bech32 fragment containing
+            `1` fails bech32 disproof and resolves to a
+            different alphabet (base58/base64/base64url/UTF-8
+            fallback). Real bech32 addresses with their
+            `bc1`/`tb1`/`ltc1`/`addr1`/`bitcoincash:` prefixes
+            are handled correctly by the specific-format
+            parsers ahead of disproof; this caveat applies
+            only to bare fragments pasted without their
+            prefix — an unusual case. v5 spec documents the
+            caveat in the alphabet-detection step. Deferred
+            rather than fixed because the fix (recognize
+            unprefixed bech32-with-separator via a smarter
+            disproof) would add complexity for a narrow win;
+            revisit if a real user reports confusion.
+
+        FA11 SVG Injection Regression Test = decision:
+          id: fa11svxi
+          status: done
+          why: >
+            Implementation is safe because the SVG emission
+            uses `lxml.etree`'s `.text =` assignment, which
+            escapes `<`, `>`, `&`, and quotes. v4 had no
+            test exercising this path. Resolved in commit
+            d5144fc as part of the F1–F4 fix batch: a
+            regression test now asserts hostile cell-text
+            input is HTML-escaped in the output SVG.
+
+        FA12 BCH Unprefixed Acceptance = decision:
+          id: fa12bchu
+          status: nonissue
+          why: >
+            `parse_bitcoin_cash_address` accepts strings
+            matching `[pq]<41 bech32 chars>` even without the
+            `bitcoincash:` or `bchtest:` prefix. After the
+            F4 fix (regex now `$`-anchored), trailing junk
+            is rejected. The unprefixed form IS legitimate
+            per the Bitcoin Cash spec — many tools emit it
+            that way for compactness. Classifying it as BCH
+            is correct, not a misclassification. Permanent
+            non-issue.
+
+        EOS Regex Char-Class Residual = decision:
+          id: 3osr3sd1
+          status: deferred
+          why: >
+            After F1 (parse_eos_address moved to run AFTER
+            parse_hex in the dispatch order), lowercase pure-
+            hex inputs are correctly classified as hex
+            instead of EOS. But the EOS regex's character
+            class `[a-z1-5.]` still overlaps with lowercase
+            hex letters `[a-f]`, so a 12-char input that
+            happens to be all-hex would parse as EOS only if
+            parse_hex somehow failed first (it doesn't,
+            because hex always wins now). The residual is
+            "narrow heuristic over a too-permissive char
+            class" — not exploitable today, but it would
+            re-surface if the dispatch order is ever
+            reshuffled. Recorded here so a future review
+            doesn't re-flag the same overlap and the
+            reshuffle-resistance is understood: anyone
+            considering changing parser dispatch order must
+            verify the EOS regex doesn't regain priority
+            over parse_hex. The proper long-term fix is to
+            tighten EOS_REGEX to require >=12 chars or at
+            least one non-hex character, but that is a
+            separate decision with its own legitimate-input
+            test surface; deferred.
