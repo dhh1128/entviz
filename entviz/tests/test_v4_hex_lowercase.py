@@ -4,8 +4,13 @@ lowercase, matching UUIDs (which already lowercase). This avoids
 the oral-reading ambiguity where uppercase A-F would be pronounced
 "cap A" through "cap F".
 
-Ethereum addresses are exempt — they preserve EIP-55 mixed case as
-a checksum signal.
+v5 update (F7b / lenient EIP-55): Ethereum addresses are ALSO
+normalized to lowercase in the core. The checksum is validated at
+parse time (mixed-case-invalid raises EIP55ChecksumError; see
+test_f7_eip55.py), then the canonical case is discarded for
+visualization purposes. Pre-v5 the parser silently re-derived
+canonical case, which made an invalid-checksum input render
+identically to a valid one (review F7).
 """
 from entviz.entropy import parse
 from entviz.pipeline import render
@@ -33,15 +38,18 @@ def test_uuid_stays_lowercase():
     assert p.core == "550e8400e29b41d4a716446655440000"
 
 
-def test_ethereum_preserves_eip55_mixed_case():
-    """Ethereum core preserves EIP-55 checksum case (mixed case meaningful)."""
+def test_ethereum_normalizes_to_lowercase_after_eip55_validation():
+    """v5 lenient B1: Ethereum core is normalized to lowercase in every
+    accepted case. The EIP-55 checksum (when present) has already been
+    validated at parse time; carrying canonical case into the visualization
+    was the F7b silent-normalization bug."""
+    # Input is a known-valid EIP-55 mixed-case address.
     p = parse("0x742d35Cc6634C0532925a3b844Bc454e4438f44e")
     assert p is not None
     assert p.type == "ETH"
-    # The full 40-char body is in `core`, normalized to EIP-55 mixed case.
-    has_upper = any(c.isupper() for c in p.core if c.isalpha())
-    has_lower = any(c.islower() for c in p.core if c.isalpha())
-    assert has_upper and has_lower
+    # The full 40-char body is in `core`, normalized to lowercase.
+    assert p.core == "742d35cc6634c0532925a3b844bc454e4438f44e"
+    assert all(c.isdigit() or c.islower() for c in p.core)
 
 
 def test_rendered_hex_cells_use_lowercase():

@@ -2,6 +2,30 @@ import collections
 import re
 import hashlib
 
+from .keccak import keccak256
+
+
+class EIP55ChecksumError(ValueError):
+    """
+    Raised by parse_ethereum_address when a mixed-case Ethereum input (with
+    explicit 0x/0X prefix) fails the EIP-55 checksum — i.e., its case
+    pattern disagrees with the canonical case derived from keccak256 of the
+    lowercase body.
+
+    Subclasses ValueError so existing handlers that catch ValueError keep
+    working; specific callers can catch EIP55ChecksumError for targeted
+    handling. See `this.i:3ip55rj1` and review F7 for rationale.
+    """
+    def __init__(self, address: str, position: int, expected: str, got: str):
+        self.address = address
+        self.position = position
+        self.expected = expected
+        self.got = got
+        super().__init__(
+            f"Ethereum address {address!r} fails EIP-55 checksum: "
+            f"position {position} is {got!r}, canonical case is {expected!r}"
+        )
+
 
 # Alphabet metadata. Each parser declares the alphabet of the `core` it
 # produces; the tokenizer reads `Parsed.alphabet` directly and dispatches
@@ -378,21 +402,24 @@ def parse_ripple_address(text) -> Parsed:
         return Parsed("XRP", BASE58, m.group(1), m.group(2), None)
 
 def to_EIP55_address(address: str) -> str:
-    # Remove the '0x' prefix if present
-    address = address.lower().replace('0x', '')
-    
-    # Create a keccak-256 hash of the address
-    hash = hashlib.sha3_256(address.encode('utf-8')).hexdigest()
-    
-    # Apply the checksum
-    checksum_address = '0x'
-    for i, char in enumerate(address):
-        if int(hash[i], 16) >= 8:
-            checksum_address += char.upper()
-        else:
-            checksum_address += char.lower()
-    
-    return checksum_address
+    """
+    Return the canonical EIP-55-cased form of a 40-hex Ethereum address
+    (with leading "0x"). Uses Keccak-256 (the original Keccak, NOT NIST
+    SHA3-256 — see entviz/keccak.py for why this distinction matters).
+
+    Input may be 40 or 42 chars (with or without 0x prefix), any case.
+    Output is the 0x-prefixed 42-char canonical form.
+    """
+    body = address.lower()
+    if body.startswith('0x'):
+        body = body[2:]
+    digest_hex = keccak256(body.encode('ascii')).hex()
+    return '0x' + ''.join(
+        c if c.isdigit()
+        else (c.upper() if int(digest_hex[i], 16) >= 8 else c.lower())
+        for i, c in enumerate(body)
+    )
+
 
 def parse_ethereum_address(text) -> Parsed:
     """
@@ -405,24 +432,78 @@ def parse_ethereum_address(text) -> Parsed:
     A bare 40-char single-case hex string without prefix falls through
     to plain hex — "0x" is a generic hex prefix predating Ethereum,
     and a length-40 match alone is too weak a signal.
+
+    For prefix-bearing mixed-case input, enforces lenient B1 EIP-55
+    validation (see spec.md "Ethereum (EIP-55) case validation" and
+    this.i:3ip55rj1):
+      - all-lowercase body: accept ("checksum not asserted").
+      - all-uppercase body: accept ("checksum not asserted").
+      - mixed-case body matching canonical EIP-55: accept.
+      - mixed-case body NOT matching canonical EIP-55: raise
+        EIP55ChecksumError identifying the first mismatched position.
+        (Crucially we raise rather than return None — silent fall-through
+        to parse_hex would re-introduce the F7b silent-normalization bug.)
+
+    In every accepted case, the parsed core is the lowercase 40-hex body.
+    The visualization itself does NOT carry the EIP-55 case (which is the
+    bug F7b documents: re-deriving canonical case on render meant a bad-
+    checksum input rendered identically to a good one).
     """
     m = ETHEREUM_REGEX.match(text)
     if not m:
         return None
     has_prefix = bool(m.group(1))
-    body = m.group(2)  # the 40-char hex body
+    body = m.group(2)  # the 40-char hex body, original case
+
+    # Classify case pattern.
+    letters = [c for c in body if c.isalpha()]
+    has_lower = any(c.islower() for c in letters)
+    has_upper = any(c.isupper() for c in letters)
+    is_mixed = has_lower and has_upper
+
     if not has_prefix:
-        has_lower = any(c.islower() for c in body if c.isalpha())
-        has_upper = any(c.isupper() for c in body if c.isalpha())
-        if not (has_lower and has_upper):
-            return None  # falls through to plain hex
-    # The full 40-char body is the core. Ethereum addresses don't have
-    # a separable checksum suffix — the EIP-55 "checksum" is the case
-    # pattern of the entire 40 chars. (A prior implementation split off
-    # the last 8 chars as a fake suffix, which silently dropped them
-    # from tokenization and the fingerprint.)
-    eip55_format = to_EIP55_address(body)
-    return Parsed("ETH", HEX, "0x", eip55_format[2:], None)
+        # Without an explicit 0x prefix we only promote to Ethereum if the
+        # case pattern itself is a signal (mixed case). Single-case bodies
+        # fall through to parse_hex. We do NOT validate the checksum in
+        # this branch — there is no caller-asserted "this is an Ethereum
+        # address" signal, and mistakenly rejecting a 40-char hex blob
+        # because it happens to be 40 chars would be a foot-gun.
+        if not is_mixed:
+            return None
+        # Mixed-case unprefixed input: still enforce EIP-55 (mixed case IS
+        # the signal that the user means EIP-55).
+        _validate_eip55(text, body)
+    elif is_mixed:
+        # Explicit 0x prefix AND mixed case → user is asserting EIP-55.
+        _validate_eip55(text, body)
+    # else: explicit prefix + single-case body → "checksum not asserted",
+    # accepted unchanged per lenient B1.
+
+    # Normalized core is lowercase in all accepted cases. The full 40-char
+    # body is the core (no separable suffix — a prior implementation split
+    # off the last 8 chars as a fake suffix, which silently dropped them
+    # from tokenization and the fingerprint).
+    return Parsed("ETH", HEX, "0x", body.lower(), None)
+
+
+def _validate_eip55(original: str, body: str) -> None:
+    """
+    Raise EIP55ChecksumError if `body` (40 hex chars, mixed case) does NOT
+    match the canonical EIP-55 case derived from keccak256(lower(body)).
+    `original` is the user's full input (with prefix) — included in the
+    error message so the user can fix the offending position.
+    """
+    lower_body = body.lower()
+    digest_hex = keccak256(lower_body.encode('ascii')).hex()
+    for i, c in enumerate(body):
+        if not c.isalpha():
+            continue
+        canonical_upper = int(digest_hex[i], 16) >= 8
+        expected = c.upper() if canonical_upper else c.lower()
+        if c != expected:
+            raise EIP55ChecksumError(
+                address=original, position=i, expected=expected, got=c,
+            )
 
 def parse_litecoin_address(text) -> Parsed:
     """

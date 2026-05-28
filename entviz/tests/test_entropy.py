@@ -176,14 +176,21 @@ def test_hex_multihash_normalization():
         assert answer.type == "hex multihash sha2-256"
 
 def test_etherereum_normalization():
-    """v4: core is the full 40-char EIP-55-cased body; no separable suffix.
-    (The old 32/8 split dropped the last 8 chars from the visualization.)"""
+    """v5 (lenient B1): the parsed core is the full 40-char lowercase body
+    in every accepted case (all-lower, all-upper, mixed-valid). Mixed-case
+    inputs whose case pattern fails the EIP-55 checksum are rejected at
+    parse time — see test_f7_eip55.py. No separable suffix.
+
+    Pre-v5 the parser silently re-derived EIP-55 canonical case into the
+    core, which made an invalid-checksum input render identically to a
+    valid one (review F7). That behavior is the bug this normalization
+    test now defends against."""
     for input in [
         "0xC932BE343B94F860124DC4FEE278FDCBD38C102D",  # all upper case
         "0xc932be343b94f860124dc4fee278fdcbd38c102d",  # all lower case
         ]:
         answer = parse(input)
-        assert answer.core == 'C932Be343b94f860124dc4FEe278fDcBd38c102d'
+        assert answer.core == 'c932be343b94f860124dc4fee278fdcbd38c102d'
         assert not answer.suffix
         assert answer.type == "ETH"
 
