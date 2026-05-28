@@ -60,7 +60,7 @@ python bin/entviz.py "your-entropy-string" --ar 1:1 --fs 12
 
 ## Documentation
 
-For the full specification of the Entviz algorithm and design goals, see [docs/index.md](docs/index.md).
+For the full specification of the Entviz algorithm and design goals, see [docs/spec.md](docs/spec.md).
 
 ## Methodology & AI Collaboration
 

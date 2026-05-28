@@ -1,6 +1,6 @@
 # Entviz Project To-Do List
 
-This list tracks the remaining tasks to complete the Entviz reference implementation, based on the algorithm specification in `docs/index.md`.
+This list tracks the remaining tasks to complete the Entviz reference implementation, based on the algorithm specification in `docs/spec.md`.
 
 ## 1. Core Algorithm Implementation
 

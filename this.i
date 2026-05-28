@@ -1049,3 +1049,188 @@ Entviz = goal:
             at 75% of reference; SCS renders at min(round(0.9 x reference),
             cell text rendered size). The rendered size never affects
             geometry.
+
+    V5 Migration = goal:
+      id: v5m1grat
+      status: drafted
+      why: >
+        Move the implementation from spec v4 (now archived at
+        docs/v4/index.md) to spec v5 (canonical at docs/spec.md).
+        v5 closes adversarial review finding F5 (head+tail-only
+        text truncation collision on long inputs) and partially
+        addresses F6 (CVD-accessible labeling of the gestalt color
+        bar). v5 keeps all of v4's geometry, palette, surround,
+        ellipse, blank-cell, and label-strip behavior intact; the
+        only substantive changes are the long-input text-channel
+        rule, the truncation marker style, and the addition of
+        per-band letters on the color bar.
+
+      children:
+
+        Head + Tail + Middle Slice Text Channel = decision:
+          id: v5mid1sl
+          why: >
+            v4 truncated >512-bit inputs to head-256 + tail-256
+            and bound the omitted middle only through the
+            fingerprint. The adversarial review of 2026-05-27
+            (reviews/adversarial-2026-05-27.md, finding F5)
+            demonstrated that this lets a T1+T5+T6 attacker (per
+            docs/threat-model.md) grind a head+tail-matching
+            input pair whose text channel is byte-identical and
+            whose only differences live in the fingerprint-driven
+            gestalt channels — a feasible attack against a
+            habituated user landmark-checking on ~30 bits of
+            perceptual entropy.
+
+            v5 reserves cells for four fingerprint-selected
+            middle slices in addition to head and tail. Total
+            22-cell budget allocation: H=8 head tokens, 1
+            separator blank, M=4 middle-slice tokens, 1
+            separator blank, T=8 tail tokens (8+1+4+1+8 = 22).
+            Allocation rationale:
+              * 22 cells is hard-capped by the fingerprint's
+                22 ftoks, so any extension to head/tail/middle
+                must steal from each other.
+              * 8 head + 8 tail keeps each group large enough
+                to fill a typical row of the grid (8 cells wide
+                in 8x3 or 11x2 layouts) so they're visually
+                dominant — these are the cells the user can
+                read against an external reference (e.g. an
+                address shown elsewhere).
+              * 4 middle slices gives meaningful coverage (96
+                bits sampled across 4 disjoint body regions)
+                without crowding the head/tail; smaller (1-2)
+                would be near-redundant.
+              * 2 separator blanks are the minimum to make the
+                three groups visually distinct; a single blank
+                would let the eye merge head+middle or
+                middle+tail.
+            Alternatives considered and rejected:
+              * 6/6/8 (head/tail/middle): makes the middle
+                dominate visually, but head/tail are what the
+                user actually compares against external sources.
+              * 10/10/2 (head/tail/middle): keeps head/tail
+                strong but the 2-cell middle is too small to
+                reliably catch grinding attacks against the
+                body.
+
+            Middle-slice offset derivation: for slice i in
+            0..3, read digest[32+2i .. 33+2i] as big-endian
+            uint16, compute offset_i = (uint16 mod
+            (input_length_bytes − 3 − 32)) + 16. This keeps
+            slices strictly between the head-32 and tail-32
+            byte regions. Overlap rule: increment by 3 and
+            retry if within ±3 bytes of a previously-selected
+            offset; deterministic even-spacing fallback if the
+            search wraps. Slices are presented sorted by
+            ascending offset (not derivation order) so the
+            user reads middle-group cells left-to-right
+            through the body.
+
+            Middle-slice cell text shows the 3 bytes at that
+            offset, rendered in the input's declared alphabet
+            (hex → 6 hex chars; base64/url → 4 chars via the
+            standard 3-byte encoding; base32/bech32/crockford32
+            → 4 chars covering 20 bits; rounding to nearest
+            aligned character boundary when the alphabet's
+            token alignment doesn't fall on byte boundaries).
+
+            Used ftoks rule unchanged from v4: cell index →
+            used ftok index, with separator blank cells
+            consuming their cell indices but no ftoks.
+
+            Attacker cost change: a T5 attacker who could
+            previously collide only on head+tail (64 bytes)
+            must now additionally match four fingerprint-
+            selected 3-byte windows in the body, AND those
+            windows shift as a function of the full input.
+            This raises the grinding cost from a fixed
+            64-byte-prefix-and-suffix search to a joint
+            (full-input, offsets) search — a much larger and
+            non-stationary target.
+
+        Loud Truncation Marker = decision:
+          id: v5trncma
+          why: >
+            v4's truncation marker was `^…$ ` — regex anchors +
+            ellipsis — prepended to the top label in the same
+            quiet #666 color and weight as the rest of the
+            label. Adversarial review F5 noted that a reading
+            user encountering `^…$ hex(200):` for the first
+            time will not parse it correctly, and the marker
+            disappears in peripheral vision.
+
+            v5 replaces it with `truncated(N bytes) ` where N is
+            the original entropy byte length, rendered in bold
+            with fill = #a00000 (dark red, Oklab L ~0.43).
+            Communicates *what* the middle cells are (a
+            sampled summary, not a linear scan) and *how big*
+            the original input was. The byte count is itself a
+            useful corroborating fact for the user — inputs of
+            very different lengths cannot be the same input
+            regardless of cell similarity.
+
+            Color choice rationale: #a00000 contrasts well
+            against the white bounding-rect background,
+            satisfies WCAG AA, sits at Oklab L ~0.43 (clearly
+            "dark red" and distinct from both #666 label gray
+            and any of the palette colors). Implementations
+            MAY substitute another dark red provided Oklab L
+            lies in [0.35, 0.55] and the color remains
+            hue-distinct from the rest of the label under CVD
+            simulation.
+
+        Color Bar Letters = decision:
+          id: v5cblet1
+          why: >
+            v4 communicated color-bar band identity by hue
+            alone. Adversarial review F6 noted that the
+            gold/red pair collapses below the severe-CVD JND
+            threshold (ΔE ≈ 26.7 under deuteranopia, well
+            below the 50-60 severe-CVD bar), so CVD users
+            lose one of the most important gestalt
+            discriminators.
+
+            v5 adds a single uppercase letter (W/G/R/B/K) to
+            the center of each color-bar band. Letter color
+            picked by the same Oklab L < 0.6 rule used for
+            cell text against nucleus bg: black letter on
+            white and gold bands; white letter on red, blue,
+            and black bands. Font: same monospace family as
+            cell text; size = round(band_height × 0.6),
+            clamped to round(box_height × 0.5) as a minimum
+            so the letter stays legible even on tiny bands.
+
+            Why this addresses F6 only partially: it provides
+            a verbal label for the gestalt channel (which
+            survives complete CVD and monochrome rendering
+            and CSS color filtering), but does NOT change the
+            palette itself. A separate palette re-tune would
+            be needed to make gold/red discriminable under
+            deuteranopia/protanopia in the per-cell surround
+            channel. v5 ships the letter fix only; palette
+            re-tune is deferred to a future spec revision
+            because it would invalidate every v4 golden test
+            and a large fraction of v4's per-cell appearance.
+
+        Spec File Rename = decision:
+          id: v5spcfnm
+          why: >
+            v5 archives v4 at docs/v4/index.md (matching the
+            existing docs/v3/index.md convention) and renames
+            the working spec from docs/index.md to
+            docs/spec.md. Two reasons:
+              * docs/index.md was indexable as a GitHub Pages
+                "site root" (entviz uses github.io for its
+                gallery) which conflated "the algorithm spec"
+                with "the project landing page" — the spec
+                deserves a name that says what it is.
+              * docs/spec.md is the conventional name in the
+                wider open-source ecosystem (IETF, W3C
+                proto-specs, RFC tracking) for the
+                authoritative algorithm document.
+            All top-level references in README.md, AGENTS.md,
+            CLAUDE.md, and this.i (this file) are updated to
+            point at docs/spec.md. The git mv preserves the
+            file's history so blame/log over v2-v4 changes
+            remains traversable.

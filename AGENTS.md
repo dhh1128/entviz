@@ -16,7 +16,7 @@ We maintain a file named `this.i` in the root of the repository. This file uses 
 - **Structure:** Use the indented YAML-like format (see `this.i` for current state).
 - **Updates:** Every time you make a significant design decision or identify a new constraint/tech debt, update `this.i`.
 - **IDs:** Assign unique, 8-character alphanumeric IDs (e.g., `r4nk2mp8`) to every goal, decision, or constraint.
-- **Intent Checks:** Before starting any implementation task, perform an "intent check": read `this.i` and `docs/index.md` to ensure your plan aligns with the established vision.
+- **Intent Checks:** Before starting any implementation task, perform an "intent check": read `this.i` and `docs/spec.md` to ensure your plan aligns with the established vision.
 
 ## 3. Engineering Discipline
 
@@ -41,7 +41,7 @@ Code is a human language.
 ## 5. Navigation
 
 - [README.md](README.md) - Developer onboarding.
-- [docs/index.md](docs/index.md) - Algorithm specification.
+- [docs/spec.md](docs/spec.md) - Algorithm specification (current: v5).
 - [this.i](this.i) - The "Why" behind the project.
 - [CLAUDE.md](CLAUDE.md) - Summary for Claude.
 - [GEMINI.md](GEMINI.md) - Summary for Gemini.

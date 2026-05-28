@@ -16,7 +16,7 @@ You are adversarial, not appreciative. The codebase has many thoughtful choices;
 
 Read these files in order, in full, before examining any other code:
 
-1. `docs/index.md` — the v4 algorithm specification. This is the authoritative description of every visual channel, every geometry derivation, every fingerprint-driven step, the alphabet detection rules, and the cell rendering algorithm. Note the **explicit non-requirements** — these are scope decisions, not gaps.
+1. `docs/spec.md` — the current algorithm specification (declares its own version at the top — currently v5). This is the authoritative description of every visual channel, every geometry derivation, every fingerprint-driven step, the alphabet detection rules, and the cell rendering algorithm. Note the **explicit non-requirements** — these are scope decisions, not gaps. Prior spec versions are archived under `docs/v<N>/`.
 2. `entviz-paper.md` — the academic analysis. Pay particular attention to:
    * The dichotomy between *perceptual hashing for machine similarity* (the opposite of what entviz is for) and *authentication visualization for human distinguishability* (what entviz is for). The security property entviz must provide is **near-collision resistance**: it must be computationally infeasible to find two distinct inputs that produce perceptually indistinguishable entvizes.
    * Section 2.2 / Table 2 — psychophysical JND thresholds for size, shape, angle, luminance, chromaticity, and the much-larger thresholds for color-vision-deficient observers. Every visual channel in entviz must produce differences that exceed these thresholds for the target population.
@@ -106,7 +106,7 @@ For each channel, estimate a **perceptual bits** number even if rough, and call 
 
 ### E. Spec-vs-implementation drift
 
-* For each named guarantee in `docs/index.md`, find the code that implements it and check correspondence. Particular high-value drift points: the clip-path id salting; the Oklab L threshold of 0.6; the weighted RGB distance for edge color selection; the bit-extension rule; the disproof alphabet order; the alphabet aliasing in crockford32 (`I`/`L` → `1`, `O` → `0`, `U` forbidden).
+* For each named guarantee in `docs/spec.md`, find the code that implements it and check correspondence. Particular high-value drift points: the clip-path id salting; the Oklab L threshold of 0.6; the weighted RGB distance for edge color selection; the bit-extension rule; the disproof alphabet order; the alphabet aliasing in crockford32 (`I`/`L` → `1`, `O` → `0`, `U` forbidden).
 * If `this.i` records a decision the code contradicts, that is a finding.
 
 ## Step 3 — Evaluate and prioritize
@@ -141,7 +141,7 @@ Use this structure:
 
 **Date:** YYYY-MM-DD
 **Reviewer:** [model identifier]
-**Algorithm version reviewed:** [v3 / v4 / etc., from docs/index.md header]
+**Algorithm version reviewed:** [version from docs/spec.md header]
 **Implementation commit:** [git rev-parse HEAD]
 
 ---
@@ -187,7 +187,7 @@ Ordered by bang-for-buck (highest risk reduction per unit of fix effort, first).
 - **Severity:** CRITICAL | HIGH | MEDIUM | LOW
 - **Confidence:** CONFIRMED | LIKELY | SPECULATIVE
 - **Threat-model attacker:** [which tier T1..T6 from the threat model]
-- **Location:** `path/to/file:line` and/or `docs/index.md` section
+- **Location:** `path/to/file:line` and/or `docs/spec.md` section
 - **Finding:** What the problem is and why it matters
 - **Exploit path:** Concrete steps an attacker would take. Include a worked
   example input pair if constructible.
