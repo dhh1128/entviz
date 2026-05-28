@@ -1234,3 +1234,132 @@ Entviz = goal:
             point at docs/spec.md. The git mv preserves the
             file's history so blame/log over v2-v4 changes
             remains traversable.
+
+    Adversarial Review F7 Decisions = goal:
+      id: f7d3c1de
+      status: drafted
+      why: >
+        The adversarial review of 2026-05-27 (review F7 in
+        reviews/adversarial-2026-05-27.md) raised three case-
+        normalization concerns. This node records the
+        maintainer's resolution of each. F7a and F7c are
+        intentional invariants of the algorithm; F7b is a
+        behavior change to land in a follow-up implementation
+        commit.
+
+      children:
+
+        Case Normalization Is Intentional = decision:
+          id: c4s3norm
+          why: >
+            For every case-insensitive alphabet entviz supports
+            (hex, UUID, base32, bech32, EOS-base, crockford32),
+            the parser lowercases (or otherwise canonicalizes)
+            the input before tokenization and fingerprinting.
+            This means two inputs differing only in case for a
+            case-insensitive alphabet produce identical
+            entvizes. This is correct and required behavior —
+            it is what the F2 fix established. Without it,
+            'ABCDEF' and 'abcdef' would produce different
+            entvizes despite being semantically the same hex
+            value, which would let a T3 attacker (per
+            docs/threat-model.md) cause a benign tooling
+            difference to look like an entropy difference.
+
+            F7's concern is that a user encountering the
+            normalized cell text might not realize the
+            normalization happened. The spec (docs/spec.md)
+            documents the normalization explicitly so that the
+            behavior is discoverable; no label-strip marker is
+            added because the cell text already shows the
+            normalized form, and a marker would add chrome on
+            most mixed-case hex inputs without conveying
+            information the cells don't already convey.
+
+            Apply to: any case-insensitive alphabet parser.
+            Not to: case-sensitive alphabets (base58,
+            base64/base64url for non-Ethereum, ULID's
+            crockford32 input *aliasing* is canonicalized but
+            the resulting normalized alphabet remains
+            distinguishable from case-sensitive base64).
+
+        Ethereum EIP-55 Mixed-Case Validation = decision:
+          id: 3ip55rj1
+          why: >
+            EIP-55 encodes a checksum in the *case pattern* of
+            the address's hex digits. v4 silently re-derived
+            the canonical EIP-55 case from the address bytes
+            before rendering, which made an invalid-checksum
+            mixed-case input render identically to the same
+            address with a valid checksum (review F7). A T3
+            attacker substituting a mixed-case address with a
+            silently-corrupted checksum gets through entviz
+            comparison; the wallet rejects later, after the
+            user has committed time to the flow.
+
+            v5 adopts "lenient B1": reject only mixed-case
+            Ethereum inputs whose case pattern fails the
+            EIP-55 checksum. All-lowercase and all-uppercase
+            Ethereum inputs are accepted unchanged — per
+            EIP-55 itself, these forms are conventionally
+            understood as "checksum not asserted" and are
+            widely used by CLI tools, JSON-RPC outputs, and
+            block explorers; rejecting them would break
+            legitimate paste flows. Mixed-case-but-valid is
+            accepted. Mixed-case-but-invalid raises a parse
+            error with a message identifying the position of
+            the first mismatched-case digit.
+
+            Strict B1 (reject all non-canonical-EIP-55 case
+            including all-lower and all-upper) was rejected:
+            it defends against the same attack as lenient B1
+            but at the cost of breaking widely-deployed
+            tooling. B2 (render with a flag in the label) was
+            rejected because Ethereum users have a
+            checksum-aware mental model already (their wallet
+            enforces it); silently rendering and flagging
+            invites the user to ignore the flag. B3 (preserve
+            user case verbatim) was rejected because it would
+            make two valid representations of the same address
+            (lower-only and mixed-case canonical) produce
+            different entvizes — an own-goal against entviz's
+            core "equivalent inputs render identically" principle.
+
+            Implementation lands in a follow-up commit; the
+            spec edit accompanying this decision documents the
+            behavior so spec and code stay aligned.
+
+        UUID Dashless Input Is Permanently Accepted = decision:
+          id: uu1ddash
+          why: >
+            Review F7 noted that entviz accepts UUIDs whose
+            dashes have been stripped (32 hex characters
+            instead of the canonical 8-4-4-4-12 grouping) and
+            asked whether this should be flagged as non-
+            standard. The decision is: this is permanently a
+            non-issue, not deferred.
+
+            Rationale: RFC 4122 defines the UUID's identity as
+            its 128 bits, with dashes as a *display*
+            convention, not as part of the value. Many
+            real-world contexts (URLs, database keys,
+            filesystem identifiers) routinely emit UUIDs
+            without dashes for compactness. Treating these as
+            non-standard would force users to insert
+            cosmetically-required dashes before entviz
+            comparison — adding friction that defends nothing,
+            since the fingerprint is byte-identical whether
+            the input has dashes or not.
+
+            This decision is recorded explicitly so that
+            future adversarial reviews of this codebase will
+            not re-flag UUID dashless acceptance as a finding
+            to consider. It is intended behavior. The spec at
+            docs/spec.md documents this in the normalization
+            section.
+
+            Apply to: UUID parser only. (Other dash-bearing
+            formats — Bitcoin cash bech32 with the
+            `bitcoincash:` prefix, SSH key `ssh-ed25519` type
+            strings — have different semantics and are not
+            governed by this decision.)
