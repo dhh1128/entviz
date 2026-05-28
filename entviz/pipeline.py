@@ -66,22 +66,21 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
 
-    # When the input exceeds 512 bits, tokenize_entropy keeps only the
-    # head-256 and tail-256 bits and elides the middle. Flag this in the
-    # top label with a language-neutral '^…$' (regex start + end anchors)
-    # so viewers know the cells aren't the whole input.
-    if is_truncated:
-        type_name = f"^…$ {type_name}"
+    # v5: when the input exceeds 512 bits, tokenize_entropy returns 20
+    # tokens — 8 head + 4 middle slices + 8 tail. The label gets a loud
+    # `truncated(N bytes)` prefix rendered in bold dark-red; assembly is
+    # done in _draw_label_strips where the styling lives. We carry the
+    # byte count separately so the label rendering doesn't have to peek
+    # at the raw input.
+    truncated_bytes = len(raw_input.encode("utf-8")) if is_truncated else None
 
-    # is_truncated means the input was > 512 bits. Spec requires a blank
-    # separator cell between the first 11 tokens (head) and the last 11
-    # tokens (tail), "in addition to" the up-to-3 median/quartile blanks.
-    # Reserve 4 extra cells for truncated input so all 4 possible blanks
-    # (3 normal + 1 separator) deterministically fit. For non-truncated
-    # input the existing assign_cell_indices logic gracefully scales the
-    # blank count to whatever the chosen grid allows.
+    # v5 large-input layout uses a fixed 22-cell budget: H=8 + 1 blank +
+    # M=4 + 1 blank + T=8. The 20 returned tokens map to cell indices
+    # 0..7 (head), 9..12 (middle), and 14..21 (tail); cell indices 8 and
+    # 13 are the separator blanks. We bypass the median/quartile blank
+    # insertion entirely in this path because the cell layout is fully
+    # determined by the spec.
     token_count = len(tokens)
-    extra_cells_needed = 4 if is_truncated else 0
 
     # --- Compute the fingerprint and derive used ftoks ---
     # The fingerprint avalanche means single-bit input changes propagate
@@ -89,9 +88,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     used_ftoks = tokenize_fingerprint(compute_fingerprint(core))[:token_count]
 
     # --- Choose grid ---
-    # Pass token_count + separator-cell budget so the grid is large
-    # enough for the separator plus the up-to-3 median/quartile blanks.
-    grid = choose_grid(token_count + extra_cells_needed, target_ar)
+    if is_truncated:
+        # v5: fixed 22 cells (20 tokens + 2 separators).
+        grid = choose_grid(22, target_ar)
+    else:
+        grid = choose_grid(token_count, target_ar)
 
     # --- Median, quartiles, visual style — all from ftoks ---
     median_ftok = get_median_ftok(used_ftoks)
@@ -100,19 +101,25 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     style = select_visual_style(median_ftok, second_quartile_ftok)
 
     # --- Blank cell placement keyed off ftok ASCII sort ---
-    cell_indices = assign_cell_indices(
-        tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
-    )
-
-    # Large-input separator: shift the second half (tokens 11..21) by one
-    # cell to leave a blank between cells 10 and 11. The shift runs AFTER
-    # the median/quartile insertions so the head/tail split is preserved
-    # exactly. Per spec: "the blank cell separating the first and last
-    # 256-bit groups is in addition to" the other blanks.
     if is_truncated:
-        for t_idx in list(cell_indices):
-            if t_idx >= 11:
-                cell_indices[t_idx] += 1
+        # v5: deterministic mapping. tokens[0..7] → cells 0..7;
+        # tokens[8..11] → cells 9..12 (skipping separator at cell 8);
+        # tokens[12..19] → cells 14..21 (skipping separator at cell 13).
+        # The median/quartile blank-insertion rule does NOT apply here:
+        # the spec says >512-bit inputs always have token_count = 20 and
+        # use a 22-cell grid with the two separators fixed at 8 and 13.
+        cell_indices = {}
+        for t_idx in range(token_count):
+            if t_idx < 8:
+                cell_indices[t_idx] = t_idx
+            elif t_idx < 12:
+                cell_indices[t_idx] = t_idx + 1  # skip cell 8
+            else:
+                cell_indices[t_idx] = t_idx + 2  # skip cells 8 and 13
+    else:
+        cell_indices = assign_cell_indices(
+            tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
+        )
 
     # --- Pixel dimensions ---
     # font_size_px is the rendered text size for full-size cells (base64).
@@ -448,6 +455,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         svg, grid_rect, gm, nucleus_height,
         type_name=type_name, prefix=prefix, suffix=suffix,
         text_size_px=label_text_px,
+        truncated_bytes=truncated_bytes,
     )
 
     # Gray border lines (#808080) on all four sides of the bounding rect,
@@ -469,7 +477,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
 
 def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
-                       type_name, prefix, suffix, text_size_px):
+                       type_name, prefix, suffix, text_size_px,
+                       truncated_bytes=None):
     """
     Render the top "<Type>: <prefix>..." label strip (always) and, when
     suffix is present, the bottom "...<suffix>" strip. Strips are
@@ -482,22 +491,62 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     v5: each strip is wrapped in its own data-channel group
     ("label-top" / "label-bottom") so an overlay can highlight or
     suppress the labels independently.
+
+    When `truncated_bytes` is not None, the top label is prefixed with a
+    loud `truncated(N bytes) ` marker rendered in bold dark-red (#a00000),
+    with the rest of the label following in the standard #666 non-bold
+    style. The marker and tail are emitted as two adjacent <text>
+    elements inside the label-top group so the styling cleanly differs
+    while the line still reads left-to-right.
     """
     style = f"font-family: monospace; font-size: {text_size_px}px;"
     # Top strip — always.
     top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
-    top_text = f"{type_name}:"
+    rest_text = f"{type_name}:"
     if prefix:
-        top_text += f" {prefix}..."
+        rest_text += f" {prefix}..."
     # Vertical center of the top strip is at grid_rect.top - GM - nucleus_height/2.
     top_cy = grid_rect.top - gm - nucleus_height / 2
-    el = etree.SubElement(
-        top_g, 'text',
-        x=str(grid_rect.left), y=str(top_cy),
-        fill='#666666', style=style,
-        **{"dominant-baseline": "central"},
-    )
-    el.text = top_text
+    if truncated_bytes is not None:
+        # Loud marker in bold dark red, followed by the standard label
+        # in #666. Use two adjacent <text> elements so each carries its
+        # own styling unambiguously; the second is positioned with `dx`
+        # equal to the rendered width of the marker text in monospace
+        # ems. Monospace assumption: char width ≈ 0.6 · font_size_px is
+        # a safe approximation across DejaVu Sans Mono / Menlo /
+        # Consolas (all sit in 0.55–0.62). We pad with a single ascii
+        # space between marker and tail to make the visual break crisp.
+        marker_text = f"truncated({truncated_bytes} bytes) "
+        marker_el = etree.SubElement(
+            top_g, 'text',
+            x=str(grid_rect.left), y=str(top_cy),
+            fill='#a00000', style=style,
+            **{
+                "dominant-baseline": "central",
+                "font-weight": "bold",
+            },
+        )
+        marker_el.text = marker_text
+        # Approximate monospace advance per char. Slight overestimate is
+        # fine — it just leaves a tiny visual gap; underestimate would
+        # cause overlap, which is worse.
+        char_advance = text_size_px * 0.6
+        tail_x = grid_rect.left + len(marker_text) * char_advance
+        tail_el = etree.SubElement(
+            top_g, 'text',
+            x=str(tail_x), y=str(top_cy),
+            fill='#666666', style=style,
+            **{"dominant-baseline": "central"},
+        )
+        tail_el.text = rest_text
+    else:
+        el = etree.SubElement(
+            top_g, 'text',
+            x=str(grid_rect.left), y=str(top_cy),
+            fill='#666666', style=style,
+            **{"dominant-baseline": "central"},
+        )
+        el.text = rest_text
     # Bottom strip — only when suffix exists.
     if suffix:
         bottom_g = etree.SubElement(svg, 'g', **{"data-channel": "label-bottom"})

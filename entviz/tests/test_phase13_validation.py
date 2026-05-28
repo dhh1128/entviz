@@ -48,17 +48,21 @@ def test_losslessness_le_512_bits_text_roundtrip():
     assert concatenated == parsed.core
 
 
-def test_large_input_text_shows_first_and_last_256():
-    # 576 bits = 144 hex chars; truncate to first 64 + last 64.
+def test_large_input_text_shows_first_and_last_192():
+    # v4→v5: head/tail are now 192 bits (8 tokens × 6 hex chars = 48
+    # chars per side) instead of v4's 256 bits (64 chars per side); the
+    # middle 4 tokens are fingerprint-sampled and NOT a contiguous slice
+    # of the input, so the old "concatenate all tokens" assertion no
+    # longer applies — we check head and tail separately.
     core = "deadbeef" * 18
     parsed = parse(core)
     tokens, is_truncated = tokenize_entropy(parsed.core, parsed.type)
     assert is_truncated
-    assert len(tokens) == 22
-    head_text = "".join(t.text for t in tokens[:11])
-    tail_text = "".join(t.text for t in tokens[11:])
-    assert head_text == parsed.core[:64]
-    assert tail_text == parsed.core[-64:]
+    assert len(tokens) == 20
+    head_text = "".join(t.text for t in tokens[:8])
+    tail_text = "".join(t.text for t in tokens[12:20])
+    assert head_text == parsed.core[:48]
+    assert tail_text == parsed.core[-48:]
 
 
 def test_large_input_fingerprint_uses_full_input():
@@ -103,21 +107,20 @@ def test_no_degenerate_grids_across_input_sizes():
 
 
 def test_large_input_grid_has_room_for_separator_plus_blanks():
-    # For >512-bit input, the grid is sized to fit token_count + 4 extra
-    # cells (3 possible median/quartile blanks + 1 separator). For
-    # "deadbeef" * 18 → 22 tokens, grid_cells must be ≥ 26.
-    # v4 bounding-rect formulas:
-    #   bounding_w = 1 + box_height + 1 + GM + grid_w + GM + 1
-    #   bounding_h = 1 + GM + grid_h + GM + 1
+    # v4→v5: the grid for a >512-bit input is now exactly 22 cells
+    # (20 tokens + 2 separator blanks at fixed cell indices 8 and 13).
+    # The v4 spec reserved 26 cells (22 tokens + up to 4 blanks); the
+    # v5 spec collapses median/quartile blank insertion into the fixed
+    # 22-cell budget for the large-input path.
     svg = _doc(render("deadbeef" * 18))
     bw = float(svg.get("width"))
     bh = float(svg.get("height"))
     GM, box_height = 5, 10
     cell_w, cell_h = 60, 40
     grid_w = bw - 3 - box_height - 2 * GM
-    grid_h = bh - 2 - 2 * GM
-    cells = int(grid_w / cell_w) * int(grid_h / cell_h)
-    assert cells >= 26, f"grid has only {cells} cells; need ≥ 26 for 22 tokens + 4 blanks"
+    grid_h = bh - 2 * GM - 2 - 2 * GM - 20  # account for top label strip
+    cells = int(round(grid_w / cell_w)) * int(round(grid_h / cell_h))
+    assert cells >= 22, f"grid has only {cells} cells; need ≥ 22 for 20 tokens + 2 separators"
 
 
 def test_large_input_blank_separator_creates_a_gap():
@@ -159,12 +162,15 @@ def test_large_input_blank_separator_creates_a_gap():
 
 
 def test_large_input_renders_exactly_token_count_nuclei():
+    # v4→v5: token count dropped from 22 to 20 for the large-input path;
+    # the two extra cells (indices 8 and 13) are separator blanks with
+    # no nucleus rendered.
     svg = _doc(render("deadbeef" * 18))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
     ]
-    assert len(nuclei) == 22
+    assert len(nuclei) == 20
 
 
 def test_small_input_has_no_extra_separator():

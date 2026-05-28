@@ -178,27 +178,37 @@ def test_disproof_alphabet_label_uses_alphabet_name():
     assert top.text == "base32:"
 
 
-def test_truncated_input_label_prefixed_with_regex_anchors():
-    """When the input is > 512 bits (tokenize_entropy returns
-    is_truncated=True), the top label is prefixed with '^…$ ' — regex
-    start-of-string + ellipsis + end-of-string — to signal in a
-    language-neutral way that the cells display only the first and last
-    256 bits of the input (the middle was elided; the fingerprint still
-    covers the full input). For a 200-char hex blob: '^…$ hex(200):'."""
+def test_truncated_input_label_prefixed_with_loud_marker():
+    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud
+    'truncated(N bytes) ' marker rendered in bold dark-red, followed by
+    the standard '<Type>: ...' label in #666. The marker and tail are
+    two adjacent <text> elements; this test concatenates them in
+    document order to assert the joined label content. For a 200-char
+    hex blob (input is plain ascii, so byte length == char length):
+    'truncated(200 bytes) hex(200):'."""
     long_hex = "ab" * 100  # 200 hex chars = 800 bits ≫ 512
     svg = _doc(render(long_hex))
-    labels = _labels(svg)
-    top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "^…$ hex(200):", f"got: {top.text!r}"
+    # v4→v5: the loud marker has fill="#a00000" rather than #666666, so
+    # the legacy `_labels` filter (only #666) misses it. Read the full
+    # label-top group directly and concatenate in document order.
+    top_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
+    assert top_g, "missing label-top group"
+    joined = "".join(
+        el.text or "" for el in top_g[0].xpath('.//*[local-name()="text"]')
+    )
+    assert "truncated(200 bytes)" in joined, f"got: {joined!r}"
+    assert "hex(200):" in joined, f"got: {joined!r}"
 
 
-def test_non_truncated_input_label_has_no_anchor_prefix():
-    """A short input (under 512 bits) gets a plain label with no
-    '^…$' prefix."""
+def test_non_truncated_input_label_has_no_loud_marker():
+    """v4→v5: short inputs render no 'truncated(...)' marker, same as
+    they previously rendered no '^…$' prefix."""
     svg = _doc(render("deadbeefcafe1234"))  # 16 hex chars = 64 bits
     labels = _labels(svg)
-    top = min(labels, key=lambda t: float(t.get("y")))
-    assert not top.text.startswith("^…$"), f"got: {top.text!r}"
+    for t in labels:
+        if t.text:
+            assert not t.text.startswith("truncated("), f"got: {t.text!r}"
+            assert not t.text.startswith("^…$"), f"got: {t.text!r}"
 
 
 def test_canvas_height_grows_with_top_label_only():

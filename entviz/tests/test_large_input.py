@@ -1,9 +1,16 @@
 """
-v2 large-input handling: inputs whose tokenization would exceed 22 tokens
-are truncated to the first ~256 bits and the last ~256 bits, with a
-logical blank-cell separator. The fingerprint is always computed over
-the full input, so the truncated middle still binds into every
-fingerprint-driven channel.
+v5 large-input handling: inputs whose underlying byte length exceeds 64
+bytes (>512 bits), or whose tokenization would otherwise exceed the
+22-cell budget, are reduced to a head (8 tokens) + 4 fingerprint-selected
+middle slices + tail (8 tokens), separated by two blank cells when
+rendered. The fingerprint is always computed over the full input, so the
+truncated middle still binds into every fingerprint-driven channel.
+
+v4→v5 update: replaced head-256 + blank + tail-256 (22 visible tokens)
+with head-192 + 4 middle slices + tail-192 (20 visible tokens + 2
+separator blanks). Assertions rewritten to match the new token count
+and head/tail boundaries; the byte-content checks adapt to the new
+192-bit head/tail span (32 hex chars per side instead of 64).
 """
 from entviz.entropy import tokenize, tokenize_entropy
 from entviz.fingerprint import compute_fingerprint
@@ -28,7 +35,7 @@ def test_uuid_size_input_passes_through():
 
 def test_exact_512_bit_input_passes_through():
     # 512 bits = 128 hex chars = 22 tokens (21 full of 6 chars + 1 partial of 2 chars).
-    # This is the boundary: at exactly 22 tokens, no truncation should occur.
+    # This is the boundary: at exactly 22 tokens / 64 bytes, no truncation.
     core = "DEADBEEF" * 16  # 128 chars
     tokens, is_truncated = tokenize_entropy(core, "hex")
     assert not is_truncated
@@ -36,78 +43,96 @@ def test_exact_512_bit_input_passes_through():
 
 
 def test_above_512_bits_truncates_hex():
-    # 576 bits = 144 hex chars = 24 tokens > 22, so truncate.
+    # v4→v5: 576 bits = 144 hex chars; v5 returns 20 tokens (head 8 +
+    # middle 4 + tail 8). The two separator blanks are inserted at
+    # render time, not by tokenize_entropy.
     core = "DEADBEEF" * 18  # 144 chars
     tokens, is_truncated = tokenize_entropy(core, "hex")
     assert is_truncated
-    # First 256 bits (64 hex chars) yields 11 tokens (10 full + 1 partial of 4 chars).
-    # Last 256 bits (64 hex chars) yields 11 tokens.
-    # Total: 22 tokens.
-    assert len(tokens) == 22
+    assert len(tokens) == 20
 
 
-def test_above_512_truncation_keeps_first_256_and_last_256_bits():
-    # Build a core whose first/last 64 chars are distinguishable from the middle.
-    head = "AAAAAA" * 11  # 66 chars but we'll only use first 64
-    # Actually use a clearer structure: 64 'A' chars head, middle of 'B' chars,
-    # 64 'C' chars tail. Total > 128 chars to force truncation.
-    head = "A" * 64
-    middle = "B" * 32
-    tail = "C" * 64
-    core = head + middle + tail  # 160 hex chars = 27 tokens
+def test_above_512_truncation_keeps_first_and_last_192_bits():
+    # v4→v5: head/tail were 256 bits (64 chars hex); v5 shrinks both to
+    # 192 bits = 32 chars hex (8 tokens × 6 chars). The middle group
+    # of 4 cells now contains fingerprint-sampled slices that are not
+    # necessarily all-A or all-C; we only assert head and tail content.
+    head = "A" * 48     # > 32 chars so the first 32 are stable
+    middle = "B" * 80   # padding for the body
+    tail = "C" * 48
+    core = head + middle + tail  # 176 hex chars = 30 tokens
     tokens, is_truncated = tokenize_entropy(core, "hex")
     assert is_truncated
-    assert len(tokens) == 22
-    # First 11 tokens should all be made of 'A' chars; last 11 of 'C' chars.
-    for i in range(11):
-        assert set(tokens[i].text) == {"A"}, f"head token {i} text was {tokens[i].text!r}"
-    for j in range(11):
-        assert set(tokens[11 + j].text) == {"C"}, f"tail token {j} text was {tokens[11 + j].text!r}"
+    assert len(tokens) == 20
+    # First 8 tokens — all 'A'.
+    for i in range(8):
+        assert set(tokens[i].text) == {"A"}, f"head token {i} text {tokens[i].text!r}"
+    # Last 8 tokens (indices 12..19) — all 'C'.
+    for j in range(8):
+        assert set(tokens[12 + j].text) == {"C"}, (
+            f"tail token {j} text {tokens[12 + j].text!r}"
+        )
 
 
-def test_truncated_indices_are_renumbered_0_to_21():
+def test_truncated_indices_are_renumbered_0_to_19():
+    # v4→v5: token range shrinks from 0..21 to 0..19; two extra cells (8
+    # and 13) are the separator blanks inserted by the pipeline.
     core = "DEADBEEF" * 18
     tokens, _ = tokenize_entropy(core, "hex")
-    assert [t.index for t in tokens] == list(range(22))
+    assert [t.index for t in tokens] == list(range(20))
 
 
-def test_base64_input_above_threshold_truncates_at_43_chars_per_side():
-    # base64 uses 6 bits per char; ceil(256/6) = 43 chars per side.
-    # An input of 100 base64 chars = 25 tokens, well over 22.
-    head = "A" * 43
-    middle = "C" * 14
-    tail = "Z" * 43
-    core = head + middle + tail  # 100 chars
+def test_base64_input_above_threshold_yields_20_tokens():
+    # v4→v5: base64 uses 6 bits per char; 192-bit head/tail = 32 chars
+    # each (8 tokens × 4 chars). A 200-base64-char input is well over
+    # the 64-byte threshold; expect 20 tokens.
+    head = "A" * 32
+    middle = "C" * 136
+    tail = "Z" * 32
+    core = head + middle + tail  # 200 chars
     tokens, is_truncated = tokenize_entropy(core, "base64")
     assert is_truncated
-    assert len(tokens) == 22
-    # First 11 tokens should be all 'A'; last 11 all 'Z'.
-    for i in range(11):
+    assert len(tokens) == 20
+    # First 8 tokens all 'A'; last 8 all 'Z'.
+    for i in range(8):
         assert set(tokens[i].text) == {"A"}
-    for j in range(11):
-        assert set(tokens[11 + j].text) == {"Z"}
+    for j in range(8):
+        assert set(tokens[12 + j].text) == {"Z"}
 
 
-def test_inputs_sharing_ends_but_differing_middle_have_same_truncated_tokens():
-    # This is the failure mode the fingerprint exists to detect: two inputs
-    # with identical first/last 256 bits but different middles produce
-    # identical truncated tokens (i.e., identical *displayed text*), but
-    # the fingerprint must differ.
-    head = "DEADBEEF" * 8   # 64 hex chars
+def test_inputs_sharing_head_and_tail_but_differing_middle_now_differ_in_text():
+    # v4→v5: in v4 the truncated tokens were byte-identical for two
+    # inputs sharing head-256 and tail-256 (that was the F5 finding the
+    # v5 spec exists to fix). In v5 the middle group of 4 cells contains
+    # fingerprint-sampled slices that necessarily differ when the inputs
+    # differ at those offsets — so the TEXT channel itself now
+    # discriminates these two inputs. The fingerprint also still differs.
+    head = "DEADBEEF" * 8   # 64 hex chars (covers v5's first 32 plus margin)
     tail = "FEEDFACE" * 8   # 64 hex chars
-    core_a = head + ("A" * 32) + tail  # 160 chars
-    core_b = head + ("B" * 32) + tail  # 160 chars
+    core_a = head + ("A" * 64) + tail  # 192 chars = 96 bytes
+    core_b = head + ("B" * 64) + tail
     tokens_a, _ = tokenize_entropy(core_a, "hex")
     tokens_b, _ = tokenize_entropy(core_b, "hex")
-    # Truncated tokens are identical: text channel cannot distinguish.
-    assert [(t.text, t.quant) for t in tokens_a] == [(t.text, t.quant) for t in tokens_b]
-    # But fingerprints differ — the avalanche is preserved.
+    # Head and tail tokens match.
+    for i in range(8):
+        assert tokens_a[i].text == tokens_b[i].text
+    for j in range(8):
+        assert tokens_a[12 + j].text == tokens_b[12 + j].text
+    # Middle tokens MUST differ on at least one cell — that's the v5
+    # text-channel improvement F5 demanded.
+    middle_a = [t.text for t in tokens_a[8:12]]
+    middle_b = [t.text for t in tokens_b[8:12]]
+    assert middle_a != middle_b, (
+        "v5 middle slices should differ when bodies differ; this is the F5 fix"
+    )
+    # Fingerprints differ (avalanche is preserved).
     assert compute_fingerprint(core_a) != compute_fingerprint(core_b)
 
 
 def test_token_count_never_exceeds_22():
-    # Stress test: very large input. After truncation, must be exactly 22.
+    # v4→v5: post-truncation token count is now exactly 20 (was 22).
+    # Stress test: very large input.
     core = "DEADBEEF" * 1000  # 8000 chars = ~1333 tokens
     tokens, is_truncated = tokenize_entropy(core, "hex")
     assert is_truncated
-    assert len(tokens) == 22
+    assert len(tokens) == 20
