@@ -358,6 +358,6 @@ def test_visual_output_is_preserved_after_stripping_v5_additions():
         # No band-letter texts survived.
         texts = doc.xpath('//*[local-name()="text"]')
         for t in texts:
-            assert t.text not in {"W", "G", "R", "B", "K"} or len(t.text or "") != 1, (
+            assert t.text not in {"w", "g", "r", "b", "k"} or len(t.text or "") != 1, (
                 f"band letter text survived: {t.text!r}"
             )

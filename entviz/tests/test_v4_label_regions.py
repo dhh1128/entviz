@@ -179,13 +179,12 @@ def test_disproof_alphabet_label_uses_alphabet_name():
 
 
 def test_truncated_input_label_prefixed_with_loud_marker():
-    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud
-    'truncated(N bytes) ' marker rendered in bold dark-red, followed by
-    the standard '<Type>: ...' label in #666. The marker and tail are
-    two adjacent <text> elements; this test concatenates them in
-    document order to assert the joined label content. For a 200-char
-    hex blob (input is plain ascii, so byte length == char length):
-    'truncated(200 bytes) hex(200):'."""
+    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud 'part of '
+    marker rendered in bold dark-red, followed by the standard
+    '<Type>: ...' label in #666. The marker and tail are two adjacent
+    <text> elements; this test concatenates them in document order to
+    assert the joined label content. The byte count is conveyed by the
+    type-label parenthetical (e.g. 'hex(200)'), not by the marker."""
     long_hex = "ab" * 100  # 200 hex chars = 800 bits ≫ 512
     svg = _doc(render(long_hex))
     # v4→v5: the loud marker has fill="#a00000" rather than #666666, so
@@ -196,18 +195,18 @@ def test_truncated_input_label_prefixed_with_loud_marker():
     joined = "".join(
         el.text or "" for el in top_g[0].xpath('.//*[local-name()="text"]')
     )
-    assert "truncated(200 bytes)" in joined, f"got: {joined!r}"
+    assert "part of" in joined, f"got: {joined!r}"
     assert "hex(200):" in joined, f"got: {joined!r}"
 
 
 def test_non_truncated_input_label_has_no_loud_marker():
-    """v4→v5: short inputs render no 'truncated(...)' marker, same as
+    """v4→v5: short inputs render no 'part of' marker, same as
     they previously rendered no '^…$' prefix."""
     svg = _doc(render("deadbeefcafe1234"))  # 16 hex chars = 64 bits
     labels = _labels(svg)
     for t in labels:
         if t.text:
-            assert not t.text.startswith("truncated("), f"got: {t.text!r}"
+            assert not t.text.startswith("part of"), f"got: {t.text!r}"
             assert not t.text.startswith("^…$"), f"got: {t.text!r}"
 
 

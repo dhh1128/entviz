@@ -1,23 +1,23 @@
 """
 v5: color-bar band letters.
 
-Each visible band in the color bar carries a single uppercase letter
+Each visible band in the color bar carries a single lowercase letter
 centered horizontally and vertically:
 
-    #ffffff → W   (black text)
-    #ffd966 → G   (black text)
-    #ff3f2f → R   (white text)
-    #2f3fbf → B   (white text)
-    #000000 → K   (white text)
+    #ffffff → w   (black text)
+    #ffd966 → g   (black text)
+    #ff3f2f → r   (white text)
+    #2f3fbf → b   (white text)
+    #000000 → k   (white text)
 
 Letter color follows the existing Oklab L threshold rule from
 entviz.colors: L < 0.6 → white text; else black. For these five colors
 that yields the mapping above (verified at test time, not hard-coded).
 
 Letter font: same monospace family as cell text.
-Font size = round(band_height * 0.6), clamped to a minimum of
-0.5 * box_height (= 5 px at 12pt) so it stays legible on the smallest
-bands.
+Font size = min(band_height * 0.7, bar_width * 0.85) so the glyph fits
+both axes. There is no minimum: very small bands get very small letters
+(and bands too small for legibility skip the letter entirely).
 """
 from lxml import etree
 
@@ -30,11 +30,11 @@ def _doc(svg_str):
 
 
 BAND_LETTER = {
-    "#ffffff": "W",
-    "#ffd966": "G",
-    "#ff3f2f": "R",
-    "#2f3fbf": "B",
-    "#000000": "K",
+    "#ffffff": "w",
+    "#ffd966": "g",
+    "#ff3f2f": "r",
+    "#2f3fbf": "b",
+    "#000000": "k",
 }
 
 
@@ -94,7 +94,7 @@ def test_each_band_has_one_letter_text():
 
 
 def test_letter_content_matches_palette():
-    """Letter text content must be one of W, G, R, B, K and match the
+    """Letter text content must be one of w, g, r, b, k and match the
     band's fill color."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = _band_rects(svg)
@@ -163,14 +163,17 @@ def test_letter_font_family_is_monospace():
         )
 
 
-def test_letter_font_size_follows_0_6_band_height_with_min_clamp():
-    """font_size_px = max(round(band_height * 0.6), 0.5 * box_height).
-    box_height = 10 px at 12pt → min = 5 px."""
+def test_letter_font_size_fits_both_band_height_and_bar_width():
+    """font_size_px = min(band_height * 0.7, bar_width * 0.85). No
+    minimum floor: small bands get small letters (or skip the letter
+    entirely if below the legibility threshold). bar_width = 10 px at
+    12pt → horizontal cap = 8.5 px."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = _band_rects(svg)
     letters = _band_letters(svg)
     assert bands and letters
 
+    bar_width = 10.0  # bar inset width at default 12pt geometry
     for t in letters:
         ty = float(t.get("y"))
         band = next(
@@ -178,12 +181,11 @@ def test_letter_font_size_follows_0_6_band_height_with_min_clamp():
             if float(b.get("y")) <= ty <= float(b.get("y")) + float(b.get("height"))
         )
         bh = float(band.get("height"))
-        expected = max(round(bh * 0.6), 5)
+        expected = min(bh * 0.7, bar_width * 0.85)
         style = t.get("style") or ""
-        # Extract font-size from style.
         import re
         m = re.search(r'font-size:\s*([0-9.]+)px', style)
         assert m, f"font-size not found in style={style!r}"
-        assert abs(float(m.group(1)) - expected) < 0.5, (
+        assert abs(float(m.group(1)) - expected) < 0.01, (
             f"font-size {m.group(1)} != expected {expected} for band_h={bh}"
         )

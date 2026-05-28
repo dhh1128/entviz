@@ -1160,15 +1160,24 @@ Entviz = goal:
             time will not parse it correctly, and the marker
             disappears in peripheral vision.
 
-            v5 replaces it with `truncated(N bytes) ` where N is
-            the original entropy byte length, rendered in bold
-            with fill = #a00000 (dark red, Oklab L ~0.43).
-            Communicates *what* the middle cells are (a
-            sampled summary, not a linear scan) and *how big*
-            the original input was. The byte count is itself a
-            useful corroborating fact for the user — inputs of
-            very different lengths cannot be the same input
-            regardless of cell similarity.
+            v5 replaces it with `part of ` (revised twice on
+            2026-05-27: initial v5 draft used `truncated(N bytes) `
+            — dropped after gallery review showed the parenthetical
+            duplicated the byte count already present in the type
+            label, e.g. `hex(200)`, `b64(119)`; then briefly
+            `partviz` — dropped because the coined word was
+            non-obvious to a first-time reader; settled on
+            `part of` which reads as plain English when joined
+            with the type label that follows: "part of hex(200):",
+            "part of b64(1024):"). Rendered in bold with
+            fill = #a00000 (dark red, Oklab L ~0.43). The marker
+            communicates *what* the cells shown are: only part of
+            the input, sampled at head + middle slices + tail, not
+            a linear scan. The type-label parenthetical that
+            immediately follows still supplies the byte count as a
+            useful corroborating fact — inputs of very different
+            lengths cannot be the same input regardless of cell
+            similarity.
 
             Color choice rationale: #a00000 contrasts well
             against the white bounding-rect background,
@@ -1191,15 +1200,33 @@ Entviz = goal:
             lose one of the most important gestalt
             discriminators.
 
-            v5 adds a single uppercase letter (W/G/R/B/K) to
-            the center of each color-bar band. Letter color
-            picked by the same Oklab L < 0.6 rule used for
-            cell text against nucleus bg: black letter on
-            white and gold bands; white letter on red, blue,
-            and black bands. Font: same monospace family as
-            cell text; size = round(band_height × 0.6),
-            clamped to round(box_height × 0.5) as a minimum
-            so the letter stays legible even on tiny bands.
+            v5 adds a single letter to the center of each
+            color-bar band. Letter color picked by the same
+            Oklab L < 0.6 rule used for cell text against
+            nucleus bg: black letter on white and gold bands;
+            white letter on red, blue, and black bands. Font:
+            same monospace family as cell text.
+
+            Case and sizing revised 2026-05-27 after gallery
+            review: the initial draft rendered uppercase
+            (W/G/R/B/K) at font-size round(band_height × 0.6)
+            with a min clamp of round(box_height × 0.5). In
+            the gallery this produced letters that visually
+            overpowered the narrow color bar — uppercase caps
+            sit at roughly 0.7·font_size and the min clamp
+            kicked in on smaller bands. The revised rule:
+            lowercase glyphs (w/g/r/b/k) at font-size
+            min(band_height × 0.7, bar_width × 0.85), no
+            minimum floor. Lowercase glyphs sit at x-height
+            so their visual mass is smaller for the same
+            font-size; the explicit bar_width cap prevents
+            wide bands from sprouting oversized letters; and
+            dropping the floor means a tiny band gets a tiny
+            (and optionally omitted) letter rather than one
+            that overflows. The machine-readable
+            `data-color-bar-band` attribute remains uppercase
+            for stability across any future restyle of the
+            rendered case.
 
             Why this addresses F6 only partially: it provides
             a verbal label for the gestalt channel (which

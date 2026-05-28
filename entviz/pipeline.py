@@ -68,7 +68,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # v5: when the input exceeds 512 bits, tokenize_entropy returns 20
     # tokens — 8 head + 4 middle slices + 8 tail. The label gets a loud
-    # `truncated(N bytes)` prefix rendered in bold dark-red; assembly is
+    # `part of` prefix rendered in bold dark-red; assembly is
     # done in _draw_label_strips where the styling lives. We carry the
     # byte count separately so the label rendering doesn't have to peek
     # at the raw input.
@@ -497,11 +497,13 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     suppress the labels independently.
 
     When `truncated_bytes` is not None, the top label is prefixed with a
-    loud `truncated(N bytes) ` marker rendered in bold dark-red (#a00000),
-    with the rest of the label following in the standard #666 non-bold
-    style. The marker and tail are emitted as two adjacent <text>
-    elements inside the label-top group so the styling cleanly differs
-    while the line still reads left-to-right.
+    loud `part of ` marker rendered in bold dark-red (#a00000), with the
+    rest of the label following in the standard #666 non-bold style. The
+    marker and tail are emitted as two adjacent <text> elements inside
+    the label-top group so the styling cleanly differs while the line
+    still reads left-to-right. The byte count is omitted from the marker
+    because it is already present in the type-label parenthetical (e.g.
+    `hex(200)`, `b64(119)`).
     """
     style = f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;"
     # Top strip — always.
@@ -520,7 +522,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
         # a safe approximation across DejaVu Sans Mono / Menlo /
         # Consolas (all sit in 0.55–0.62). We pad with a single ascii
         # space between marker and tail to make the visual break crisp.
-        marker_text = f"truncated({truncated_bytes} bytes) "
+        marker_text = "part of "
         marker_el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
@@ -858,10 +860,6 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
     used.sort(key=lambda x: (-x[1], color_order[x[0]]))
     total = sum(n ** 4 for _, n in used)
     bar_g = etree.SubElement(svg, 'g', **{"data-channel": "color-bar"})
-    # Letter font-size minimum: 0.5 · box_height so the letter stays
-    # legible on the smallest band. box_height defaults to bar_rect.width
-    # if not provided (the bar width equals box_height in current geometry).
-    min_font = 0.5 * (box_height if box_height is not None else bar_rect.size.width)
     bar_cx = bar_rect.left + bar_rect.size.width / 2
     y = bar_rect.top
     for i, (color, n) in enumerate(used):
@@ -895,18 +893,24 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
             b = int(color[5:7], 16)
             quant = r | (g << 8) | (b << 16)
             _bg, fg = get_nucleus_colors(quant)
-            font_size = max(round(h * 0.6), min_font)
-            cy = y + h / 2
-            text_el = etree.SubElement(
-                band_g, 'text',
-                x=str(bar_cx), y=str(cy),
-                fill=fg,
-                style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
-                **{
-                    "text-anchor": "middle",
-                    "dominant-baseline": "central",
-                    "data-color-bar-letter": "true",
-                },
-            )
-            text_el.text = letter
+            # Letter must fit both the band height and the bar width.
+            # Lowercase glyphs sit largely at x-height, so this stays
+            # visually compact. No minimum floor — a tiny band gets a
+            # tiny letter, and bands too small for a legible glyph
+            # simply skip the letter.
+            font_size = min(h * 0.7, bar_rect.size.width * 0.85)
+            if font_size >= 2:
+                cy = y + h / 2
+                text_el = etree.SubElement(
+                    band_g, 'text',
+                    x=str(bar_cx), y=str(cy),
+                    fill=fg,
+                    style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
+                    **{
+                        "text-anchor": "middle",
+                        "dominant-baseline": "central",
+                        "data-color-bar-letter": "true",
+                    },
+                )
+                text_el.text = letter.lower()
         y += h

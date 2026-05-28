@@ -153,28 +153,24 @@ def test_head_and_tail_collision_inputs_differ_in_middle_text():
     )
 
 
-# ---- Part 3: loud truncation marker --------------------------------------
+# ---- Part 3: loud part of marker -----------------------------------------
 
 
 def test_truncated_marker_rendered_bold_dark_red():
     """For a >512-bit input the top label carries a bold dark-red
-    `truncated(N bytes)` prefix segment. Implementation: either a
-    distinct <text> element or a <tspan> with these styling attributes."""
+    `part of` prefix segment. Implementation: either a distinct <text>
+    element or a <tspan> with these styling attributes."""
     long_hex = "ab" * 100  # 200 hex chars = 100 bytes
     svg = etree.fromstring(render(long_hex).encode())
-    # Search anywhere for an element whose text matches "truncated(...".
     candidates = svg.xpath(
         '//*[local-name()="text" or local-name()="tspan"]'
     )
     marker = None
     for el in candidates:
-        if el.text and el.text.startswith("truncated("):
+        if el.text and el.text.startswith("part of"):
             marker = el
             break
-    assert marker is not None, "no truncated(N bytes) marker rendered"
-    # Byte count is len(input.encode('utf-8')) — for plain ascii hex this
-    # equals the character count, which is 200 here.
-    assert "truncated(200 bytes)" in marker.text
+    assert marker is not None, "no part of marker rendered"
     fill = marker.get("fill") or ""
     style = marker.get("style") or ""
     assert "#a00000" in (fill + style).lower()
@@ -189,18 +185,18 @@ def test_no_truncated_marker_for_exactly_512_bit_input():
     svg = etree.fromstring(render(core).encode())
     assert svg.get("data-truncated") is None
     for el in svg.xpath('//*[local-name()="text" or local-name()="tspan"]'):
-        if el.text and el.text.startswith("truncated("):
+        if el.text and el.text.startswith("part of"):
             pytest.fail(
-                f"unexpected truncated marker on 512-bit input: {el.text!r}"
+                f"unexpected part of marker on 512-bit input: {el.text!r}"
             )
 
 
-def test_truncated_label_text_contains_byte_count_and_type():
-    """The marker reads `truncated(N bytes) <Type>: ...` per spec."""
+def test_truncated_label_text_contains_type_with_byte_count():
+    """The marker reads `part of <Type>: ...` per spec. The byte count
+    lives in the type label parenthetical (e.g. `hex(200)`), not in the
+    marker."""
     long_hex = "ab" * 100  # 200-byte hex
     svg = etree.fromstring(render(long_hex).encode())
-    # Concatenate any tspan/text that lives in the label-top group, in
-    # document order.
     label_g = svg.xpath(
         '//*[local-name()="g" and @data-channel="label-top"]'
     )
@@ -210,5 +206,5 @@ def test_truncated_label_text_contains_byte_count_and_type():
         if el.text:
             pieces.append(el.text)
     joined = "".join(pieces)
-    assert "truncated(200 bytes)" in joined
+    assert "part of" in joined
     assert "hex(200):" in joined

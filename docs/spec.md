@@ -11,8 +11,8 @@ The v4 spec is archived at [v4/index.md](v4/index.md); v3 at [v3/index.md](v3/in
 The v5 changes are concentrated in three places:
 
 1. **Head + tail + fingerprint-selected middle slices for long inputs.** v4 truncated >512-bit inputs to head-256 + tail-256 only; an attacker who could match those 64 bytes had a byte-identical text channel and only had to grind the fingerprint-driven gestalt channels. v5 reserves four of the 22 cells for **middle slices** sampled at byte offsets derived from the fingerprint, so two long inputs that share their head and tail still differ in the text channel unless the attacker can *also* match four specific 3-byte windows inside the body — and those windows move as a function of the full input. See the tokenization step in the algorithm and the "Large-input handling" subsection.
-2. **Loud truncation marker.** The quiet `^…$ ` marker on the top label strip is replaced by a bold red `truncated(N bytes)` prefix that includes the original entropy byte length. The marker now reads as a warning rather than a footnote. See the label-strips step in the algorithm.
-3. **Color-bar letters.** Each color-bar band now carries a centered uppercase letter naming its color (`W`, `G`, `R`, `B`, `K`). This gives the color bar a verbal label that survives complete color blindness, monochrome display, and CSS color filtering, and makes spot-check verification ("what's the top band?") possible without trusting hue discrimination. See the color-bar step in the algorithm.
+2. **Loud truncation marker.** The quiet `^…$ ` marker on the top label strip is replaced by a bold red `part of` prefix (read as "part of \<the type\>" once the type label follows it). The marker now reads as a warning rather than a footnote. The original entropy byte length is conveyed by the type-label parenthetical (e.g. `hex(200)`, `b64(119)`) immediately after the marker, so it is not repeated inside the marker itself. See the label-strips step in the algorithm.
+3. **Color-bar letters.** Each color-bar band now carries a centered lowercase letter naming its color (`w`, `g`, `r`, `b`, `k`). This gives the color bar a verbal label that survives complete color blindness, monochrome display, and CSS color filtering, and makes spot-check verification ("what's the top band?") possible without trusting hue discrimination. See the color-bar step in the algorithm.
 
 The v4 base — described in the rest of this document — is otherwise unchanged from the v4 spec at `docs/v4/index.md`. Implementations that supported v4 need only make the three changes above to support v5.
 
@@ -58,7 +58,7 @@ Most of the entviz is drawn from the fingerprint rather than from the entropy di
 ## Guarantees
 Each entviz conveys its entropy fully and independently, in a first visual channel, as text. If the text in an entviz is read aloud, *taking into account case-sensitivity*, all information is transferred. Text is tokenized into cells for efficient and reliable reading, and the cells are organized into a grid, which should be read left-to-right and top-to-bottom. For inputs of 512 bits or less, this text channel is fully lossless. For inputs greater than 512 bits, the text channel displays the **head** (first 192 bits, 8 tokens), the **tail** (last 192 bits, 8 tokens), and 4 **middle slices** of 24 bits each sampled at fingerprint-derived byte offsets within the body of the input, separated by blank cells. The full input is still bound into the visualization through the fingerprint, which drives all other channels.
 
-The head, middle slices, and tail are not contiguous: the cells should NOT be read as a linear scan of the input. The top label strip carries a loud `truncated(N bytes)` marker when the input is truncated, indicating both the original byte length and that the text channel alone is no longer lossless for the input.
+The head, middle slices, and tail are not contiguous: the cells should NOT be read as a linear scan of the input. The top label strip carries a loud `part of` marker when the input is truncated, signalling that the text channel alone is no longer lossless for the input. The original byte length is given by the type-label parenthetical (e.g. `hex(200)`) that immediately follows the marker.
 
 The text channel does not, by itself, provide a visual avalanche effect: two inputs that differ by a single character will show nearly identical text. Avalanche is provided by the fingerprint-driven channels. The text channel's role is verbatim fidelity, not difference amplification, and it should be understood as one channel among several rather than a sole comparison method.
 
@@ -246,21 +246,21 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. Draw the **color bar** in the inset rectangle described in the bounding-rect section above (left border at x = 1, right border at `x = 1 + box_height`, drawing height = `bounding_rect.height − 2`). Build a 4-element histogram by counting how many of the 256 disjoint 2-bit slices of the SHA-512 digest (64 bytes × 4 slices/byte = 256 slices) equal each of the four 2-bit patterns (00, 01, 10, 11). Map binary value *i* to *edge palette*[*i*]. For each palette color whose count is greater than zero, compute `count^4`. Divide the color bar's drawing height into horizontal bands, one per nonzero color, with each band's height proportional to that color's `count^4` value as a share of the sum of all four `count^4` values. The fourth-power skew amplifies the dominance of the most-frequent pattern so the bar reads as a clear pecking order rather than four near-equal stripes (which is what a raw-count distribution from a uniformly-random digest typically produces). Order the bands by descending count, most frequent at the top; break ties by the order of the color in the *edge palette*. Fill each band with its color. Total count is always 256 regardless of grid size, so band proportions stay comparable across small and large inputs.
 
-    **Color-bar letters.** In each band, centered both horizontally (within the color bar's inset width) and vertically (within that band's height), draw a single uppercase letter identifying the band's color:
+    **Color-bar letters.** In each band, centered both horizontally (within the color bar's inset width) and vertically (within that band's height), draw a single lowercase letter identifying the band's color:
 
     | Color | Hex | Letter |
     |---|---|---|
-    | white | `#ffffff` | `W` |
-    | gold | `#ffd966` | `G` |
-    | red | `#ff3f2f` | `R` |
-    | blue | `#2f3fbf` | `B` |
-    | black | `#000000` | `K` |
+    | white | `#ffffff` | `w` |
+    | gold | `#ffd966` | `g` |
+    | red | `#ff3f2f` | `r` |
+    | blue | `#2f3fbf` | `b` |
+    | black | `#000000` | `k` |
+
+    Lowercase is chosen so the glyph's visual height sits near x-height rather than full cap-height; this keeps the letter from dominating the narrow color-bar band even on tall slices. The machine-readable `data-color-bar-band` attribute on each band group remains the uppercase form (`W|G|R|B|K`) so it stays a stable identifier even if the rendered case is restyled.
 
     The letter's **fill color** is chosen by the same Oklab perceptual lightness rule applied to cell text against its nucleus background (see [Cell Rendering Algorithm](#cell-rendering-algorithm)): compute Oklab L of the band's fill color; if L < 0.6 use white (`#ffffff`) for the letter, otherwise use black (`#000000`). For the five palette colors this resolves to: black letter on white, gold, and red bands; white letter on blue and black bands. (Red `#ff3f2f` has Oklab `L ≈ 0.657`, just above the `0.6` threshold, so it pairs with black text — matching the cell-text behavior already established in v4 for cells whose nucleus background is red.)
 
-    The letter's **font family** is the same monospace family as cell text. The letter's **font size** is `round(band_height × 0.6)` pixels, clamped to a minimum of `round(box_height × 0.5)` pixels so that the letter remains legible even on the smallest bands. (At 12pt reference with box_height = 10 px, the minimum is 5 px — small but still recognizable for the five chosen letters, which are all visually distinct in glyph silhouette.) The letter is rendered with `text-anchor="middle"` and a baseline that places its visual center at the band's vertical center; in SVG this is typically achieved with `dominant-baseline="central"` (or a manual `y` offset of `band_height / 2 + font_size · 0.35`).
-
-    A band that is too short to fit even the minimum letter (a degenerate edge case when one color's count^4 share is below ~`1/bounding_height`) MAY omit its letter; in practice the count⁴ skew makes this exceedingly rare except for the lowest-count band, which is often visually negligible anyway.
+    The letter's **font family** is the same monospace family as cell text. The letter's **font size** is `min(band_height × 0.7, bar_width × 0.85)` pixels — small enough to fit *both* the band's vertical extent (with margin for descenders/ascenders on `g`, `b`, `k`) and the color bar's horizontal inset width. There is no minimum floor: very small bands get correspondingly small letters, and a band too short or too narrow to fit a legible glyph MAY omit its letter entirely. The letter is rendered with `text-anchor="middle"` and a baseline that places its visual center at the band's vertical center; in SVG this is typically achieved with `dominant-baseline="central"`.
 
     **Why letters.** The color bar is the primary gestalt-comparison channel and is the channel most relied on under habituated comparison. v4 communicated band identity by hue alone, which left CVD users (adversarial review finding F6) and users on monochrome or color-filtered displays without a primary discriminator. The letters provide a verbal label that survives color blindness, monochrome rendering, and CSS color filtering, and they enable simple spot-check verification ("the top band is `G`") without trusting hue discrimination.
 
@@ -312,20 +312,20 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     **Bottom label content.** `"...<suffix>"`, present only when the parsed result has a suffix. Examples: `...d4af` (Bitcoin legacy 4-char base58 checksum), `...12` (LEI 2-char MOD 97-10 check), `...user@host` (SSH key comment).
 
-    **Large-input truncation marker.** When the input exceeds 512 bits and the text channel is reduced to head + middle slices + tail (with two inserted separator blanks; see the large-input handling subsection above), the top label is prefixed with a bold, dark-red marker giving the original entropy byte length, formatted as `truncated(N bytes) `. The full top label thus reads `truncated(N bytes) <Type>: <prefix>...`. Examples: `truncated(200 bytes) hex(200):`, `truncated(1024 bytes) b64(1024):`.
+    **Large-input truncation marker.** When the input exceeds 512 bits and the text channel is reduced to head + middle slices + tail (with two inserted separator blanks; see the large-input handling subsection above), the top label is prefixed with a bold, dark-red marker `part of `. The full top label thus reads `part of <Type>: <prefix>...`. Examples: `part of hex(200):`, `part of b64(1024):`. The original entropy byte length is not repeated in the marker because it is already conveyed by the type-label parenthetical (`hex(N)`, `b64(N)`, etc.) immediately following.
 
     The marker MUST be rendered with these visual attributes, distinct from the rest of the top label:
 
     * **Font weight:** bold (`font-weight="bold"`).
     * **Fill color:** `#a00000` (a dark, desaturated red chosen for contrast against the white bounding rect background and reasonable visibility under deuteranopia/protanopia; its Oklab L is ~0.43, which gives it clear separation from the `#666` of the rest of the label). Implementations MAY substitute a different dark red provided that (a) it satisfies WCAG AA contrast against white, (b) its Oklab L lies in `[0.35, 0.55]`, and (c) it remains clearly hue-distinct from the rest of the label under common CVD simulations.
     * **Font size:** same as the rest of the label (the hex-equivalent rendered size).
-    * **Anchor:** rendered as the first segment of the top label, immediately followed by a single space and then the rest of the label in the standard `#666666` non-bold style. The `truncated(N bytes)` segment and the rest of the label are conceptually two SVG `<tspan>` elements within one `<text>` element (or two adjacent `<text>` elements positioned end-to-end), so the entire top label still reads left-to-right as a single visual unit.
+    * **Anchor:** rendered as the first segment of the top label, immediately followed by a single space and then the rest of the label in the standard `#666666` non-bold style. The `part of` segment and the rest of the label are conceptually two SVG `<tspan>` elements within one `<text>` element (or two adjacent `<text>` elements positioned end-to-end), so the entire top label still reads left-to-right as a single visual unit.
 
-    The marker communicates *what* the middle cells are — namely, that the cells display the head, a small fingerprint-selected sample from the middle, and the tail of the input, NOT a linear scan. A reading user encountering `truncated(N bytes)` should:
+    The marker communicates *what* the middle cells are — namely, that the cells display the head, a small fingerprint-selected sample from the middle, and the tail of the input, NOT a linear scan. A reading user encountering `part of` should:
 
     1. Understand that two inputs sharing all 22 cells of text are not necessarily byte-identical (only the head, the middle slices at four specific offsets, and the tail are guaranteed to match).
     2. Compare the fingerprint-driven channels (surround pattern, blank-cell positions, color bar, ellipse overlay, quartile marks) as carefully as — or more carefully than — the text channel.
-    3. Treat `N` as a useful corroborating fact: two inputs of meaningfully different byte length cannot possibly be the same input, regardless of how their cells appear to match.
+    3. Treat the byte count `N` from the type-label parenthetical (e.g. `hex(200)`) as a useful corroborating fact: two inputs of meaningfully different byte length cannot possibly be the same input, regardless of how their cells appear to match.
 
     The head-byte-only or tail-byte-only collision attacks that were sufficient against v4 are no longer sufficient against v5: an attacker must also produce matching bytes at the fingerprint-selected middle offsets, and those offsets shift as a function of the full input. See `threat-model.md` and adversarial review finding F5 for context.
 
