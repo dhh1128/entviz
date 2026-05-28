@@ -32,10 +32,14 @@ def _font_size_px(el):
 
 
 def _cell_text_pxs(svg):
+    # v5: color-bar band letters also use text-anchor="middle". Exclude
+    # them via the data-color-bar-letter marker so this stays a pure
+    # cell-text check.
     return [
         _font_size_px(t)
         for t in svg.xpath('//*[local-name()="text"]')
         if t.get("text-anchor") == "middle"
+        and t.get("data-color-bar-letter") != "true"
     ]
 
 
@@ -74,7 +78,8 @@ def test_hex_text_fits_inside_nucleus():
     # monospace char is ~7.2 px wide and 6 chars need ~43 px — fits.
     svg = _doc(render("deadbeefdeadbeef"))
     texts = [t for t in svg.xpath('//*[local-name()="text"]')
-             if t.get("text-anchor") == "middle"]
+             if t.get("text-anchor") == "middle"
+             and t.get("data-color-bar-letter") != "true"]
     # All cell texts use the same font size and are centered in 48-px
     # nuclei; with a ~0.6 char-width ratio, 6 chars × 0.6 × 12 px ≈
     # 43.2 px, leaving ~4.8 px of slack. We can't measure rendered

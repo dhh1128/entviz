@@ -48,8 +48,10 @@ def test_rendered_hex_cells_use_lowercase():
     """The cell text in a rendered hex entviz should be lowercase."""
     svg = render("a1b2c3d4e5f6a7b8")
     doc = etree.fromstring(svg.encode())
+    # v5: color-bar band letters are uppercase by design; exclude them.
     texts = [t.text for t in doc.xpath('//*[local-name()="text"]')
-             if t.get("text-anchor") == "middle" and t.text]
+             if t.get("text-anchor") == "middle" and t.text
+             and t.get("data-color-bar-letter") != "true"]
     assert texts, "no cell text found"
     for t in texts:
         # Letters in cell text should all be lowercase.
@@ -63,8 +65,10 @@ def test_rendered_uppercase_hex_input_displays_lowercase():
     lowercase after normalization."""
     svg = render("DEADBEEFCAFEBABE")
     doc = etree.fromstring(svg.encode())
+    # v5: color-bar band letters are uppercase by design; exclude them.
     texts = [t.text for t in doc.xpath('//*[local-name()="text"]')
-             if t.get("text-anchor") == "middle" and t.text]
+             if t.get("text-anchor") == "middle" and t.text
+             and t.get("data-color-bar-letter") != "true"]
     for t in texts:
         for c in t:
             if c.isalpha():

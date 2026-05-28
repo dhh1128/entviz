@@ -61,8 +61,10 @@ def test_text_baseline_inside_nucleus():
     At 12pt, nucleus is 20 px tall; with central baseline at nucleus center,
     descenders (~25% of em) fit inside the nucleus."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    # v5: color-bar band letters also use text-anchor="middle"; exclude.
     texts = [t for t in svg.xpath('//*[local-name()="text"]')
-             if t.get("text-anchor") == "middle"]
+             if t.get("text-anchor") == "middle"
+             and t.get("data-color-bar-letter") != "true"]
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20

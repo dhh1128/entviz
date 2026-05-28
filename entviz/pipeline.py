@@ -167,6 +167,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     renderer = Renderer(style, grid)
 
     svg = canvas(bounding_rect.size)
+    # v5: data-* attributes on the root SVG let an overlay (e.g. the
+    # Idea-2 React component) discover structure without re-deriving it
+    # from raw geometry. data-truncated is OMITTED when false (not
+    # rendered as ="false") so a missing attribute reads as the absence
+    # of the property.
+    svg.set("data-entviz-version", "v5")
+    svg.set("data-input-bytes", str(len(raw_input.encode("utf-8"))))
+    svg.set("data-cols", str(grid.cols))
+    svg.set("data-rows", str(grid.rows))
+    if is_truncated:
+        svg.set("data-truncated", "true")
     # <defs> first so gradients, clipPath, and future symbols appear at
     # the top of the SVG. Order of definitions inside <defs> doesn't
     # matter for SVG rendering, but consolidating them early keeps the
@@ -191,9 +202,20 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     draw_rect(svg, bounding_rect, '#ffffff')
+
+    # v5: introduce channel groups so an overlay can find each visual
+    # subsystem by name (data-channel="..."). The groups are pure
+    # metadata — they have no transform, fill, or opacity, so they do
+    # not affect rendering. The depth-first document order of leaf
+    # elements is preserved exactly, which is what every existing
+    # layering test relies on. The ellipse group is nested inside the
+    # grid group (between edges and nuclei) so layering is preserved
+    # while still being a queryable channel on its own.
+    grid_g = etree.SubElement(svg, 'g', **{"data-channel": "grid"})
+
     # Entviz background color (from median ftok) fills the grid_rect so
     # blank cells show that color rather than the white bounding-rect fill.
-    draw_rect(svg, grid_rect, style.bg_color)
+    draw_rect(grid_g, grid_rect, style.bg_color)
 
     # Build the token→cell map once so both render passes can reuse it.
     # nucleus_bg is precomputed here so the edges pass can use it for the
@@ -213,21 +235,55 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         nucleus_bg, _ = get_nucleus_colors(token.quant)
         token_cells.append((token, used_ftoks[token.index], cell, ci, nucleus_bg))
 
+    # v5: pre-allocate per-cell groups for the nucleus / blank-marker /
+    # quartile layer (Layer 3+) keyed by cell-index. Cells are created
+    # in reading order so the document-order traversal of "//*" still
+    # walks them as 0,1,2,...; that order is required by overlays that
+    # use cell-index as an iteration key. Edges remain a single flat
+    # batch (Layer 1) so the "all edges before any nucleus" invariant
+    # still holds after the ellipse layer.
+    used_cell_indices = set(cell_indices.values())
+
     # Layer 1: every cell's edge shapes, all drawn before any nucleus or
     # overlay element. This is required because the ellipse overlay
     # (Phase 12) must sit on top of all edges but below all nuclei across
-    # the whole grid.
+    # the whole grid. Wrapped in an internal group for tidiness; the
+    # group itself is purely organizational (no data-channel attribute
+    # so React queries don't see it as a separate channel).
+    edges_g = etree.SubElement(grid_g, 'g')
     for token, ftok, cell, ci, nucleus_bg in token_cells:
-        renderer.render_edges(svg, ftok, cell, nucleus_bg=nucleus_bg)
+        renderer.render_edges(edges_g, ftok, cell, nucleus_bg=nucleus_bg)
 
     # Layer 2: ellipse overlay derived from raw digest bytes 60-63,
-    # clipped to the bounding rect.
+    # clipped to the grid rect. Wrapped in its own data-channel group
+    # carrying the ellipse parameters as data-* so an overlay can find
+    # the silhouette without re-deriving it from the digest.
     digest = compute_fingerprint(core)
     _draw_ellipse_overlay(
-        svg, defs, digest, bounding_rect, grid_rect,
+        grid_g, defs, digest, bounding_rect, grid_rect,
         cell_w=cell_width, cell_h=cell_height,
         bg_color=style.bg_color, clip_id=clip_id,
     )
+
+    # v5: per-cell groups inside the grid, in reading order. Each group
+    # carries data-cell-index/row/col plus optional data-cell-blank,
+    # data-cell-quartile, data-cell-blank-marker. The nucleus, text,
+    # quartile-mark, and blank-marker children get attached to the
+    # appropriate group below.
+    nuclei_g = etree.SubElement(grid_g, 'g')  # holds all cell groups
+    cell_groups = {}
+    for ci in range(grid.cols * grid.rows):
+        col = ci % grid.cols
+        row = ci // grid.cols
+        attrs = {
+            "data-channel": "cell",
+            "data-cell-index": str(ci),
+            "data-cell-row": str(row),
+            "data-cell-col": str(col),
+        }
+        if ci not in used_cell_indices:
+            attrs["data-cell-blank"] = "true"
+        cell_groups[ci] = etree.SubElement(nuclei_g, 'g', **attrs)
 
     # V3-4: per-token cell-text rendered size. Reference drives all
     # geometry; rendered size shrinks for hex (6-char tokens) so the
@@ -242,14 +298,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
     for token, ftok, cell, ci, _nucleus_bg in token_cells:
-        renderer.render_nucleus(svg, token, cell, text_size_px=cell_text_px)
+        renderer.render_nucleus(
+            cell_groups[ci], token, cell, text_size_px=cell_text_px
+        )
 
     # Layer 3b: blank cells — every cell index in the grid that no token
     # was placed at. Each blank cell shows a bicolor ring centered in
     # the cell, plus two pointer markers indicating the minftok and
     # maxftok cells (the used ftoks with smallest / largest 24-bit
     # quant values; tie-break = highest cell index).
-    used_cell_indices = set(cell_indices.values())
 
     def _cell_center(ci):
         col = ci % grid.cols
@@ -305,8 +362,13 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             continue  # mid-run blank — leave truly empty
         prev_was_blank = True
         cx, cy = _cell_center(ci)
+        cg = cell_groups[ci]
+        # v5: flag the first cell in each blank run as the marker-bearing
+        # cell so an overlay can distinguish marker cells from mid-run
+        # blanks (which are truly empty).
+        cg.set("data-cell-blank-marker", "true")
         etree.SubElement(
-            svg, 'circle',
+            cg, 'circle',
             cx=str(cx), cy=str(cy), r=str(nominal_radius),
             fill='#ffffff', stroke='#000000',
             **{'stroke-width': '1'},
@@ -314,7 +376,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         # Long hand → maxftok direction.
         angle_max = math.atan2(max_target[1] - cy, max_target[0] - cx)
         etree.SubElement(
-            svg, 'line',
+            cg, 'line',
             x1=str(cx), y1=str(cy),
             x2=str(cx + long_hand_len * math.cos(angle_max)),
             y2=str(cy + long_hand_len * math.sin(angle_max)),
@@ -327,7 +389,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         tip_x = cx + short_hand_len * math.cos(angle_min)
         tip_y = cy + short_hand_len * math.sin(angle_min)
         etree.SubElement(
-            svg, 'line',
+            cg, 'line',
             x1=str(cx), y1=str(cy),
             x2=str(tip_x), y2=str(tip_y),
             stroke='#000000',
@@ -335,7 +397,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         )
         # Tip circle at the short hand's end.
         etree.SubElement(
-            svg, 'circle',
+            cg, 'circle',
             cx=str(tip_x), cy=str(tip_y), r=str(tip_radius),
             fill='#ffffff', stroke='#000000',
             **{'stroke-width': '1'},
@@ -359,7 +421,13 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         if token is None:
             continue
         _bg, fg_color = get_nucleus_colors(token.quant)
-        renderer.draw_quartile_mark(svg, cell, q_idx, fg_color)
+        # v5: emit the mark into the cell's group, and tag the group
+        # with the quartile index (1..4). Quartile index here is 0-based;
+        # the data-* attribute is 1-based to match the human convention
+        # "1st/2nd/3rd/4th quartile".
+        cg = cell_groups[ci]
+        cg.set("data-cell-quartile", str(q_idx + 1))
+        renderer.draw_quartile_mark(cg, cell, q_idx, fg_color)
 
     # Layer 5a: color bar inside its inset rect (x=1, width=box_height).
     # Bands proportional to count^4 of each edge color (V3-1); empty
@@ -368,6 +436,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     _draw_color_bar(
         svg, color_bar_rect, gm,
         _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
+        box_height=box_height,
     )
 
     # Layer 5b: top / bottom label strips. The top strip is always drawn
@@ -409,16 +478,21 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     Top is left-aligned to grid_rect.left; bottom is right-aligned to
     grid_rect.right (so the ellipses on each point inward toward the
     cells).
+
+    v5: each strip is wrapped in its own data-channel group
+    ("label-top" / "label-bottom") so an overlay can highlight or
+    suppress the labels independently.
     """
     style = f"font-family: monospace; font-size: {text_size_px}px;"
     # Top strip — always.
+    top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
     top_text = f"{type_name}:"
     if prefix:
         top_text += f" {prefix}..."
     # Vertical center of the top strip is at grid_rect.top - GM - nucleus_height/2.
     top_cy = grid_rect.top - gm - nucleus_height / 2
     el = etree.SubElement(
-        svg, 'text',
+        top_g, 'text',
         x=str(grid_rect.left), y=str(top_cy),
         fill='#666666', style=style,
         **{"dominant-baseline": "central"},
@@ -426,10 +500,11 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     el.text = top_text
     # Bottom strip — only when suffix exists.
     if suffix:
+        bottom_g = etree.SubElement(svg, 'g', **{"data-channel": "label-bottom"})
         bottom_text = f"...{suffix}"
         bottom_cy = grid_rect.bottom + gm + nucleus_height / 2
         el = etree.SubElement(
-            svg, 'text',
+            bottom_g, 'text',
             x=str(grid_rect.right), y=str(bottom_cy),
             fill='#666666', style=style,
             **{"text-anchor": "end", "dominant-baseline": "central"},
@@ -647,7 +722,22 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     fill, opacity = _ellipse_overlay_for_bg(bg_color)
     # v3 structure restored: <g clip-path><ellipse transform=rotate>.
     # User confirms this rendered flawlessly in v3.
-    clipped = etree.SubElement(svg, 'g', **{"clip-path": f"url(#{clip_id})"})
+    # v5: hoist the ellipse parameters onto the wrapping clip-path group
+    # AND add data-channel="ellipse" so an overlay can grab the anchor
+    # + radii + rotation without parsing the transform string. The
+    # rotation is normalized to [0, 180) degrees.
+    clipped = etree.SubElement(
+        svg, 'g',
+        **{
+            "clip-path": f"url(#{clip_id})",
+            "data-channel": "ellipse",
+            "data-ellipse-anchor-x": str(anchor.x),
+            "data-ellipse-anchor-y": str(anchor.y),
+            "data-ellipse-rx": str(rx),
+            "data-ellipse-ry": str(ry),
+            "data-ellipse-rotation-deg": str(rotation_deg),
+        },
+    )
     etree.SubElement(
         clipped, 'ellipse',
         cx=str(anchor.x), cy=str(anchor.y),
@@ -670,7 +760,20 @@ def _two_bit_color_usage(digest: bytes, edge_colors) -> dict:
     return {edge_colors[i]: counts[i] for i in range(4)}
 
 
-def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
+# v5: palette → uppercase band letter mapping. Used by the color-bar
+# letter rendering; an overlay component (Idea 2) can also consume the
+# data-color-bar-band="<letter>" attribute without re-deriving this map.
+_BAND_LETTER_BY_COLOR = {
+    "#ffffff": "W",
+    "#ffd966": "G",
+    "#ff3f2f": "R",
+    "#2f3fbf": "B",
+    "#000000": "K",
+}
+
+
+def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
+                    box_height=None):
     """
     Draw color-bar bands inside bar_rect's drawing region.
 
@@ -681,6 +784,13 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
 
     Band heights are weighted by `count^4` (V3-1). The `gm` parameter is
     accepted for backwards-compatible call signatures but unused.
+
+    v5: each band group carries data-color-bar-band="<W|G|R|B|K>" plus
+    data-color-bar-rank="<0..3>" (rank 0 = top / largest), and a
+    centered uppercase letter is rendered inside each band.
+    `box_height` lets callers pin the letter font-size minimum to
+    0.5 · box_height; if omitted, the minimum is derived from the bar
+    width instead (kept for backwards-compatible call signatures).
     """
     used = [
         (c, color_usage.get(c, 0))
@@ -694,16 +804,56 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors):
     color_order = {c: i for i, c in enumerate(edge_colors)}
     used.sort(key=lambda x: (-x[1], color_order[x[0]]))
     total = sum(n ** 4 for _, n in used)
+    bar_g = etree.SubElement(svg, 'g', **{"data-channel": "color-bar"})
+    # Letter font-size minimum: 0.5 · box_height so the letter stays
+    # legible on the smallest band. box_height defaults to bar_rect.width
+    # if not provided (the bar width equals box_height in current geometry).
+    min_font = 0.5 * (box_height if box_height is not None else bar_rect.size.width)
+    bar_cx = bar_rect.left + bar_rect.size.width / 2
     y = bar_rect.top
     for i, (color, n) in enumerate(used):
         is_last = i == len(used) - 1
         # Pin the last band to exactly cover the remaining height so any
         # floating-point drift doesn't leave a gap or overflow.
         h = (bar_rect.bottom - y) if is_last else bar_rect.size.height * (n ** 4) / total
+        letter = _BAND_LETTER_BY_COLOR.get(color)
+        band_attrs = {"data-color-bar-rank": str(i)}
+        if letter is not None:
+            band_attrs["data-color-bar-band"] = letter
+        band_g = etree.SubElement(bar_g, 'g', **band_attrs)
         etree.SubElement(
-            svg, 'rect',
+            band_g, 'rect',
             x=str(bar_rect.left), y=str(y),
             width=str(bar_rect.size.width), height=str(h),
             fill=color,
         )
+        # Centered uppercase letter. Font color follows the existing
+        # Oklab L < 0.6 contrast rule used for cell text; this gives
+        # black-on-{white,gold,red} and white-on-{blue,black} for the
+        # five palette colors (red sits at L≈0.66, just above the
+        # threshold, so the rule selects black text — if the maintainer
+        # wants white-on-red, the threshold needs adjusting, not this
+        # call site). Only emit a letter for palette colors; tests that
+        # pass synthetic colors (e.g. "#a") skip the letter rendering.
+        if letter is not None:
+            from .colors import get_nucleus_colors
+            r = int(color[1:3], 16)
+            g = int(color[3:5], 16)
+            b = int(color[5:7], 16)
+            quant = r | (g << 8) | (b << 16)
+            _bg, fg = get_nucleus_colors(quant)
+            font_size = max(round(h * 0.6), min_font)
+            cy = y + h / 2
+            text_el = etree.SubElement(
+                band_g, 'text',
+                x=str(bar_cx), y=str(cy),
+                fill=fg,
+                style=f"font-family: monospace; font-size: {font_size}px;",
+                **{
+                    "text-anchor": "middle",
+                    "dominant-baseline": "central",
+                    "data-color-bar-letter": "true",
+                },
+            )
+            text_el.text = letter
         y += h
