@@ -58,6 +58,14 @@ dev = [
 docs = [
     "zensical",
 ]
+# SVG rasterizer for development/authoring only (visual confirmation of spec
+# changes, gallery PNG/PDF artifacts, CVD spot-checks). Opt-in group — never a
+# runtime dependency of the shipped library, which only emits SVG. Use with
+# `uv run --group render ...`. Requires system libcairo to be present.
+render = [
+    "cairosvg",
+    "numpy",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
