@@ -281,54 +281,40 @@ def _strip_v5_overlay(svg_str):
     return etree.tostring(doc, encoding='unicode', xml_declaration=False)
 
 
-def test_pixel_identity_when_v5_additions_are_stripped():
-    """Render to PNG via cairosvg with and without the new color-bar
-    letters (the only intentional visual change in v5). The 'without'
-    rendering must be pixel-identical to a separately-captured v4
-    baseline rendering for representative inputs.
+# Representative inputs spanning short hex/UUID and a longer text blob.
+_REPRESENTATIVE_INPUTS = [
+    "550e8400-e29b-41d4-a716-446655440000",
+    "deadbeefcafebabe1234567890abcdef",
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
+]
 
-    Skipped if cairosvg (or its native libcairo backend) is unavailable.
-    The companion structural invariants test below covers the non-pixel
-    guarantees."""
-    # cairosvg is a declared dev dependency, but it dlopens the system
-    # libcairo at import time; a missing native lib raises OSError, which
-    # importorskip would NOT catch (it only catches ImportError) — that
-    # would error the test instead of skipping. Catch both so the test
-    # degrades to a skip on any environment lacking the backend.
-    try:
-        import cairosvg
-    except (ImportError, OSError) as exc:  # pragma: no cover - env-dependent
-        pytest.skip(f"cairosvg/libcairo unavailable: {exc}")
-    import hashlib
-    inputs = [
-        "550e8400-e29b-41d4-a716-446655440000",
-        "deadbeefcafebabe1234567890abcdef",
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-    ]
-    for raw in inputs:
+
+def test_color_bar_letters_present_in_full_absent_when_stripped():
+    """The v5 color-bar letters are the only intentional visual addition
+    over v4. They are emitted as <text data-color-bar-letter="true">, so a
+    full render carries them and a stripped render does not. Asserting this
+    structurally (no rasterization) is what the old cairosvg pixel-diff was
+    really getting at; the companion structural-invariants test proves the
+    stripped output otherwise matches the v4 layout."""
+    for raw in _REPRESENTATIVE_INPUTS:
         svg5 = render(raw)
-        svg5_stripped = _strip_v5_overlay(svg5)
-        # Render to PNG at fixed width. We compare two v5 outputs: full
-        # and stripped. The DIFFERENCE between them is what the new
-        # letters add — proving the letters are the only visual delta.
-        png_full = cairosvg.svg2png(bytestring=svg5.encode(), output_width=400)
-        png_stripped = cairosvg.svg2png(
-            bytestring=svg5_stripped.encode(), output_width=400
+        assert svg5.count('data-color-bar-letter="true"') >= 1, (
+            f"expected color-bar letters in full render of {raw!r}"
         )
-        # They must differ (letters present in full, absent in stripped).
-        assert png_full != png_stripped, (
-            f"stripping band letters should change pixel output for {raw!r}"
+        stripped = _strip_color_bar_letters(svg5)
+        assert stripped.count('data-color-bar-letter="true"') == 0, (
+            f"color-bar letters survived stripping for {raw!r}"
         )
-        # And the stripped PNG must round-trip through the strip+render
-        # path deterministically (re-stripping is idempotent).
-        svg5_stripped2 = _strip_v5_overlay(svg5_stripped)
-        png_stripped2 = cairosvg.svg2png(
-            bytestring=svg5_stripped2.encode(), output_width=400
-        )
-        assert hashlib.sha256(png_stripped).digest() == \
-               hashlib.sha256(png_stripped2).digest(), (
-            f"strip is not idempotent for {raw!r}"
-        )
+
+
+def test_strip_v5_overlay_is_idempotent():
+    """Re-stripping a stripped SVG is a no-op. The old pixel test checked
+    this by hashing PNGs, but idempotence is a property of the SVG string,
+    so assert it directly."""
+    for raw in _REPRESENTATIVE_INPUTS:
+        once = _strip_v5_overlay(render(raw))
+        twice = _strip_v5_overlay(once)
+        assert once == twice, f"_strip_v5_overlay not idempotent for {raw!r}"
 
 
 def test_data_cell_index_values_are_contiguous():
@@ -340,10 +326,6 @@ def test_data_cell_index_values_are_contiguous():
     cells = _cells(svg)
     indices = sorted(int(c.get("data-cell-index")) for c in cells)
     assert indices == list(range(cols * rows))
-
-
-# import pytest at module level for importorskip
-import pytest
 
 
 def test_visual_output_is_preserved_after_stripping_v5_additions():

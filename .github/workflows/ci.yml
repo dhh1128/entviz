@@ -16,12 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Install system libs for cairosvg
-        # cairosvg (a dev dependency) dlopens libcairo at import time; install
-        # it so the SVG->PNG pixel-identity test actually runs rather than
-        # skipping. The test still skips gracefully if this is ever absent.
-        run: sudo apt-get update && sudo apt-get install -y libcairo2
-
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:

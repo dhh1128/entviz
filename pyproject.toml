@@ -51,11 +51,6 @@ packages = ["src/entviz"]
 [dependency-groups]
 dev = [
     "pytest>=8",
-    # Used by the SVG->PNG pixel-identity test in
-    # tests/test_v5_data_attributes.py. Requires the system libcairo2 to be
-    # present; the test still importorskips so a missing system lib degrades
-    # gracefully rather than failing collection.
-    "cairosvg>=2.7",
 ]
 
 [tool.pytest.ini_options]
