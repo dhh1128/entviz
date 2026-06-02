@@ -287,9 +287,18 @@ def test_pixel_identity_when_v5_additions_are_stripped():
     rendering must be pixel-identical to a separately-captured v4
     baseline rendering for representative inputs.
 
-    Skipped if cairosvg is unavailable. The companion structural
-    invariants test below covers the non-pixel guarantees."""
-    cairosvg = pytest.importorskip("cairosvg")
+    Skipped if cairosvg (or its native libcairo backend) is unavailable.
+    The companion structural invariants test below covers the non-pixel
+    guarantees."""
+    # cairosvg is a declared dev dependency, but it dlopens the system
+    # libcairo at import time; a missing native lib raises OSError, which
+    # importorskip would NOT catch (it only catches ImportError) — that
+    # would error the test instead of skipping. Catch both so the test
+    # degrades to a skip on any environment lacking the backend.
+    try:
+        import cairosvg
+    except (ImportError, OSError) as exc:  # pragma: no cover - env-dependent
+        pytest.skip(f"cairosvg/libcairo unavailable: {exc}")
     import hashlib
     inputs = [
         "550e8400-e29b-41d4-a716-446655440000",
