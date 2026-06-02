@@ -10,6 +10,11 @@ Usage:
                                                           #   (must be > current; a
                                                           #    major jump > 1 needs
                                                           #    --allow-major-jump)
+    uv run python scripts/release.py --no-bump            # tag the CURRENT version
+                                                          #   as-is (no bump, no
+                                                          #    commit) — for the first
+                                                          #    release of a version
+                                                          #    already on main
 
 The library version is single-sourced in src/entviz/__init__.py (`__version__`);
 this script edits that one line and hatch derives the package version from it.
@@ -111,6 +116,14 @@ def check_in_sync():
         )
 
 
+def check_tag_absent(tag):
+    """Refuse to clobber an existing release tag (locally or on origin)."""
+    if run(["git", "tag", "--list", tag], capture=True).stdout.strip():
+        sys.exit(f"Tag {tag} already exists locally. Delete it or choose another version.")
+    if run(["git", "ls-remote", "--tags", "origin", tag], capture=True).stdout.strip():
+        sys.exit(f"Tag {tag} already exists on origin. Choose another version.")
+
+
 def run_tests():
     print("Running tests (uv run pytest)...")
     run(["uv", "run", "pytest"])
@@ -167,6 +180,12 @@ def main():
         "--set", dest="explicit", metavar="X.Y.Z", default=None,
         help="set an explicit version instead of bumping; must be > current",
     )
+    group.add_argument(
+        "--no-bump", dest="no_bump", action="store_true",
+        help="release the CURRENT version as-is (no version change, no commit) — "
+             "just tag HEAD and push the tag. Use for the first release of a "
+             "version that is already on main (e.g. v0.5.0).",
+    )
     parser.add_argument(
         "--allow-major-jump", action="store_true",
         help="permit --set to raise the major version by more than one step",
@@ -175,36 +194,49 @@ def main():
     args = parser.parse_args()
 
     old = current_version()
-    if args.explicit:
+    if args.no_bump:
+        new = old
+        label = "no-bump"
+    elif args.explicit:
         new = parse_explicit_version(args.explicit, old, allow_major_jump=args.allow_major_jump)
         label = "set"
     else:
         label = args.part or "patch"
         new = bump(old, label)
 
+    tag = f"v{new}"
+
     if args.message:
         message = args.message
     elif label == "patch":
         message = "misc fixes/enhancements"
+    elif label == "no-bump":
+        message = f"release {tag}"
     else:
         message = prompt_message(label)
 
     check_branch()
     check_clean()
     check_in_sync()
+    check_tag_absent(tag)
     run_tests()
 
-    tag = f"v{new}"
-    verb = "Setting" if args.explicit else "Bumping"
-    print(f"{verb} {old} -> {new}")
-    set_version(new)
-    warn_spec_minor_mismatch(new)
-    regenerate_gallery()
+    if args.no_bump:
+        # Nothing to bump or regenerate: the version is already on main, so we
+        # only tag the current (already-pushed) HEAD and push the tag.
+        print(f"Releasing current version {new} (no bump)")
+        warn_spec_minor_mismatch(new)
+    else:
+        verb = "Setting" if args.explicit else "Bumping"
+        print(f"{verb} {old} -> {new}")
+        set_version(new)
+        warn_spec_minor_mismatch(new)
+        regenerate_gallery()
+        run(["git", "add", "src/entviz/__init__.py", "docs"])
+        # DCO sign-off (we work in DCO-enforced repos and sign every commit).
+        run(["git", "commit", "-s", "-m", f"Release {tag}: {message}"])
+        run(["git", "push", "origin", "main"])
 
-    run(["git", "add", "src/entviz/__init__.py", "docs"])
-    # DCO sign-off (we work in DCO-enforced repos and sign every commit).
-    run(["git", "commit", "-s", "-m", f"Release {tag}: {message}"])
-    run(["git", "push", "origin", "main"])
     run(["git", "tag", "-a", tag, "-m", f"Release {tag}: {message}"])
     run(["git", "push", "origin", tag])
 
