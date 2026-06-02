@@ -12,9 +12,10 @@ Each fix is intentionally narrow:
     64-bit collision resistance).
   * F-A4: root <svg> carries a viewBox attribute matching its
     width/height so responsive embeds scale correctly.
-  * F-A5: font-family is a documented fallback chain across DejaVu Sans
-    Mono / Consolas / Menlo / Liberation Mono / monospace, not bare
-    `monospace` (which lets each viewer's OS pick its own glyph metrics).
+  * F-A5: font-family is a documented cross-platform fallback chain
+    (JetBrains Mono / Menlo / Consolas / DejaVu Sans Mono / Liberation
+    Mono / Roboto Mono / Noto Sans Mono / monospace), not bare `monospace`
+    (which lets each viewer's OS pick its own glyph metrics).
 """
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -35,7 +36,8 @@ from entviz.entropy import (
 from entviz.pipeline import render
 
 
-FONT_CHAIN = '"DejaVu Sans Mono", "Consolas", "Menlo", "Liberation Mono", monospace'
+FONT_CHAIN = ('"JetBrains Mono", "Menlo", "Consolas", "DejaVu Sans Mono", '
+              '"Liberation Mono", "Roboto Mono", "Noto Sans Mono", monospace')
 
 
 # ---------------------------------------------------------------------------

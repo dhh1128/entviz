@@ -152,8 +152,8 @@ def test_top_label_left_aligned_to_grid():
     svg = _doc(render("0x742d35cc6634c0532925a3b844bc454e4438f44e"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    # At 12pt with 7-token Ethereum, grid_rect.left = 17.
-    assert float(top.get("x")) == 17
+    # At 12pt with 7-token Ethereum, grid_rect.left = 27 (v6 bar_width=20).
+    assert float(top.get("x")) == 27
     assert top.get("text-anchor") in (None, "start")
 
 

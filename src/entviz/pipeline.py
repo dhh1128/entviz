@@ -140,18 +140,22 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     cell_width = nucleus_width + 2 * box_width
     cell_height = nucleus_height + 2 * box_height
     gm = box_height / 2
+    # v6: the color bar is its own geometry term, twice box_height wide, so
+    # its per-band color letters render legibly (v5 reused box_height = 10px,
+    # too narrow for the letters). bar_width = 2·box_height = 1.25·font_size_px.
+    bar_width = 2 * box_height
 
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
-    # Bounding rect dimensions (v4):
-    #   width  = 1 + box_height + 1 + GM + grid_width + GM + 1
+    # Bounding rect dimensions (v6):
+    #   width  = 1 + bar_width + 1 + GM + grid_width + GM + 1
     #   height = 1 + GM + nucleus_height + GM + grid_height
     #              + [GM + nucleus_height +] GM + 1
     # The top "type label" strip is always present (the entviz declares
     # the detected type / alphabet). The bottom "suffix label" strip
     # appears only when the parsed result has a suffix.
-    bounding_w = 1 + box_height + 1 + gm + grid_w + gm + 1
+    bounding_w = 1 + bar_width + 1 + gm + grid_w + gm + 1
     has_suffix_label = bool(suffix)
     suffix_strip_h = nucleus_height + gm if has_suffix_label else 0
     bounding_h = (
@@ -161,15 +165,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # grid_rect sits below the top label strip.
     grid_rect = Rect(
-        Point(1 + box_height + 1 + gm, 1 + gm + nucleus_height + gm),
+        Point(1 + bar_width + 1 + gm, 1 + gm + nucleus_height + gm),
         Size(grid_w, grid_h),
     )
 
-    # Color bar drawing region: x=1, width=box_height; y starts at 1
+    # Color bar drawing region: x=1, width=bar_width; y starts at 1
     # (just below the top border) and ends at bounding_h - 1 (just
     # above the bottom border), so its drawable height is bounding_h - 2.
     color_bar_rect = Rect(
-        Point(1, 1), Size(box_height, bounding_h - 2),
+        Point(1, 1), Size(bar_width, bounding_h - 2),
     )
 
     renderer = Renderer(style, grid)
@@ -319,17 +323,20 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         )
 
     # Layer 3b: blank cells — every cell index in the grid that no token
-    # was placed at. Each blank cell shows a bicolor ring centered in
-    # the cell, plus two pointer markers indicating the minftok and
-    # maxftok cells (the used ftoks with smallest / largest 24-bit
-    # quant values; tie-break = highest cell index).
+    # was placed at. v6: each blank cell shows a black-outlined rounded
+    # rectangle coincident with the nucleus rect. The FIRST blank cell (the
+    # lowest cell index) additionally becomes a "map": a miniature scale
+    # model of the grid, filled (white, or gold on a white-bg entviz), with
+    # a red dot at the maxftok cell's grid position and a blue dot at the
+    # minftok cell's. This replaces v5's white-disc + clock hands and its
+    # mix-blend-mode dependence, closing adversarial finding F-A6 here.
 
-    def _cell_center(ci):
+    def _cell_nucleus_origin(ci):
         col = ci % grid.cols
         row = ci // grid.cols
         return (
-            grid_rect.left + col * cell_width + cell_width / 2,
-            grid_rect.top + row * cell_height + cell_height / 2,
+            grid_rect.left + col * cell_width + box_width,
+            grid_rect.top + row * cell_height + box_height,
         )
 
     # Identify minftok / maxftok cells. used_ftoks[i] corresponds to
@@ -346,78 +353,64 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     max_ftok_cell_idx = max(
         used_ftok_cells, key=lambda fc: (fc[0].quant, fc[1])
     )[1]
-    min_target = _cell_center(min_ftok_cell_idx)
-    max_target = _cell_center(max_ftok_cell_idx)
 
-    # Ring geometry: white disc with 1-px black outline at
-    # nucleus_width/4 + 5 = 17 at 12pt. Direction is conveyed by two
-    # clock hands from the ring center:
-    #   * Long hand (radius + 1, white stroke + mix-blend-mode: difference)
-    #     → angle of maxftok cell. The white stroke inverts to black on
-    #     the white disc interior and to a single white pixel where it
-    #     crosses the black rim — that "notch" is the angle marker.
-    #   * Short hand (radius / 2, black stroke) → angle of minftok cell,
-    #     terminated by a small white-filled black-stroked tip circle so
-    #     the tip reads as a distinct "circle with white dot inside".
-    nominal_radius = nucleus_width / 4 + 5
-    long_hand_len = nominal_radius + 1
-    short_hand_len = nominal_radius / 2
-    tip_radius = 1.5
+    blank_indices = [ci for ci in range(grid.cols * grid.rows)
+                     if ci not in used_cell_indices]
+    map_cell_idx = min(blank_indices) if blank_indices else None
+    corner_radius = font_size_px / 8     # = 2 at 12pt
+    # The map fill must contrast with whatever background shows behind it:
+    # white on any non-white entviz background, gold on a white one.
+    map_fill = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
 
-    # Decoration rule: render the ring + clock-hands stack only on the
-    # FIRST cell of each run of consecutive blank cells (in reading
-    # order). A trailing run of N blanks shows just one decorated cell;
-    # the rest are truly empty. This keeps larger entropies from
-    # looking cluttered with repeated identical decorations.
-    prev_was_blank = False
-    for ci in range(grid.cols * grid.rows):
-        if ci in used_cell_indices:
-            prev_was_blank = False
-            continue
-        if prev_was_blank:
-            continue  # mid-run blank — leave truly empty
-        prev_was_blank = True
-        cx, cy = _cell_center(ci)
+    for ci in blank_indices:
         cg = cell_groups[ci]
-        # v5: flag the first cell in each blank run as the marker-bearing
-        # cell so an overlay can distinguish marker cells from mid-run
-        # blanks (which are truly empty).
-        cg.set("data-cell-blank-marker", "true")
+        nx, ny = _cell_nucleus_origin(ci)
+        is_map = ci == map_cell_idx
         etree.SubElement(
-            cg, 'circle',
-            cx=str(cx), cy=str(cy), r=str(nominal_radius),
-            fill='#ffffff', stroke='#000000',
+            cg, 'rect',
+            x=str(nx), y=str(ny),
+            width=str(nucleus_width), height=str(nucleus_height),
+            rx=str(corner_radius), ry=str(corner_radius),
+            fill=(map_fill if is_map else 'none'), stroke='#000000',
             **{'stroke-width': '1'},
         )
-        # Long hand → maxftok direction.
-        angle_max = math.atan2(max_target[1] - cy, max_target[0] - cx)
-        etree.SubElement(
-            cg, 'line',
-            x1=str(cx), y1=str(cy),
-            x2=str(cx + long_hand_len * math.cos(angle_max)),
-            y2=str(cy + long_hand_len * math.sin(angle_max)),
-            stroke='#ffffff',
-            style='mix-blend-mode: difference',
-            **{'stroke-width': '1'},
-        )
-        # Short hand → minftok direction.
-        angle_min = math.atan2(min_target[1] - cy, min_target[0] - cx)
-        tip_x = cx + short_hand_len * math.cos(angle_min)
-        tip_y = cy + short_hand_len * math.sin(angle_min)
-        etree.SubElement(
-            cg, 'line',
-            x1=str(cx), y1=str(cy),
-            x2=str(tip_x), y2=str(tip_y),
-            stroke='#000000',
-            **{'stroke-width': '1'},
-        )
-        # Tip circle at the short hand's end.
-        etree.SubElement(
-            cg, 'circle',
-            cx=str(tip_x), cy=str(tip_y), r=str(tip_radius),
-            fill='#ffffff', stroke='#000000',
-            **{'stroke-width': '1'},
-        )
+        if not is_map:
+            continue
+        # Map: subdivide the nucleus rect into cols×rows logical sub-cells
+        # mirroring the grid, then place a red dot (maxftok cell) and a blue
+        # dot (minftok cell) at their matching (row, col) positions.
+        cg.set("data-cell-blank-map", "true")
+        sub_w = nucleus_width / grid.cols
+        sub_h = nucleus_height / grid.rows
+        dot_r = 0.35 * min(sub_w, sub_h)
+
+        def _sub_center(cell_idx):
+            return (nx + (cell_idx % grid.cols + 0.5) * sub_w,
+                    ny + (cell_idx // grid.cols + 0.5) * sub_h)
+
+        max_cx, max_cy = _sub_center(max_ftok_cell_idx)
+        min_cx, min_cy = _sub_center(min_ftok_cell_idx)
+        if max_ftok_cell_idx == min_ftok_cell_idx:
+            # Degenerate (single used ftok): blue ring + concentric red dot
+            # so both remain visible.
+            etree.SubElement(
+                cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
+                fill='none', stroke='#1d4ed8',
+                **{'stroke-width': '1', 'data-blank-map-min': 'true'},
+            )
+            etree.SubElement(
+                cg, 'circle', cx=str(max_cx), cy=str(max_cy), r=str(dot_r * 0.5),
+                fill='#d62828', **{'data-blank-map-max': 'true'},
+            )
+        else:
+            etree.SubElement(
+                cg, 'circle', cx=str(max_cx), cy=str(max_cy), r=str(dot_r),
+                fill='#d62828', **{'data-blank-map-max': 'true'},
+            )
+            etree.SubElement(
+                cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
+                fill='#1d4ed8', **{'data-blank-map-min': 'true'},
+            )
 
     # Layer 4: quartile marks at the cells of the four quartile ftoks
     # (mapped through the 1:1 ftok→token→cell correspondence). The mark
@@ -454,6 +447,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
         box_height=box_height,
     )
+    # (color bar width is bar_width = 2·box_height; the letter-size cap reads
+    # bar_rect.size.width directly, so it picks up the wider bar automatically.)
 
     # Layer 5b: top / bottom label strips. The top strip is always drawn
     # ("<Type>:" or "<Type>: <prefix>..."). The bottom strip appears only
@@ -468,7 +463,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
 
     # Gray border lines (#808080) on all four sides of the bounding rect,
-    # plus an interior vertical separator at x = 1 + box_height + 0.5 (the
+    # plus an interior vertical separator at x = 1 + bar_width + 0.5 (the
     # color bar's right edge). Each line is centered on a half-pixel so a
     # 1-px stroke covers exactly one pixel column/row crisply; the four
     # outer lines extend the full canvas width/height so the corner
@@ -479,8 +474,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     _draw_border_line(svg, bounding_w - 0.5, 0, bounding_w - 0.5, bounding_h)        # right
     _draw_border_line(svg, 0, bounding_h - 0.5, bounding_w, bounding_h - 0.5)        # bottom
     _draw_border_line(svg, 0.5, 0, 0.5, bounding_h)                                  # left
-    _draw_border_line(svg, 1 + box_height + 0.5, 0,
-                      1 + box_height + 0.5, bounding_h)                               # interior separator
+    _draw_border_line(svg, 1 + bar_width + 0.5, 0,
+                      1 + bar_width + 0.5, bounding_h)                                # interior separator
 
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
@@ -770,12 +765,16 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
         (grid_rect.right, grid_rect.bottom),
     ]
     d_far = max(math.hypot(c[0] - anchor.x, c[1] - anchor.y) for c in corners)
-    # spec.md line 274: r_min = nucleus_height (= cell_height / 2).
-    r_min = cell_h / 2
-    r_max = d_far - cell_w
+    # v6: clamp rx/ry to [0.22·d_far, 0.58·d_far] (was v5's
+    # [nucleus_height, d_far − cell_w]). Both bounds scale with the grid via
+    # d_far, holding overlay coverage in a noticeable-but-partial band
+    # (~8–70%, median ~32%) on every grid size — no swamping, no slivers.
+    # See reviews/ellipse-audit-2026-06-02.md. 0.58 > 0.22 always, so the
+    # range is never degenerate; the guard below is purely defensive.
+    r_min = 0.22 * d_far
+    r_max = 0.58 * d_far
     if r_max <= r_min:
-        return  # degenerate radius range — shouldn't trigger past the >=6
-                # interior-corners gate, but defensive
+        return
 
     rx = r_min + (p["rx_step"] / 15.0) * (r_max - r_min)
     ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)

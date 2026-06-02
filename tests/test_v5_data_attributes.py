@@ -50,8 +50,8 @@ def test_svg_carries_version_attribute():
     from entviz import SPEC_VERSION
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     # data-entviz-version is the spec/algorithm version, sourced from the
-    # single SPEC_VERSION constant (currently "v5").
-    assert svg.get("data-entviz-version") == "v5"
+    # single SPEC_VERSION constant (currently "v6").
+    assert svg.get("data-entviz-version") == "v6"
     assert svg.get("data-entviz-version") == SPEC_VERSION
 
 
@@ -173,17 +173,20 @@ def test_blank_cell_attribute_marks_only_blank_cells():
         assert "data-cell-blank" not in c.attrib
 
 
-def test_blank_marker_cells_are_subset_of_blanks():
+def test_blank_map_cell_is_the_first_blank():
+    # v6: exactly one blank cell (the lowest-indexed blank) carries the
+    # blank-cell map (data-cell-blank-map); the rest are plain outlines.
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
     cells = _cells(svg)
-    marker_cells = [c for c in cells if c.get("data-cell-blank-marker") == "true"]
+    map_cells = [c for c in cells if c.get("data-cell-blank-map") == "true"]
     blank_cells = [c for c in cells if c.get("data-cell-blank") == "true"]
-    # Every cell carrying a marker is a blank cell.
     blank_indices = {int(c.get("data-cell-index")) for c in blank_cells}
-    marker_indices = {int(c.get("data-cell-index")) for c in marker_cells}
-    assert marker_indices.issubset(blank_indices)
-    # At least one marker (test fixture is known to have blanks).
-    assert marker_indices
+    map_indices = {int(c.get("data-cell-index")) for c in map_cells}
+    assert blank_indices, "test fixture should produce at least one blank"
+    # Exactly one map cell, and it is the lowest-indexed blank.
+    assert len(map_indices) == 1
+    assert map_indices.issubset(blank_indices)
+    assert min(map_indices) == min(blank_indices)
 
 
 def test_quartile_attribute_present_on_four_cells():
