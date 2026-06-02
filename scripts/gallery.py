@@ -45,6 +45,14 @@ SAMPLES = [
         ("256-bit hex", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"),
         ("512-bit hex", "0123456789abcdef" * 8),
     ]),
+    # One 256-bit input rendered at three reference font sizes. Geometry scales
+    # linearly with font_size_pt, so this shows the same entviz small / nominal
+    # / large. A sample tuple's 3rd element may be a dict of render() kwargs.
+    ("Same 256-bit input at three font sizes", [
+        ("6pt",  "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", {"font_size_pt": 6}),
+        ("12pt", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", {"font_size_pt": 12}),
+        ("24pt", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", {"font_size_pt": 24}),
+    ]),
     ("ULIDs (Crockford base32)", [
         ("Canonical ULID",                 "01ARZ3NDEKTSV4RRFFQ69G5FAV"),
         ("Lowercase ULID (normalized up)", "01arz3ndektsv4rrffq69g5fav"),
@@ -127,32 +135,55 @@ PAGE = """<!doctype html>
   }}
   h1 {{ margin-bottom: 0; }}
   .sub {{ color: #666; margin-top: 0.25em; margin-bottom: 2em; }}
-  h2 {{ border-bottom: 1px solid #ccc; padding-bottom: 0.25em; margin-top: 2.5em; }}
-  .row {{
-    display: flex;
-    align-items: center;
-    gap: 1.5em;
-    padding: 1em 0;
-    border-bottom: 1px dotted #ddd;
+  h2 {{
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 0.25em;
+    margin-top: 2.5em;
+    page-break-after: avoid;
   }}
-  .meta {{ flex: 0 0 28em; }}
-  .input {{
+  .cards {{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.25em;
+    align-items: start;
+  }}
+  .card {{
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    padding: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }}
+  .card .viz {{ max-width: 100%; }}
+  .card .viz img {{ display: block; max-width: 100%; height: auto; }}
+  .card .label {{ font-weight: 600; margin: 0.75em 0 0.4em; text-align: center; }}
+  .card .input {{
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.85em;
+    font-size: 0.78em;
     color: #555;
     word-break: break-all;
     background: #f0f0f0;
     padding: 0.4em 0.6em;
     border-radius: 4px;
     line-height: 1.4;
+    width: 100%;
+    box-sizing: border-box;
   }}
-  .viz {{ flex: 0 0 auto; }}
-  .viz img {{ display: block; }}
+  @media print {{
+    body {{ margin: 0.5cm; background: #fff; }}
+    .sub {{ margin-bottom: 1em; }}
+    .cards {{ gap: 0.6em; }}
+    .card {{ border-color: #bbb; }}
+  }}
 </style>
 </head>
 <body>
 <h1>{title}</h1>
-<p class="sub">24-box surround, nucleus-color fill, digest-histogram color bar. Rendered at 12pt unless noted.</p>
+<p class="sub">24-box surround, nucleus-color fill, digest-histogram color bar, rounded blank-cell map, wider lettered color bar. Rendered at 12pt unless noted. (This page is laid out as printable cards.)</p>
 {body}
 </body>
 </html>
@@ -160,15 +191,16 @@ PAGE = """<!doctype html>
 
 SECTION = """
 <h2>{title}</h2>
+<div class="cards">
 {rows}
+</div>
 """
 
-ROW = """
-<div class="row">
-  <div class="meta">
-    <div class="input">{input}</div>
-  </div>
+CARD = """
+<div class="card">
   <div class="viz"><img src="{svg_path}" alt="entviz of {alt}"></div>
+  <div class="label">{label}</div>
+  <div class="input">{input}</div>
 </div>
 """
 
@@ -205,6 +237,8 @@ def main():
             if len(sample) == 2:
                 label, entropy = sample
                 kwargs = {}
+            elif isinstance(sample[2], dict):
+                label, entropy, kwargs = sample
             else:
                 label, entropy, target_ar = sample
                 kwargs = {"target_ar": target_ar}
@@ -215,10 +249,11 @@ def main():
                 with open(svg_path, 'w', encoding='utf-8') as f:
                     f.write(svg)
                 rel_path = f"{rel_svg_dir}/{filename}"
-                row_html = ROW.format(
+                row_html = CARD.format(
                     input=html.escape(entropy),
                     svg_path=html.escape(rel_path, quote=True),
                     alt=html.escape(label, quote=True),
+                    label=html.escape(label),
                 )
             except Exception as e:
                 # Parser corner cases (e.g. hex-multihash trying to decode
@@ -227,9 +262,9 @@ def main():
                        f'padding:0.5em;background:#fee;border-radius:4px;">'
                        f'render failed: {html.escape(str(e))}</div>')
                 row_html = (
-                    f'<div class="row"><div class="meta">'
+                    f'<div class="card"><div class="viz">{err}</div>'
+                    f'<div class="label">{html.escape(label)}</div>'
                     f'<div class="input">{html.escape(entropy)}</div></div>'
-                    f'<div class="viz">{err}</div></div>'
                 )
             rows.append(row_html)
         sections.append(SECTION.format(title=html.escape(title), rows="".join(rows)))
