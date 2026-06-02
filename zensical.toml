@@ -1,0 +1,65 @@
+[project]
+site_name = "entviz"
+site_url = "https://dhh1128.github.io/entviz/"
+site_description = "Visualize high-entropy values — keys, signatures, UUIDs, blockchain addresses — as SVG diagrams a human can compare at a glance."
+site_author = "Daniel Hardman"
+copyright = "Copyright &copy; 2026 Daniel Hardman — Apache-2.0"
+
+docs_dir = "docs"
+site_dir = "site"
+
+repo_url = "https://github.com/dhh1128/entviz"
+repo_name = "dhh1128/entviz"
+
+# Explicit navigation. The gallery is a generated standalone HTML page
+# (scripts/gallery.py) that passes through verbatim; Threat Model lives in the
+# nav but is not one of the prominent index links.
+nav = [
+    { Home = "index.md" },
+    { Specification = "spec.md" },
+    { Gallery = "gallery.html" },
+    { Paper = "entviz-paper.md" },
+    { "Threat Model" = "threat-model.md" },
+    { "Developers (README)" = "https://github.com/dhh1128/entviz#readme" },
+]
+
+[project.theme]
+features = [
+    "navigation.instant",
+    "navigation.instant.prefetch",
+    "navigation.top",
+    "navigation.footer",
+    "content.code.copy",
+    "search.highlight",
+    "toc.follow",
+]
+
+[[project.theme.palette]]
+scheme = "default"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+scheme = "slate"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to light mode"
+
+# Markdown extensions (the standard MkDocs/Material set).
+[project.markdown_extensions.abbr]
+[project.markdown_extensions.admonition]
+[project.markdown_extensions.attr_list]
+[project.markdown_extensions.def_list]
+[project.markdown_extensions.footnotes]
+[project.markdown_extensions.md_in_html]
+[project.markdown_extensions.tables]
+[project.markdown_extensions.toc]
+permalink = true
+[project.markdown_extensions.pymdownx.details]
+[project.markdown_extensions.pymdownx.highlight]
+anchor_linenums = true
+line_spans = "__span"
+pygments_lang_class = true
+[project.markdown_extensions.pymdownx.inlinehilite]
+[project.markdown_extensions.pymdownx.superfences]
+[project.markdown_extensions.pymdownx.tabbed]
+alternate_style = true

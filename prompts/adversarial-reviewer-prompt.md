@@ -16,17 +16,17 @@ You are adversarial, not appreciative. The codebase has many thoughtful choices;
 
 Read these files in order, in full, before examining any other code:
 
-1. `docs/spec.md` — the current algorithm specification (declares its own version at the top — currently v5). This is the authoritative description of every visual channel, every geometry derivation, every fingerprint-driven step, the alphabet detection rules, and the cell rendering algorithm. Note the **explicit non-requirements** — these are scope decisions, not gaps. Prior spec versions are archived under `docs/v<N>/`.
-2. `entviz-paper.md` — the academic analysis. Pay particular attention to:
+1. `docs/spec.md` — the current algorithm specification (declares its own version at the top — currently v5). This is the authoritative description of every visual channel, every geometry derivation, every fingerprint-driven step, the alphabet detection rules, and the cell rendering algorithm. Note the **explicit non-requirements** — these are scope decisions, not gaps. Prior spec versions (v1–v4) are archived in the project's git history (the `docs/v<N>/` folders at commits before the v0.5.0 release).
+2. `docs/entviz-paper.md` — the academic analysis. Pay particular attention to:
    * The dichotomy between *perceptual hashing for machine similarity* (the opposite of what entviz is for) and *authentication visualization for human distinguishability* (what entviz is for). The security property entviz must provide is **near-collision resistance**: it must be computationally infeasible to find two distinct inputs that produce perceptually indistinguishable entvizes.
    * Section 2.2 / Table 2 — psychophysical JND thresholds for size, shape, angle, luminance, chromaticity, and the much-larger thresholds for color-vision-deficient observers. Every visual channel in entviz must produce differences that exceed these thresholds for the target population.
    * The randomart precedent: a 128–160 bit hash produced only ~20–24 bits of *perceptual* entropy. Use this as a sanity check — entviz's visual channels also have perceptual entropy budgets, and the algorithm's safety depends on whether the union of those budgets is high enough to make near-collision search infeasible.
 3. `this.i` — recorded intent and design decisions. Read it to identify which security/UX tensions have been considered and resolved (do not reopen these) versus left open (these are your strongest leads).
 4. `AGENTS.md`, `README.md`, `CLAUDE.md`, `GEMINI.md`, `TODO.md` — orientation.
 5. `entviz-critique-from-chatgpt.md` and `entviz-critique-from-gemini.md` — prior critiques. Read them *after* forming your own initial impressions; use them only to confirm or extend your findings, not to seed them. The independence of this review matters.
-6. The Python source tree under `entviz/` — `entropy.py` (parsing, normalization, alphabet disproof), `fingerprint.py`, `pipeline.py`, `renderer.py`, `colors.py`, `layout.py`, `shapes.py`, `app.py`. The CLI lives in `bin/`.
-7. `entviz/tests/` — note what is tested (especially the `test_v4_*` files and `test_phase4_avalanche.py`) and what is conspicuously not tested.
-8. `docs/spec-improvement-notes.md` — known deferred items the author has already flagged.
+6. The Python source tree under `src/entviz/` — `entropy.py` (parsing, normalization, alphabet disproof), `fingerprint.py`, `pipeline.py`, `renderer.py`, `colors.py`, `layout.py`, `shapes.py`, `app.py`. The CLI is the `entviz` console entry point (`src/entviz/app.py:main`).
+7. `tests/` — note what is tested (especially the `test_v4_*` files and `test_phase4_avalanche.py`) and what is conspicuously not tested.
+8. `reviews/spec-improvement-notes.md` — known deferred items the author has already flagged.
 
 If anything is unreadable, skip with a note in your Evidence Inventory; do not abort.
 

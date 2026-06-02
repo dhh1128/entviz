@@ -52,6 +52,12 @@ packages = ["src/entviz"]
 dev = [
     "pytest>=8",
 ]
+# Documentation site generator (Zensical, MkDocs-compatible). Opt-in group —
+# not installed by a plain `uv sync`. Build/preview the site with
+# `uv run --group docs zensical build` / `... serve`.
+docs = [
+    "zensical",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

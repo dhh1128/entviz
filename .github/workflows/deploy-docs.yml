@@ -1,0 +1,59 @@
+# Build the Zensical docs site and deploy it to GitHub Pages
+# (https://dhh1128.github.io/entviz/).
+#
+# One-time setup (cannot be done by the workflow): in the repo,
+# Settings -> Pages -> Source = "GitHub Actions". The first deploy fails
+# without it.
+#
+# Actions pinned to node24 / composite runtimes (verified): checkout@v6,
+# astral-sh/setup-uv@v7, configure-pages@v6, upload-pages-artifact@v5
+# (composite), deploy-pages@v5.
+name: Deploy Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'zensical.toml'
+      - '.github/workflows/deploy-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; let an in-progress deploy finish rather than cancel it.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Build site with Zensical
+        run: uv run --group docs zensical build --clean
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
