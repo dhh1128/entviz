@@ -1782,3 +1782,119 @@ Entviz = goal:
             contradicted its own base32 alphabet note (line 116).
             Corrected line 101 and the [[c4s3norm]] this.i entry to
             state base32 canonicalizes to upper case.
+
+    V6 Migration = goal:
+      id: v6m1grat
+      status: implemented
+      why: >
+        Move from spec v5 to v6 (canonical at docs/spec.md; v5 archived in
+        git history). v6 is a rendering-only revision — tokenization,
+        fingerprint, and the text channel are unchanged from v5. Four
+        changes, all motivated by legibility / robustness rather than the
+        threat model. Driven in the 2026-06-02 working session; see
+        reviews/ellipse-audit-2026-06-02.md.
+
+      children:
+
+        Color Bar Width Doubled = decision:
+          id: v6barwid
+          why: >
+            v5 reused box_height (10px at 12pt) as the color-bar width, so
+            the per-band letters (w/g/r/b/k, added in v5 for CVD/monochrome
+            legibility) were capped at bar_width x 0.85 ~ 8.5px and read as
+            tiny. v6 introduces bar_width = 2 x box_height = 1.25 x
+            font_size_px (20px at 12pt) as a named geometry term, doubling
+            the letter cap to ~17px. Ripple: bounding_width, the interior
+            separator x (1 + bar_width + 0.5), the grid_rect origin x, and
+            every geometry golden shift by +10px. The letter-size formula
+            already read bar_rect.width, so it picked up the wider bar with
+            no formula change. See [[v5cblet1]].
+
+        Blank-Cell Map Replaces Clock Hands = decision:
+          id: v6blnkmp
+          why: >
+            v5's blank-cell marker was a white disc with two clock hands
+            pointing at the maxftok/minftok cell *directions* (angles). The
+            long hand relied on mix-blend-mode:difference, which cairosvg
+            and other non-browser renderers silently drop (adversarial
+            finding F-A6), so the maxftok indicator vanished outside
+            browsers. It was also ambiguous: an angle names a ray, not a
+            cell.
+
+            v6: every blank cell gets a black-outlined rounded rect
+            (corner radius font_size_px/8) coincident with the nucleus
+            rect. The FIRST blank (lowest cell index) becomes a "map": the
+            rect is filled (white normally, gold #ffd966 when the entviz
+            background is white, so it always contrasts) and subdivided
+            into a cols x rows logical grid mirroring the entviz; a red dot
+            (#d62828) marks the maxftok cell's (row,col) and a blue dot
+            (#1d4ed8) the minftok cell's. Degenerate min==max (single used
+            ftok) draws a blue ring with a concentric red dot. This is
+            position-based (names the exact cell), renderer-independent (no
+            mix-blend-mode, closing F-A6 for this channel), and one map per
+            entviz (the rest of the blanks are bare outlines). Decisions
+            confirmed with the maintainer: red=max/blue=min; first blank
+            only; rect = nucleus rect (sub-cells stretched, not letterboxed
+            to grid AR); gold (not an arbitrary yellow) for the white-bg
+            fill. Tests in tests/test_v6_blank_map.py.
+
+        Ellipse Coverage Clamp = decision:
+          id: v6elclmp
+          why: >
+            The 2026-06-02 ellipse audit (reviews/ellipse-audit-2026-06-02.md)
+            found the v5 radius bounds [nucleus_height, d_far - cell_width]
+            sound on every grid (no degenerate math) but mis-sized at the
+            tails: 3-11% of draws covered <8% of the grid (invisible
+            slivers) and up to 7-10% on large/near-square grids covered
+            >80% (swamping the entviz, killing the dark/light gestalt that
+            is the overlay's whole purpose). Diversity was fine under the
+            correct OR discrimination model (coverage OR location OR aspect
+            differs => distinguishable; collision ~0.5-2.2%).
+
+            Fix: clamp both semi-axes to [0.22 x d_far, 0.58 x d_far]. Both
+            bounds scale with grid size (via d_far), so coverage lands in
+            ~8-70% (median ~32%) on every grid, and the bound also fixes the
+            small-grid radius-discretization (step now scales with d_far).
+            A grid-relative clamp (rx <= k x grid_width) was tried first and
+            rejected: corner anchors clip small ellipses to near-nothing, so
+            it tanked the floor. Constants chosen by sweeping + eyeballing
+            rasterized candidates (scripts/ellipse_prototype.py, candidate
+            A) with the maintainer. 0.58 > 0.22 always, so the range is
+            never degenerate. Replaces the v5 r_min=nucleus_height rule
+            pinned by [[v5m1grat]]'s test_v5_ellipse_rmin (reworked).
+
+        Font Fallback Chain Refresh = decision:
+          id: v6fontch
+          why: >
+            v5's F-A5 chain ("DejaVu Sans Mono", "Consolas", "Menlo",
+            "Liberation Mono", monospace) covered Linux/Windows/macOS but
+            left Android/iOS to the bare-monospace fallback and led with a
+            Linux-only face. The maintainer asked for solid coverage on
+            Windows/macOS/Linux/iOS/Android. Embedding a pinned font (the
+            only way to get *identical* glyphs cross-platform, and the only
+            way to defeat cross-implementation divergence) was considered
+            and declined: it would force every conformant implementation to
+            ship and embed the same licensed font, and the font-independent
+            gestalt channels already carry visual comparison while the text
+            channel only needs to be individually readable. v6 instead
+            refreshes the named chain to "JetBrains Mono", "Menlo",
+            "Consolas", "DejaVu Sans Mono", "Liberation Mono", "Roboto
+            Mono", "Noto Sans Mono", monospace: JetBrains Mono leads (best
+            homoglyph disambiguation; used by those who have it), then each
+            platform's native preinstalled mono (Menlo=macOS/iOS,
+            Consolas=Windows, DejaVu/Liberation=Linux, Roboto/Noto=
+            Android/ChromeOS), then the generic. See [[v5m1grat]] F-A5 note.
+
+        Dev-Only SVG Rasterizer (render group) = decision:
+          id: v6rendgp
+          why: >
+            cairosvg was dropped in 0.5.0 (only one skipped pixel-diff test
+            used it). The v6 work needed to *see* rendered output to tune
+            the ellipse clamp and verify the blank-cell map. Re-added
+            cairosvg + numpy as an opt-in PEP 735 dependency GROUP
+            ("render"), mirroring the existing "docs" group, so it is a
+            dev/authoring tool only — never a runtime dependency of the
+            shipped library (which emits SVG). Used via
+            `uv run --group render ...`. CI goldens stay dependency-free
+            (structural assertions, not pixel diffs); the rasterizer is a
+            bench tool for visual confirmation and gallery PNG/PDF artifacts.

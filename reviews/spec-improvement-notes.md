@@ -411,8 +411,19 @@ design uses both transform and clip-path on the overlay).
 ## Deferred items (next v3 polish pass)
 
 Items raised in a third-party review of the v3 spec draft (now
-canonical at `docs/index.md`) that
+canonical at `docs/spec.md`) that
 were judged real but not urgent. Address in a future polish pass.
+
+**Status reconciled at v6 (2026-06-02).** Several items have since been
+resolved or made obsolete by the v4/v5/v6 reworks:
+- **Resolved:** D12, D13, D15 (earlier); **D16** (v4 hybrid anchoring draws an
+  overlay on every grid, v6 clamped the radii — see
+  `ellipse-audit-2026-06-02.md`); **D17** (`parse_uuid`/`parse_ethereum` declare
+  the HEX alphabet, so pure-hex content tokenizes as hex).
+- **Obsolete:** **D6** (text contrast uses Oklab + WCAG luminance, not HLS),
+  **D9** (v4 removed edge rects and the SCS; the color bar now tallies the
+  digest, not per-cell edges), **D14** (v4 removed the SCS line below the grid).
+- **Still genuinely open:** D1–D5, D7, D8, D10, D11.
 
 ### D1. Full parser spec for input normalization
 The current v3 draft defers entropy-type detection and normalization
@@ -449,7 +460,11 @@ HLS conversion, grid placement). Add a "Numeric precision" section
 that defines a single rule (lean toward round-half-to-even) and
 states where subpixel coordinates are acceptable.
 
-### D6. HLS exact formula
+### D6. HLS exact formula — OBSOLETE (v4)
+Superseded: v4 picks cell-text and color-bar-letter contrast by Oklab
+perceptual lightness with a WCAG-luminance crossover, not stdlib HLS, so the
+HLS-conversion ambiguity no longer applies.
+
 Different stdlib HLS implementations agree on the L>0.5 test in
 practice, but a spec-grade version should embed the conversion
 formula (or normatively reference a specific definition).
@@ -465,7 +480,12 @@ Antialiasing assumptions, sRGB vs linear-RGB compositing of the
 alpha-blended overlay, sub-pixel handling. Different rasterizers
 (SVG/Cairo/Canvas) will differ; spec should pick one.
 
-### D9. "Actually drawn" edge rects
+### D9. "Actually drawn" edge rects — OBSOLETE (v4)
+Superseded: v4 removed the per-edge rects and the shape-count summary, and the
+color bar now tallies the SHA-512 digest's 2-bit patterns (independent of which
+cells are blank), so "blank cells contribute zero to the edge tally" no longer
+has meaning.
+
 One sentence to add to the color-bar and SCS sections: "blank cells
 produce no edge rects, hence contribute zero to the color and shape
 tallies." (Currently implied but never stated.)
@@ -538,7 +558,10 @@ colors in the palette.
 Update item 2 of this doc (the color bar frame decision) to use
 #808080 for both the border lines and the interior separator.
 
-### D14. Shrink the white region below the grid to a single nucleus height
+### D14. Shrink the white region below the grid to a single nucleus height — OBSOLETE (v4)
+Superseded: v4 removed the shape-count-summary line that occupied the region
+below the grid, so there is no longer an SCS band to shrink.
+
 
 The space below grid_rect currently runs `GM + nucleus_height + GM + 1`
 = 25 px at 12pt nominal: a GM gap, the nucleus-height-tall SCS line,
@@ -573,7 +596,14 @@ commit); the *fixed* items from that review are 1, 2, 3, 6, 7, 11,
 and 15, all already integrated into the draft. Items D12–D14 came
 from visual review of refs/v3-6b/ output.
 
-### D16. Find a way to draw the ellipse overlay for inputs < 256 bits
+### D16. Find a way to draw the ellipse overlay for inputs < 256 bits — RESOLVED (v4/v6)
+v4 removed the skip rule and added hybrid anchoring: grids with ≥6 interior
+corners anchor at an interior corner (centered ellipse), smaller grids anchor at
+an external corner (quarter/half silhouette), so every grid ≥ 2×2 gets a
+meaningful overlay. v6 then clamped the radii to `[0.22·d_far, 0.58·d_far]` so
+coverage stays noticeable-but-partial on every grid size. See
+`ellipse-audit-2026-06-02.md`. Original note retained below for history.
+
 
 V3-5's skip rule omits the overlay entirely whenever the grid has
 fewer than 6 interior corners (equivalent to "< 256 bits of input").
@@ -608,7 +638,13 @@ roughly: every grid ≥ 2×2 produces an overlay, the overlay reads
 as a curve (not a flat-edge clip), and the 16-level discretization
 still gives visibly distinct shapes between adjacent steps.
 
-### D17. UUID / hex-content non-hex types: tokenize as hex or as base64?
+### D17. UUID / hex-content non-hex types: tokenize as hex or as base64? — RESOLVED
+Resolved the principled way (option 1, NOT the content-inspection option 2,
+which the spec rejects as unsound): `parse_uuid` and `parse_ethereum_address`
+declare the HEX alphabet (`entviz/entropy.py`), so a UUID's `0000` token reads
+as quant 0 (black), not a base64-position lookup. Original note retained below
+for history.
+
 
 A UUID like `550e8400-...-446655440000` normalizes to a 32-character
 hex string but is given type `"UUID"`. The tokenizer treats anything
