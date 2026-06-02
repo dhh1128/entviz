@@ -111,9 +111,9 @@ def test_small_grid_ellipse_anchor_is_on_boundary():
     svg = _doc(render("ab"))
     e = _ellipse(svg)
     cx, cy = float(e.get("cx")), float(e.get("cy"))
-    # grid_rect for 2x2 at 12pt: top-left (17, 6), size 120 × 80.
-    # External boundary: cx in {17, 137} OR cy in {6, 86}.
-    boundary = (cx in (17.0, 137.0)) or (cy in (6.0, 86.0))
+    # grid_rect for 2x2 at 12pt (v6): top-left (27, 31), size 120 × 80.
+    # External boundary: cx in {27, 147} OR cy in {31, 111}.
+    boundary = (cx in (27.0, 147.0)) or (cy in (31.0, 111.0))
     assert boundary, f"anchor ({cx}, {cy}) is not on grid_rect boundary"
 
 

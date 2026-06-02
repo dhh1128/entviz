@@ -115,9 +115,9 @@ def test_large_input_grid_has_room_for_separator_plus_blanks():
     svg = _doc(render("deadbeef" * 18))
     bw = float(svg.get("width"))
     bh = float(svg.get("height"))
-    GM, box_height = 5, 10
+    GM, bar_width = 5, 20
     cell_w, cell_h = 60, 40
-    grid_w = bw - 3 - box_height - 2 * GM
+    grid_w = bw - 3 - bar_width - 2 * GM
     grid_h = bh - 2 * GM - 2 - 2 * GM - 20  # account for top label strip
     cells = int(round(grid_w / cell_w)) * int(round(grid_h / cell_h))
     assert cells >= 22, f"grid has only {cells} cells; need ≥ 22 for 20 tokens + 2 separators"
@@ -135,18 +135,19 @@ def test_large_input_blank_separator_creates_a_gap():
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
+        and r.get("rx") is None
     ]
     # Convert each nucleus (x, y) to its (col, row) and then cell_index.
     # nucleus.x = grid_rect.left + col*cell_w + edge_size = 8 + 64*col + 8.
     # nucleus.y = grid_rect.top  + row*cell_h + edge_size = 5 + 32*row + 8.
     # → col = (x - 16) / 64; row = (y - 13) / 32.
-    # v4 nucleus.x = grid_rect.left + col*cell_w + box_width = 17 + 60*col + 6.
-    # v4 nucleus.y = grid_rect.top  + row*cell_h + box_height = 6 + 40*row + 10.
-    # → col = (x - 23) / 60; row = (y - 16) / 40.
+    # v6 nucleus.x = grid_rect.left + col*cell_w + box_width = 27 + 60*col + 6.
+    # v6 nucleus.y = grid_rect.top  + row*cell_h + box_height = 31 + 40*row + 10.
+    # → col = (x - 33) / 60; row = (y - 41) / 40.
     indices = set()
     for n in nuclei:
-        col = int((float(n.get("x")) - 23) / 60)
-        row = int((float(n.get("y")) - 16) / 40)
+        col = int((float(n.get("x")) - 33) / 60)
+        row = int((float(n.get("y")) - 41) / 40)
         # cell_index = row * cols. We don't know cols from one cell; use
         # max col + 1 as approximation, but compute final indices once we
         # know cols.
@@ -169,6 +170,7 @@ def test_large_input_renders_exactly_token_count_nuclei():
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
+        and r.get("rx") is None
     ]
     assert len(nuclei) == 20
 
@@ -181,5 +183,6 @@ def test_small_input_has_no_extra_separator():
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
         if float(r.get("width", 0)) == 48 and float(r.get("height", 0)) == 20
+        and r.get("rx") is None
     ]
     assert len(nuclei) == 6  # UUID → 6 tokens via hex path (post-refactor)

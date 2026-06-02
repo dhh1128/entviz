@@ -51,7 +51,7 @@ def _expected_fg_for_band(bg_hex):
 def _band_rects(svg):
     return [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 10
+        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 20
     ]
 
 
@@ -142,8 +142,8 @@ def test_letter_is_centered_horizontally_in_color_bar():
     bands = _band_rects(svg)
     letters = _band_letters(svg)
     assert bands and letters
-    # Bar drawing region: x=1, width=10. Center x = 6.
-    expected_cx = 1 + 10 / 2
+    # Bar drawing region: x=1, width=bar_width=20. Center x = 11.
+    expected_cx = 1 + 20 / 2
     for t in letters:
         assert abs(float(t.get("x")) - expected_cx) < 0.01, (
             f"letter x={t.get('x')} not centered (expected {expected_cx})"
@@ -166,14 +166,14 @@ def test_letter_font_family_is_monospace():
 def test_letter_font_size_fits_both_band_height_and_bar_width():
     """font_size_px = min(band_height * 0.7, bar_width * 0.85). No
     minimum floor: small bands get small letters (or skip the letter
-    entirely if below the legibility threshold). bar_width = 10 px at
-    12pt → horizontal cap = 8.5 px."""
+    entirely if below the legibility threshold). bar_width = 20 px at
+    12pt → horizontal cap = 17 px."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = _band_rects(svg)
     letters = _band_letters(svg)
     assert bands and letters
 
-    bar_width = 10.0  # bar inset width at default 12pt geometry
+    bar_width = 20.0  # bar inset width at default 12pt geometry (v6)
     for t in letters:
         ty = float(t.get("y"))
         band = next(

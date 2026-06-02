@@ -23,20 +23,22 @@ def _doc(svg_str):
 
 
 def _is_nucleus_rect(rect):
-    # v4 nucleus is 48 × 20 at 12pt.
-    return float(rect.get("width", 0)) == 48 and float(rect.get("height", 0)) == 20
+    # nucleus is 48 × 20 at 12pt; blank-cell rects are also 48 × 20 but carry
+    # rounded corners (rx), so exclude those.
+    return (float(rect.get("width", 0)) == 48 and float(rect.get("height", 0)) == 20
+            and rect.get("rx") is None)
 
 
 def _is_color_bar_band(rect):
-    # v4: color bar bands at x=1 with width=box_height=10.
-    return float(rect.get("x", -1)) == 1 and float(rect.get("width", -1)) == 10
+    # v6: color bar bands at x=1 with width=bar_width=20.
+    return float(rect.get("x", -1)) == 1 and float(rect.get("width", -1)) == 20
 
 
 def _is_grid_bg(rect):
     # The single rect filling grid_rect with the entviz bg color sits
     # at (grid_rect.left, grid_rect.top). For UUID (6 hex tokens, 2x3
-    # grid): grid_rect = (17, 6) of size 120 × 120.
-    return (float(rect.get("x", 0)) == 17 and float(rect.get("y", 0)) == 6
+    # grid) in v6: grid_rect = (27, 31) of size 120 × 120.
+    return (float(rect.get("x", 0)) == 27 and float(rect.get("y", 0)) == 31
             and float(rect.get("width", 0)) == 120
             and float(rect.get("height", 0)) == 120)
 

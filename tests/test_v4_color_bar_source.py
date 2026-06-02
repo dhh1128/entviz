@@ -53,7 +53,7 @@ def test_color_bar_bands_sum_to_drawing_region_height():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 10
+        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 20
     ]
     total = sum(float(b.get("height")) for b in bands)
     bh = float(svg.get("height"))

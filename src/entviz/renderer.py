@@ -3,16 +3,18 @@ from .layout import Cell, Point
 from .colors import get_nucleus_colors, closest_palette_color, VisualStyle
 
 
-# Pinned monospace fallback chain. The maintainer chose this exact order
-# (DejaVu Sans Mono first because it ships with most Linux distributions
-# and Matplotlib; Consolas on Windows; Menlo on macOS; Liberation Mono
-# as the metric-compatible substitute on Linux systems missing DejaVu;
-# bare monospace as the last resort). Bare `monospace` alone was the
-# pre-fix value and left glyph metrics, ligatures, and homoglyph
-# behavior up to each viewer's OS — a real cross-viewer hazard for the
-# text channel (review F-A5).
+# Pinned monospace fallback chain (review F-A5; refreshed for cross-platform
+# coverage in v6). JetBrains Mono leads: not preinstalled anywhere, but widely
+# installed by developers and the strongest at homoglyph disambiguation, so
+# viewers who have it get the best rendering. The rest route each platform to a
+# good preinstalled mono — Menlo (macOS, iOS), Consolas (Windows), DejaVu Sans
+# Mono / Liberation Mono (Linux), Roboto Mono / Noto Sans Mono (Android,
+# ChromeOS) — and bare `monospace` is the last resort. Bare `monospace` alone
+# (the pre-F-A5 value) left glyph metrics and homoglyph behavior up to each
+# viewer's OS, a real cross-viewer hazard for the text channel.
 MONOSPACE_FONT_FAMILY = (
-    '"DejaVu Sans Mono", "Consolas", "Menlo", "Liberation Mono", monospace'
+    '"JetBrains Mono", "Menlo", "Consolas", "DejaVu Sans Mono", '
+    '"Liberation Mono", "Roboto Mono", "Noto Sans Mono", monospace'
 )
 
 

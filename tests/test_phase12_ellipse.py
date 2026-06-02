@@ -89,11 +89,13 @@ def test_ellipse_between_edges_and_nuclei_in_doc_order():
         i for i, el in enumerate(elements)
         if el.tag.endswith("}rect")
         and float(el.get("width", 0)) == 48 and float(el.get("height", 0)) == 20
+        and el.get("rx") is None
     )
     last_edge_idx = max(
         i for i, el in enumerate(elements)
         if i < first_nucleus_idx and el.tag.endswith("}rect")
         and not (float(el.get("width", 0)) == 48 and float(el.get("height", 0)) == 20)
+        and el.get("rx") is None
     )
     assert last_edge_idx < e_idx < first_nucleus_idx
 
