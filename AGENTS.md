@@ -37,6 +37,7 @@ Code is a human language.
 2. **Intent Update:** If the task involves a design choice, update `this.i` first.
 3. **Implementation (TDD):** Create a test, verify failure, implement, verify success.
 4. **Validation:** Run all project tests to ensure no regressions.
+5. **Regenerate the gallery:** Any time a change can alter rendered output — anything in `src/entviz/` touching tokenization, geometry, color, layout, or SVG emission, or any spec change that flows into the renderer — regenerate the visual gallery with `uv run python scripts/gallery.py` and commit the updated `docs/gallery.html` and `docs/assets/gallery/*.svg` alongside the code. The gallery is the project's visual regression surface; stale SVGs hide rendering changes from review. Skip this step only for changes that provably cannot affect output (pure docs, comments, test-only edits). (Note: `scripts/release.py` regenerates the gallery automatically, since the gallery title embeds the library version.)
 
 ## 5. Navigation
 

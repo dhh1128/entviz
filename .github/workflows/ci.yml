@@ -14,18 +14,16 @@ jobs:
         python-version: ["3.10", "3.11", "3.12"]
 
     steps:
-    - uses: actions/checkout@v6
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run tests
-      run: |
-        pytest
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Run tests
+        # --locked fails if uv.lock is out of date with pyproject.toml, so CI
+        # also proves the lockfile is current. --python pins the matrix version
+        # (uv fetches a standalone interpreter as needed), so this is the proof
+        # that the >=3.10 floor actually holds.
+        run: uv run --locked --python ${{ matrix.python-version }} pytest

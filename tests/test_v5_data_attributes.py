@@ -47,8 +47,20 @@ def _strip_data_attrs(svg_str: str) -> str:
 
 
 def test_svg_carries_version_attribute():
+    from entviz import SPEC_VERSION
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    # data-entviz-version is the spec/algorithm version, sourced from the
+    # single SPEC_VERSION constant (currently "v5").
     assert svg.get("data-entviz-version") == "v5"
+    assert svg.get("data-entviz-version") == SPEC_VERSION
+
+
+def test_svg_carries_lib_version_attribute():
+    from entviz import __version__
+    # data-entviz-lib is the library/package version (provenance), sourced
+    # from the single __version__ constant that hatch also reads.
+    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    assert svg.get("data-entviz-lib") == __version__
 
 
 def test_svg_carries_grid_dimensions():

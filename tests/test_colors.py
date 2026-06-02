@@ -1,4 +1,4 @@
-from ..colors import *
+from entviz.colors import *
 import math
 
 def test_relative_luminance():

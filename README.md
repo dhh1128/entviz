@@ -7,56 +7,68 @@ Entviz is a tool for visualizing high-entropy values (like cryptographic keys, U
 ## Developer Quickstart
 
 ### Prerequisites
-- Python 3.x
-- `pip`
+- [uv](https://docs.astral.sh/uv/) (manages the Python interpreter, virtualenv, and dependencies). uv will fetch a suitable Python (>=3.10) for you.
 
 ### Installation
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/entviz.git
+   git clone https://github.com/dhh1128/entviz.git
    cd entviz
    ```
 
-2. (Optional) Create and activate a virtual environment:
+2. Create the environment from the lockfile:
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 
 ### Running Tests
 
-We use `pytest` for testing. Run all tests with:
+```bash
+uv run pytest
+```
+
+To prove the supported Python floor locally (CI runs the full 3.10/3.11/3.12 matrix):
 
 ```bash
-pytest
+uv run --python 3.10 pytest
 ```
 
 ### Running the CLI
 
-The project includes a command-line interface in `bin/entviz.py`. You can run it like this:
+`entviz` is installed as a console entry point:
 
 ```bash
-python bin/entviz.py "your-entropy-string" --ar 1:1 --fs 12
+uv run entviz "your-entropy-string" --ar 1:1 --fs 12
 ```
+
+### Regenerating the gallery
+
+```bash
+uv run python scripts/gallery.py
+```
+
+### Cutting a release
+
+```bash
+uv run python scripts/release.py --patch -m "what changed"
+```
+
+See [scripts/release.py](scripts/release.py) for bump options and the versioning convention.
 
 ## Project Structure
 
-- `entviz/`: Core library logic.
+- `src/entviz/`: Core library.
   - `entropy.py`: Entropy parsing and normalization.
   - `layout.py`: Grid layout calculations.
   - `colors.py`: Color selection and conversion.
   - `shapes.py`: Edge shape definitions.
-  - `app.py`: Main application logic and CLI entry point.
-- `bin/`: Executable scripts.
-- `docs/`: Detailed documentation and specifications.
-- `assets/`: Images used in documentation.
-- `entviz/tests/`: Unit tests.
+  - `pipeline.py`: End-to-end render pipeline.
+  - `app.py`: CLI entry point (`entviz`).
+  - `__init__.py`: `SPEC_VERSION` (algorithm/spec) and `__version__` (library) — the single source of truth for both.
+- `scripts/`: Maintenance tooling (`gallery.py`, `release.py`).
+- `tests/`: Unit tests.
+- `docs/`: Specification, gallery, and assets.
 
 ## Documentation
 

@@ -1,5 +1,5 @@
-from ..shapes import *
-from ..layout import Size, Point, Rect
+from entviz.shapes import *
+from entviz.layout import Size, Point, Rect
 
 SIZE_300x200 = Size(300, 200)
 

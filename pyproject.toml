@@ -1,0 +1,58 @@
+[project]
+name = "entviz"
+dynamic = ["version"]
+description = "Visualize high-entropy values (keys, signatures, UUIDs, addresses) as SVG diagrams a human can compare at a glance."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Daniel Hardman", email = "daniel@provenant.net" }]
+keywords = ["entropy", "visualization", "svg", "fingerprint", "cryptography", "uuid"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security :: Cryptography",
+    "Topic :: Multimedia :: Graphics",
+]
+dependencies = [
+    "lxml>=5",
+]
+
+[project.urls]
+Homepage = "https://github.com/dhh1128/entviz"
+Repository = "https://github.com/dhh1128/entviz"
+Issues = "https://github.com/dhh1128/entviz/issues"
+
+[project.scripts]
+entviz = "entviz.app:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Single source of truth for the library version: hatch reads __version__
+# out of the package's __init__.py, so the version lives in exactly one
+# place and the package metadata derives from it. (SPEC_VERSION in the same
+# file is a separate axis — the algorithm/spec version — and is NOT the
+# package version.)
+[tool.hatch.version]
+path = "src/entviz/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/entviz"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"

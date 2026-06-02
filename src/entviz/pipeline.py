@@ -13,6 +13,7 @@ import math
 
 from lxml import etree
 
+from . import SPEC_VERSION, __version__
 from .entropy import parse, tokenize_entropy
 from .layout import choose_grid, assign_cell_indices, Cell, Point, Rect, Size
 from .colors import select_visual_style
@@ -179,7 +180,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # from raw geometry. data-truncated is OMITTED when false (not
     # rendered as ="false") so a missing attribute reads as the absence
     # of the property.
-    svg.set("data-entviz-version", "v5")
+    # data-entviz-version = the spec/algorithm revision the output conforms
+    # to; data-entviz-lib = the library build that produced it. Two axes,
+    # both sourced from src/entviz/__init__.py (see that file).
+    svg.set("data-entviz-version", SPEC_VERSION)
+    svg.set("data-entviz-lib", __version__)
     svg.set("data-input-bytes", str(len(raw_input.encode("utf-8"))))
     svg.set("data-cols", str(grid.cols))
     svg.set("data-rows", str(grid.rows))
@@ -677,7 +682,7 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
         rx       = r_min + rx_step/15 × (r_max − r_min)
         ry       = r_min + ry_step/15 × (r_max − r_min)
         rotation = rotation_step/15 × 180°
-      with r_min = cell_h and r_max = d_far(anchor) − cell_w.
+      with r_min = nucleus_height (= cell_h/2) and r_max = d_far(anchor) − cell_w.
     - opacity is fixed at 0.20 (no digest byte consumed for it).
     """
     return {
@@ -765,7 +770,8 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
         (grid_rect.right, grid_rect.bottom),
     ]
     d_far = max(math.hypot(c[0] - anchor.x, c[1] - anchor.y) for c in corners)
-    r_min = cell_h
+    # spec.md line 274: r_min = nucleus_height (= cell_height / 2).
+    r_min = cell_h / 2
     r_max = d_far - cell_w
     if r_max <= r_min:
         return  # degenerate radius range — shouldn't trigger past the >=6

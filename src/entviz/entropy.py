@@ -918,14 +918,20 @@ def tokenize(text: str, alphabet, token_len: int = None) -> list[Token]:
             val = (val << bits_per_char) | char_val
             actual_bits += bits_per_char
         
-        # Extend to 24 bits by repeating low-order bits
+        # Extend to 24 bits by repeating low-order bits. spec.md lines
+        # 155-174: the pad chunk is taken from the low-order bits of the
+        # *current (already-extended) quant*, not from the original value.
+        # This only differs from `val` once the quant has grown past the
+        # original bit width (e.g. a 4-bit value needs three doublings:
+        # 0x5 -> 0x55 -> 0x5555 -> 0x555555), but getting it wrong there
+        # mis-colors the nucleus of any cell holding a 4-bit partial token.
         quant = val
         if actual_bits > 0 and actual_bits < 24:
             while actual_bits < 24:
                 shift = min(actual_bits, 24 - actual_bits)
-                # Take low-order 'shift' bits and append them
+                # Take low-order 'shift' bits of the current quant and append them
                 mask = (1 << shift) - 1
-                bits_to_add = val & mask
+                bits_to_add = quant & mask
                 quant = (quant << shift) | bits_to_add
                 actual_bits += shift
         elif actual_bits > 24:

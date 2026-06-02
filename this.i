@@ -1281,8 +1281,15 @@ Entviz = goal:
           why: >
             For every case-insensitive alphabet entviz supports
             (hex, UUID, base32, bech32, EOS-base, crockford32),
-            the parser lowercases (or otherwise canonicalizes)
-            the input before tokenization and fingerprinting.
+            the parser canonicalizes case before tokenization
+            and fingerprinting. Most canonicalize to lower case;
+            base32 canonicalizes to UPPER case (RFC 4648
+            convention — Stellar and IPFS CID v1 cores are
+            uppercased, see parse_stellar_address and the CID v1
+            parser). The direction is irrelevant; consistency
+            per alphabet is what matters. spec.md line 101 was
+            corrected during the 2026-06-02 audit to stop
+            claiming base32 lowercases.
             This means two inputs differing only in case for a
             case-insensitive alphabet produce identical
             entvizes. This is correct and required behavior —
@@ -1700,3 +1707,78 @@ Entviz = goal:
         in the text channel and would differ only in the
         type label, which is not a user-visible improvement
         for arbitrary decimal blobs.
+
+    Spec-Implementation Audit Triage 2026-06-02 = goal:
+      id: aud0602t
+      status: done
+      why: >
+        A full spec-vs-implementation audit on 2026-06-02 found
+        two real implementation bugs and two spec-internal
+        inconsistencies. All four were fixed. This node records
+        the dispositions.
+
+      children:
+
+        AUDIT1 Quant Bit-Extension Pad Source = decision:
+          id: qb1tpad1
+          why: >
+            tokenize() in entviz/entropy.py extended a partial
+            token's value to 24 bits by repeatedly appending the
+            low-order bits of the ORIGINAL value (`val & mask`).
+            spec.md lines 155-174 require appending the low-order
+            bits of the CURRENT (already-extended) quant
+            (`quant & mask`). The two coincide for 8/12/16/20-bit
+            partials (one doubling, or val==quant at the divergent
+            step) but diverge for 4-bit partials, which need three
+            doublings: the spec's own worked example 0x5 ->
+            0x555555 was computed by the code as 0x550505.
+
+            Blast radius: the nucleus background color of any cell
+            holding a 4-bit partial token (hex/decimal inputs whose
+            final chunk is a single character — char count
+            ≡ 1 mod 6). ftoks are unaffected (the partial ftok is
+            always 8 bits). Fixed by changing `val & mask` to
+            `quant & mask`; regressions pinned by
+            test_tokenize_4bit_extension_repeats_current_quant.
+
+        AUDIT2 Ellipse Overlay r_min = decision:
+          id: 3llrmin1
+          why: >
+            _draw_ellipse_overlay in entviz/pipeline.py set
+            r_min = cell_h, but spec.md line 274 specifies
+            r_min = nucleus_height (= cell_h/2). The function's own
+            docstring already said cell_h/2, so the code contradicted
+            both the spec and its own comment. Effect: every overlay
+            was sized off an inflated floor (2x at the minimum), and
+            the r_max <= r_min guard tripped more often on small
+            grids, occasionally suppressing the overlay entirely.
+            Fixed to r_min = cell_h / 2; the stale v3_ellipse_params
+            docstring (which also said cell_h) was corrected.
+            Regression pinned by test_v5_ellipse_rmin.
+
+        AUDIT3 Spec Line 149 Ftok-Cell Mapping = decision:
+          id: sp149fx1
+          why: >
+            spec.md line 149 claimed large-input middle cells use
+            ftoks 9..12 and tail cells use ftoks 14..21 ("cell index
+            -> used ftok index"), contradicting line 188 ("used ftok
+            at index i drives the token with token_index i"). The
+            implementation follows line 188 (the 20 tokens carry
+            contiguous token indices 0..19, so middle uses ftoks
+            8..11 and tail uses 12..19; ftoks 20-21 unused). Line 149
+            was the wrong statement; corrected to the token-index
+            mapping. No code change — flagged to prevent a future
+            "fix" toward the erroneous line. See also [[c4s3norm]].
+
+        AUDIT4 Spec Line 101 Base32 Case Direction = decision:
+          id: sp101fx1
+          why: >
+            spec.md line 101 listed base32 among alphabets that
+            "lowercase" before fingerprinting, but the parsers
+            uppercase base32 cores (RFC 4648 canonical; Stellar and
+            IPFS CID v1). Not a behavioral bug — case-insensitivity
+            holds because the regexes accept either case and
+            normalize consistently — but the spec text was wrong and
+            contradicted its own base32 alphabet note (line 116).
+            Corrected line 101 and the [[c4s3norm]] this.i entry to
+            state base32 canonicalizes to upper case.

@@ -1,23 +1,19 @@
 version: 2
 
 updates:
-  # GitHub Actions
+  # GitHub Actions used by the CI and release workflows.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     labels: ["dependencies", "github-actions"]
 
-  # Frontend npm dependencies
-  - package-ecosystem: "npm"
-    directory: "/frontend"
+  # Python dependencies. Use the native "uv" ecosystem (GA March 2025) rather
+  # than "pip": only the uv ecosystem regenerates uv.lock alongside
+  # pyproject.toml, keeping the lockfile in sync (the pip ecosystem updates
+  # pyproject.toml but leaves uv.lock stale, which fails CI's --locked check).
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
       interval: "weekly"
-    labels: ["dependencies", "frontend"]
-
-  # Backend Maven dependencies
-  - package-ecosystem: "maven"
-    directory: "/backend"
-    schedule:
-      interval: "weekly"
-    labels: ["dependencies", "backend"]
+    labels: ["dependencies", "python"]

@@ -1,4 +1,4 @@
-from ..entropy import *
+from entviz.entropy import *
 import hashlib
 import random
 

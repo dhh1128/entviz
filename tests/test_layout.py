@@ -1,5 +1,5 @@
 """Layout primitives — Rect, Cell. v4 geometry."""
-from ..layout import *
+from entviz.layout import *
 
 
 def test_Rect():

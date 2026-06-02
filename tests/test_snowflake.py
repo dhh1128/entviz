@@ -11,7 +11,7 @@ import time
 
 import pytest
 
-from ..entropy import (
+from entviz.entropy import (
     DECIMAL,
     DISCORD_EPOCH_MS,
     parse,
@@ -186,7 +186,7 @@ def test_parse_treats_16_digit_decimal_as_hex():
 # --- Pipeline smoke test -------------------------------------------------
 
 def test_pipeline_renders_snowflake_without_error():
-    from ..pipeline import render
+    from entviz.pipeline import render
     svg = render("80351110224678912")
     assert svg.startswith("<")
     assert "80351110224678912" in svg or "8035" in svg  # cells visible
@@ -200,7 +200,7 @@ def test_pipeline_uses_shrunk_font_for_6char_decimal_tokens():
     `alphabet.name == "hex"` — too narrow, would have left decimal text
     overflowing the nucleus.
     """
-    from ..pipeline import render
+    from entviz.pipeline import render
     # Render at 12pt (reference). Expect cell text font-size = 12 * 0.75
     # = 9pt = 12px @ 96 dpi.
     svg = render("80351110224678912", font_size_pt=12)
