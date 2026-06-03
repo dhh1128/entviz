@@ -1898,3 +1898,46 @@ Entviz = goal:
             `uv run --group render ...`. CI goldens stay dependency-free
             (structural assertions, not pixel diffs); the rasterizer is a
             bench tool for visual confirmation and gallery PNG/PDF artifacts.
+
+        Long-Input Middle = Fingerprint, Not Body Slices = decision:
+          id: v6fpmid1
+          why: >
+            v5 closed adversarial finding F5 by filling the 4 middle cells
+            of a >512-bit input with entropy BODY slices sampled at
+            fingerprint-derived offsets (see [[v5mid1sl]]). Empirically
+            (tests/test_v6_fingerprint_middle.py), that made the middle
+            TEXT differ between two inputs only probabilistically: a
+            low-entropy or structured body could render identical middle
+            cells for different inputs, so a screen-reader / read-aloud
+            comparison (no access to the gestalt channels) could miss a
+            real difference. The maintainer's requirement: the middle text
+            must be GUARANTEED to differ on any input change.
+
+            v6 fills the middle from the MIDDLE OF THE FINGERPRINT — digest
+            bytes 24-35 (the 3-byte groups behind ftoks 8-11) — rendered in
+            the INPUT'S alphabet via a bit-chunk encoder
+            (_fingerprint_token_text), so token length / charset / font size
+            match head/tail exactly (no base64url-vs-input mismatch). The
+            fingerprint avalanches by construction, so the middle text is
+            guaranteed to change on any 1-bit input change. Head/tail stay
+            real entropy (recognition + verification).
+
+            NOT a weakening (maintainer's hard constraint): gestalt is
+            untouched; F5 resistance is comparable — matching the 4 shown
+            fingerprint tokens is a ~2^96 partial preimage of SHA-512, vs
+            v5's ~2^96 body-window match at moving offsets — and arguably
+            stronger (exact hash bits, not a lossy gestalt projection).
+            Losslessness promise is unaffected: it only ever applied to
+            <=512-bit inputs, which don't use this path.
+
+            Rendering: the 4 middle nuclei are painted with the entviz
+            background color (neutral/hollow) since they carry no entropy in
+            their bg — visually distinct from the entropy-colored head/tail,
+            and already bracketed by the two separator blanks. Their surround
+            stays ftok-driven (still avalanches). Dropped the v5 body-slice
+            offset/guard math (derive_middle_slice_offsets et al.). The
+            `fingerprint of` truncation marker (renamed from `part of`) now
+            literally describes the middle cells. Format question raised by
+            the maintainer (base64url ftoks would mismatch a hex input's
+            head/tail) resolved by rendering in the input alphabet. AGREED
+            follow-up: re-run the adversarial lens on the new text channel.

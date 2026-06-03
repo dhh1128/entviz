@@ -69,7 +69,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # v5: when the input exceeds 512 bits, tokenize_entropy returns 20
     # tokens — 8 head + 4 middle slices + 8 tail. The label gets a loud
-    # `part of` prefix rendered in bold dark-red; assembly is
+    # `fingerprint of` prefix rendered in bold dark-red; assembly is
     # done in _draw_label_strips where the styling lives. We carry the
     # byte count separately so the label rendering doesn't have to peek
     # at the raw input.
@@ -250,7 +250,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
             Size(cell_width, cell_height),
         )
         cell_index_to_cell[ci] = cell
-        nucleus_bg, _ = get_nucleus_colors(token.quant)
+        # v6: the 4 fingerprint-middle cells (token indices 8-11 on a
+        # >512-bit input) carry no entropy in their bg, so neutralize it to
+        # the entviz background color — they read as "hollow" cells, distinct
+        # from the entropy-colored head/tail nuclei. Their surround stays
+        # ftok-driven (still avalanches). All other cells keep the entropy bg.
+        if is_truncated and 8 <= token.index <= 11:
+            nucleus_bg = style.bg_color
+        else:
+            nucleus_bg, _ = get_nucleus_colors(token.quant)
         token_cells.append((token, used_ftoks[token.index], cell, ci, nucleus_bg))
 
     # v5: pre-allocate per-cell groups for the nucleus / blank-marker /
@@ -317,9 +325,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
-    for token, ftok, cell, ci, _nucleus_bg in token_cells:
+    for token, ftok, cell, ci, nucleus_bg in token_cells:
         renderer.render_nucleus(
-            cell_groups[ci], token, cell, text_size_px=cell_text_px
+            cell_groups[ci], token, cell, text_size_px=cell_text_px,
+            bg_override=nucleus_bg,
         )
 
     # Layer 3b: blank cells — every cell index in the grid that no token
@@ -357,7 +366,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     blank_indices = [ci for ci in range(grid.cols * grid.rows)
                      if ci not in used_cell_indices]
     map_cell_idx = min(blank_indices) if blank_indices else None
-    corner_radius = font_size_px / 8     # = 2 at 12pt
+    corner_radius = nucleus_height / 4   # = 5 at 12pt
     # The map fill must contrast with whatever background shows behind it:
     # white on any non-white entviz background, gold on a white one.
     map_fill = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
@@ -382,7 +391,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         cg.set("data-cell-blank-map", "true")
         sub_w = nucleus_width / grid.cols
         sub_h = nucleus_height / grid.rows
-        dot_r = 0.35 * min(sub_w, sub_h)
+        # Fixed dot radius (independent of grid dims) so dots are a consistent
+        # size across entvizes; centered in the sub-cell, may overflow it on
+        # dense grids (acceptable).
+        dot_r = nucleus_height / 8
 
         def _sub_center(cell_idx):
             return (nx + (cell_idx % grid.cols + 0.5) * sub_w,
@@ -445,10 +457,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     _draw_color_bar(
         svg, color_bar_rect, gm,
         _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
-        box_height=box_height,
+        box_height=box_height, cell_text_px=cell_text_px,
     )
-    # (color bar width is bar_width = 2·box_height; the letter-size cap reads
-    # bar_rect.size.width directly, so it picks up the wider bar automatically.)
+    # (color bar width is bar_width = 2·box_height; v6 letters render at the
+    # cell-text size, bottom-anchored within each band.)
 
     # Layer 5b: top / bottom label strips. The top strip is always drawn
     # ("<Type>:" or "<Type>: <prefix>..."). The bottom strip appears only
@@ -497,7 +509,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     suppress the labels independently.
 
     When `truncated_bytes` is not None, the top label is prefixed with a
-    loud `part of ` marker rendered in bold dark-red (#a00000), with the
+    loud `fingerprint of ` marker rendered in bold dark-red (#a00000), with the
     rest of the label following in the standard #666 non-bold style. The
     marker and tail are emitted as two adjacent <text> elements inside
     the label-top group so the styling cleanly differs while the line
@@ -522,7 +534,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
         # a safe approximation across DejaVu Sans Mono / Menlo /
         # Consolas (all sit in 0.55–0.62). We pad with a single ascii
         # space between marker and tail to make the visual break crisp.
-        marker_text = "part of "
+        marker_text = "fingerprint of "
         marker_el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
@@ -833,7 +845,7 @@ _BAND_LETTER_BY_COLOR = {
 
 
 def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
-                    box_height=None):
+                    box_height=None, cell_text_px=None):
     """
     Draw color-bar bands inside bar_rect's drawing region.
 
@@ -898,24 +910,24 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
             b = int(color[5:7], 16)
             quant = r | (g << 8) | (b << 16)
             _bg, fg = get_nucleus_colors(quant)
-            # Letter must fit both the band height and the bar width.
-            # Lowercase glyphs sit largely at x-height, so this stays
-            # visually compact. No minimum floor — a tiny band gets a
-            # tiny letter, and bands too small for a legible glyph
-            # simply skip the letter.
-            font_size = min(h * 0.7, bar_rect.size.width * 0.85)
-            if font_size >= 2:
-                cy = y + h / 2
-                text_el = etree.SubElement(
-                    band_g, 'text',
-                    x=str(bar_cx), y=str(cy),
-                    fill=fg,
-                    style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
-                    **{
-                        "text-anchor": "middle",
-                        "dominant-baseline": "central",
-                        "data-color-bar-letter": "true",
-                    },
-                )
-                text_el.text = letter.lower()
+            # v6: the letter renders at exactly the cell-text size (uniformity
+            # across the entviz), never scaled to the band. It is
+            # bottom-anchored: the baseline sits a descender's height above the
+            # band's bottom edge so the glyph bottom never bleeds below the
+            # band; on a short band the top may bleed above. Bands are emitted
+            # top-to-bottom, so a bleeding lower letter paints over the band
+            # above it (deterministic layering).
+            font_size = cell_text_px if cell_text_px is not None else bar_rect.size.width
+            baseline_y = (y + h) - 0.22 * font_size
+            text_el = etree.SubElement(
+                band_g, 'text',
+                x=str(bar_cx), y=str(baseline_y),
+                fill=fg,
+                style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
+                **{
+                    "text-anchor": "middle",
+                    "data-color-bar-letter": "true",
+                },
+            )
+            text_el.text = letter.lower()
         y += h

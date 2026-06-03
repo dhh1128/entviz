@@ -984,128 +984,66 @@ def _core_byte_length(core: str, alphabet) -> int:
     return (len(core) * alphabet.bits_per_char) // 8
 
 
-def middle_slice_char_offset(byte_offset: int, alphabet) -> tuple[int, int]:
+def _fingerprint_token_text(b3: bytes, alphabet) -> tuple[str, int]:
     """
-    Map a middle-slice byte offset to the (char_offset, char_length) of
-    the verbatim substring rendered into the cell, per the v5 spec's
-    "character-aligned substring" rule:
+    Render 3 fingerprint bytes (24 bits) as one token of `alphabet` text.
 
-      * hex (4 bits/char):    char_offset = byte_offset · 2, length = 6.
-      * 6-bit alphabets (base64 / base64url / base58 / base36):
-            char_offset = floor(byte_offset · 4 / 3) rounded DOWN to
-            the nearest 4-char alignment; length = 4.
-      * 5-bit alphabets (base32 / bech32 / crockford32):
-            char_offset = floor(byte_offset · 8 / 5) rounded DOWN to
-            the nearest 4-char alignment; length = 4.
+    Produces `token_len = 24 // bits_per_char` characters by chunking the
+    24-bit value MSB-first into `bits_per_char`-bit groups and mapping each to
+    `alphabet.chars[group]`. For power-of-2 alphabets (hex, base32/bech32/
+    crockford, base64/url — the alphabets that actually reach >512-bit inputs)
+    this is an exact base conversion; for non-power-of-2 alphabets the index is
+    taken mod the alphabet size (these never reach the large-input path, and
+    the cell is a fingerprint readout, not lossless input, so a clean
+    round-trip is not required). Returns (text, 24-bit quant).
     """
+    quant = (b3[0] << 16) | (b3[1] << 8) | b3[2]
     bpc = alphabet.bits_per_char
-    if bpc == 4:
-        return byte_offset * 2, 6
-    if bpc == 6:
-        raw = (byte_offset * 4) // 3
-        return (raw // 4) * 4, 4
-    if bpc == 5:
-        raw = (byte_offset * 8) // 5
-        return (raw // 4) * 4, 4
-    # Fallback: treat as 6-bit. No active alphabet hits this branch.
-    raw = (byte_offset * 4) // 3
-    return (raw // 4) * 4, 4
+    token_len = 24 // bpc
+    chars = alphabet.chars
+    n = len(chars)
+    out = []
+    for k in range(token_len):
+        shift = 24 - bpc * (k + 1)
+        idx = (quant >> shift) & ((1 << bpc) - 1)
+        out.append(chars[idx % n])
+    return "".join(out), quant
 
 
-def derive_middle_slice_offsets(
-    digest: bytes, input_length_bytes: int, num_slices: int = _MIDDLE_TOKENS,
-) -> list[int]:
+def _match_core_case(text: str, core: str) -> str:
+    """Match `text`'s case to the normalized core's, so the fingerprint-middle
+    cells read in the same case as the head/tail (which are slices of `core`).
+
+    Some alphabet char tables are a different case than their normalized core
+    (e.g. HEX_ALPHABET is uppercase but hex cores normalize to lowercase), so
+    rendering straight from `alphabet.chars` would mis-case the middle cells.
+    Case-insensitive alphabets normalize to a single case (all-lower or
+    all-upper core) → follow it; case-sensitive alphabets (base64/url/base58)
+    have mixed-case cores → leave as-is.
     """
-    Derive `num_slices` ascending, non-overlapping byte offsets inside
-    the middle region of a long input, deterministically from the SHA-512
-    fingerprint. v5 spec ref: docs/spec.md "Middle-slice offset derivation".
+    has_lower = any(c.islower() for c in core)
+    has_upper = any(c.isupper() for c in core)
+    if has_lower and not has_upper:
+        return text.lower()
+    if has_upper and not has_lower:
+        return text.upper()
+    return text
 
-    Algorithm:
-      For slice index i in [0..M-1]:
-        raw_i    = uint16_be(digest[32 + 2i .. 33 + 2i])
-        offset_i = 16 + (raw_i mod (N - 3 - 32))
-        if offset_i is within ±3 bytes of any prior pick, step +3 and
-        retry until clean OR until the search wraps past the tail-guard
-        line (offset_i + 3 > N - 16); on wrap, fall back to evenly-
-        spaced offsets in [16, N - 16].
-      After all M derived, return them sorted ascending.
 
-    The +16 shifts past the head's 16-byte guard band; the −32 reserves
-    16 bytes of guard + 16 bytes of the tail-192-bit region at the tail
-    side; the −3 keeps the 3-byte read inside the modulus range.
-
-    For inputs whose underlying byte length is too small to satisfy the
-    spec's guard bands (≤64 bytes — only reachable for the 5-bit alphabet
-    edge case where a sub-512-bit input still exceeds the 22-token cap),
-    fall through directly to the evenly-spaced offset rule clipped to
-    the available range.
+def _build_fingerprint_middle_tokens(digest: bytes, alphabet, core: str) -> list[Token]:
     """
-    if num_slices <= 0:
-        return []
-    modulus = input_length_bytes - 3 - 32
-    if input_length_bytes <= 64 or modulus <= 0:
-        # Degenerate range — produce evenly-spaced offsets inside a
-        # narrow [4, N-4] window (whatever room is available), clipped
-        # so the 3-byte read stays in bounds.
-        lo = min(4, max(0, input_length_bytes // 4))
-        hi = max(lo + num_slices, input_length_bytes - max(4, input_length_bytes // 4) - 3)
-        if hi <= lo:
-            hi = lo + num_slices
-        return [
-            min(hi, lo + round(i * (hi - lo) / max(1, num_slices - 1)))
-            for i in range(num_slices)
-        ]
-    tail_guard_line = input_length_bytes - 16  # offset_i + 3 must be ≤ this
-
-    picked: list[int] = []
-    fell_back = False
-    for i in range(num_slices):
-        raw = (digest[32 + 2 * i] << 8) | digest[33 + 2 * i]
-        candidate = 16 + (raw % modulus)
-        # Dedup loop: if within ±3 of any prior pick, step +3 and retry.
-        while any(abs(candidate - p) < 3 for p in picked):
-            candidate += 3
-            if candidate + 3 > tail_guard_line:
-                fell_back = True
-                break
-        if fell_back:
-            break
-        picked.append(candidate)
-
-    if fell_back or len(picked) < num_slices:
-        # Deterministic fallback: evenly-spaced offsets across the body.
-        picked = [
-            16 + round(i * (input_length_bytes - 32) / num_slices)
-            for i in range(num_slices)
-        ]
-    return sorted(picked)
-
-
-def _build_middle_slice_tokens(
-    core: str, alphabet, digest: bytes, byte_offsets: list[int],
-) -> list[Token]:
-    """
-    Build the M middle-slice Tokens by slicing the core string at the
-    character-aligned offsets corresponding to each byte offset, then
-    running each substring through `tokenize()` so the quant follows the
-    standard bit-extension rule. Token indices here are 0..M-1; the
-    caller renumbers into the final 0..19 sequence.
+    Build the M middle Tokens from the middle of the SHA-512 digest: token i
+    uses digest bytes [24 + 3i : 27 + 3i] (ftoks 8..11), rendered in the
+    input's alphabet and cased to match the normalized core. Token indices
+    here are 0..M-1; the caller renumbers into the final 0..19 sequence. The
+    pipeline paints these cells' nuclei with the entviz background color (they
+    carry no entropy in their bg).
     """
     tokens: list[Token] = []
-    for off in byte_offsets:
-        char_off, char_len = middle_slice_char_offset(off, alphabet)
-        # Clamp to the string in case rounding produced an end-overflow.
-        if char_off + char_len > len(core):
-            char_off = max(0, len(core) - char_len)
-        chunk = core[char_off:char_off + char_len]
-        sub_tokens = tokenize(chunk, alphabet)
-        # tokenize() emits one token per `token_len` chars; our chunk is
-        # exactly one token long by construction, so take the first.
-        if sub_tokens:
-            tokens.append(sub_tokens[0])
-        else:
-            # Defensive fallback: a zero-quant blank-text token.
-            tokens.append(Token("", 0, 0))
+    for i in range(_MIDDLE_TOKENS):
+        b3 = digest[24 + 3 * i: 27 + 3 * i]
+        text, quant = _fingerprint_token_text(b3, alphabet)
+        tokens.append(Token(_match_core_case(text, core), i, quant))
     return tokens
 
 
@@ -1117,11 +1055,13 @@ def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
     accepted via the same compatibility shim used by `tokenize()`.
 
     For inputs whose underlying byte length exceeds 64 (>512 bits), apply
-    the v5 head + middle-slice + tail rule:
+    the head + fingerprint-middle + tail rule:
       * head: first 8 tokens of the input (covering ≈192 bits, rounded to
         whole characters of the alphabet).
-      * middle: 4 tokens sampled at fingerprint-derived byte offsets in
-        the body (see `derive_middle_slice_offsets`).
+      * middle: 4 tokens taken from the middle of the SHA-512 fingerprint
+        (digest bytes 24-35), rendered in the input's alphabet (see
+        `_build_fingerprint_middle_tokens`). v6 change — guarantees the
+        middle text avalanches on any input change.
       * tail: last 8 tokens of the input.
     The 20 tokens are renumbered with indices 0..19; the pipeline inserts
     the two separator blanks at cell indices 8 and 13 around the middle
@@ -1149,11 +1089,13 @@ def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
     head_tokens = tokenize(core[:head_chars], alphabet)
     tail_tokens = tokenize(core[-tail_chars:], alphabet)
 
-    # Middle slices need the fingerprint and the byte length of the input
-    # under its alphabet.
+    # v6: the 4 middle cells display bytes from the MIDDLE of the SHA-512
+    # fingerprint (digest bytes 24-35 = ftoks 8-11), rendered in the input's
+    # alphabet. This makes the middle text avalanche on ANY input change; v5
+    # used entropy body slices, whose difference was only probabilistic (a
+    # low-entropy body could render identical middle cells for two inputs).
     digest = hashlib.sha512(core.encode("utf-8")).digest()
-    offsets = derive_middle_slice_offsets(digest, n_bytes, num_slices=_MIDDLE_TOKENS)
-    middle_tokens = _build_middle_slice_tokens(core, alphabet, digest, offsets)
+    middle_tokens = _build_fingerprint_middle_tokens(digest, alphabet, core)
 
     combined = head_tokens + middle_tokens + tail_tokens
     renumbered = [Token(t.text, i, t.quant) for i, t in enumerate(combined)]

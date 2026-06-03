@@ -74,17 +74,17 @@ def test_every_blank_cell_has_rounded_outline_rect():
         assert float(r.get("width")) == 48 and float(r.get("height")) == 20
         assert r.get("stroke") == "#000000"
         assert r.get("stroke-width") == "1"
-        assert float(r.get("rx")) == 2  # font_size_px / 8 at 12pt
+        assert float(r.get("rx")) == 5  # nucleus_height / 4 at 12pt
 
 
 def test_corner_radius_scales_with_font_size():
-    # rx = font_size_px / 8 = (pt*96/72)/8. 12pt → 2; 24pt → 4.
+    # rx = nucleus_height / 4 = (1.25 * pt*96/72) / 4. 12pt → 5; 24pt → 10.
     svg12 = _doc(render(FIXTURE, font_size_pt=12))
     svg24 = _doc(render(FIXTURE, font_size_pt=24))
     rx12 = float(_children(_blank_groups(svg12)[0], "rect")[0].get("rx"))
     rx24 = float(_children(_blank_groups(svg24)[0], "rect")[0].get("rx"))
-    assert rx12 == 2
-    assert rx24 == 4
+    assert rx12 == 5
+    assert rx24 == 10
 
 
 # ---- Exactly one map cell, the first blank ------------------------------
@@ -124,6 +124,24 @@ def test_map_has_one_red_and_one_blue_dot():
     fills = [c.get("fill") for c in _circles(g)]
     assert fills.count(RED) == 1
     assert fills.count(BLUE) == 1
+
+
+def test_dot_radius_is_fixed_regardless_of_grid():
+    """The red/blue dots have a fixed radius (nucleus_height / 8 = 2.5 at
+    12pt), independent of grid dimensions — so dot size is consistent across
+    entvizes rather than shrinking on denser grids."""
+    # Two inputs with different grids (and thus different sub-cell sizes):
+    # a small 2x3-ish grid vs a dense large-input grid.
+    for inp in [FIXTURE, "deadbeef", "0123456789abcdef" * 16]:
+        svg = _doc(render(inp))
+        maps = _map_group(svg)
+        if not maps:
+            continue
+        for c in _circles(maps[0]):
+            if c.get("fill") in (RED, BLUE):
+                assert float(c.get("r")) == 2.5, (
+                    f"{inp!r}: dot r={c.get('r')} (expected fixed 2.5)"
+                )
 
 
 def test_map_fill_contrasts_with_entviz_background():

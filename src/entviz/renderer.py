@@ -47,9 +47,23 @@ class Renderer:
             )
 
     def render_nucleus(self, svg: etree.Element, token, cell: Cell,
-                       text_size_px=None):
-        """Nucleus rect + centered token text."""
-        bg_color, fg_color = get_nucleus_colors(token.quant)
+                       text_size_px=None, bg_override=None):
+        """Nucleus rect + centered token text.
+
+        `bg_override` (a hex color) forces the nucleus background — used for
+        the v6 fingerprint-middle cells, which are painted with the entviz
+        background color. The foreground color follows the same Oklab
+        contrast rule (computed by re-deriving via get_nucleus_colors on the
+        override color's quant). When None, the bg is the token's entropy
+        color as usual.
+        """
+        if bg_override is not None:
+            r = int(bg_override[1:3], 16)
+            g = int(bg_override[3:5], 16)
+            b = int(bg_override[5:7], 16)
+            bg_color, fg_color = get_nucleus_colors(r | (g << 8) | (b << 16))
+        else:
+            bg_color, fg_color = get_nucleus_colors(token.quant)
         n = cell.nucleus
         etree.SubElement(svg, 'rect',
                          x=str(n.left), y=str(n.top),

@@ -93,47 +93,37 @@ def test_each_band_has_one_letter_text():
     )
 
 
+def _band_fill_of_letter(t):
+    """The band a letter belongs to is its parent group's rect — robust to
+    the v6 bottom-anchoring where the letter's y may sit outside its band."""
+    parent = t.getparent()
+    rects = [c for c in parent if c.tag.endswith("}rect")]
+    assert rects, "letter's parent group has no band rect"
+    return rects[0].get("fill")
+
+
 def test_letter_content_matches_palette():
-    """Letter text content must be one of w, g, r, b, k and match the
+    """Letter text content must be one of w, g, r, b, k and match its
     band's fill color."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    bands = _band_rects(svg)
     letters = _band_letters(svg)
-
-    # Map band y-center → expected letter from fill.
-    expected_by_y = {}
-    for b in bands:
-        y = float(b.get("y")) + float(b.get("height")) / 2
-        expected_by_y[round(y, 2)] = BAND_LETTER[b.get("fill")]
-
+    assert letters
     for t in letters:
-        ty = round(float(t.get("y")), 2)
-        # The letter's y is the band center; match within tolerance.
-        match = min(expected_by_y.keys(), key=lambda k: abs(k - ty))
-        assert abs(match - ty) < 0.5, (
-            f"letter y={ty} not near any band center {list(expected_by_y)}"
-        )
-        assert t.text == expected_by_y[match], (
-            f"letter '{t.text}' at y={ty} != expected {expected_by_y[match]}"
+        fill = _band_fill_of_letter(t)
+        assert t.text == BAND_LETTER[fill], (
+            f"letter '{t.text}' on band {fill} != expected {BAND_LETTER[fill]}"
         )
 
 
 def test_letter_fill_follows_oklab_contrast_rule():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    bands = _band_rects(svg)
     letters = _band_letters(svg)
-
-    # Match letters to bands by y-coord proximity.
+    assert letters
     for t in letters:
-        ty = float(t.get("y"))
-        # Find the band whose y-range contains ty.
-        band = next(
-            b for b in bands
-            if float(b.get("y")) <= ty <= float(b.get("y")) + float(b.get("height"))
-        )
-        expected = _expected_fg_for_band(band.get("fill"))
+        fill = _band_fill_of_letter(t)
+        expected = _expected_fg_for_band(fill)
         assert t.get("fill") == expected, (
-            f"letter on {band.get('fill')}: expected fill {expected}, got {t.get('fill')}"
+            f"letter on {fill}: expected fill {expected}, got {t.get('fill')}"
         )
 
 
@@ -163,29 +153,44 @@ def test_letter_font_family_is_monospace():
         )
 
 
-def test_letter_font_size_fits_both_band_height_and_bar_width():
-    """font_size_px = min(band_height * 0.7, bar_width * 0.85). No
-    minimum floor: small bands get small letters (or skip the letter
-    entirely if below the legibility threshold). bar_width = 20 px at
-    12pt → horizontal cap = 17 px."""
-    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    bands = _band_rects(svg)
-    letters = _band_letters(svg)
-    assert bands and letters
+import re
 
-    bar_width = 20.0  # bar inset width at default 12pt geometry (v6)
+
+def _font_size_px(text_el):
+    m = re.search(r'font-size:\s*([0-9.]+)px', text_el.get("style") or "")
+    assert m, f"font-size not found in style={text_el.get('style')!r}"
+    return float(m.group(1))
+
+
+def test_letter_font_size_equals_cell_text_size():
+    """v6: each color-bar letter renders at exactly the cell-text size (no
+    scaling to the band), for uniform type across the entviz."""
+    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    letters = _band_letters(svg)
+    assert letters
+    # Cell-text size: a token <text> living inside a cell group.
+    cell_texts = svg.xpath(
+        '//*[local-name()="g"][@data-cell-index]//*[local-name()="text"]'
+    )
+    assert cell_texts, "no cell text found"
+    cell_size = _font_size_px(cell_texts[0])
     for t in letters:
-        ty = float(t.get("y"))
-        band = next(
-            b for b in bands
-            if float(b.get("y")) <= ty <= float(b.get("y")) + float(b.get("height"))
+        assert _font_size_px(t) == cell_size, (
+            f"color-bar letter {_font_size_px(t)} != cell text {cell_size}"
         )
-        bh = float(band.get("height"))
-        expected = min(bh * 0.7, bar_width * 0.85)
-        style = t.get("style") or ""
-        import re
-        m = re.search(r'font-size:\s*([0-9.]+)px', style)
-        assert m, f"font-size not found in style={style!r}"
-        assert abs(float(m.group(1)) - expected) < 0.01, (
-            f"font-size {m.group(1)} != expected {expected} for band_h={bh}"
+
+
+def test_letter_bottom_does_not_bleed_below_its_band():
+    """The baseline is placed so the glyph bottom stays within the band;
+    the top may bleed above on a short band."""
+    svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
+    for t in _band_letters(svg):
+        parent = t.getparent()
+        rect = [c for c in parent if c.tag.endswith("}rect")][0]
+        band_bottom = float(rect.get("y")) + float(rect.get("height"))
+        baseline = float(t.get("y"))
+        fs = _font_size_px(t)
+        # Glyph bottom ≈ baseline + descender (~0.2*fs) must not exceed the band.
+        assert baseline + 0.2 * fs <= band_bottom + 0.01, (
+            f"letter bottom {baseline + 0.2*fs} bleeds below band {band_bottom}"
         )

@@ -1,16 +1,16 @@
 """
-v5 large-input handling: inputs whose underlying byte length exceeds 64
+Large-input handling: inputs whose underlying byte length exceeds 64
 bytes (>512 bits), or whose tokenization would otherwise exceed the
-22-cell budget, are reduced to a head (8 tokens) + 4 fingerprint-selected
-middle slices + tail (8 tokens), separated by two blank cells when
-rendered. The fingerprint is always computed over the full input, so the
-truncated middle still binds into every fingerprint-driven channel.
+22-cell budget, are reduced to a head (8 tokens) + 4 middle tokens +
+tail (8 tokens), separated by two blank cells when rendered. The
+fingerprint is always computed over the full input, so it binds into
+every fingerprint-driven channel.
 
-v4→v5 update: replaced head-256 + blank + tail-256 (22 visible tokens)
-with head-192 + 4 middle slices + tail-192 (20 visible tokens + 2
-separator blanks). Assertions rewritten to match the new token count
-and head/tail boundaries; the byte-content checks adapt to the new
-192-bit head/tail span (32 hex chars per side instead of 64).
+Head/tail are real input entropy (192 bits = 32 hex chars per side, 8
+tokens). v6 changed the middle: the 4 middle tokens are now taken from
+the middle of the SHA-512 fingerprint (digest bytes 24-35), rendered in
+the input's alphabet (see test_v6_fingerprint_middle.py). These tests
+assert head/tail content and token counts, which are unchanged.
 """
 from entviz.entropy import tokenize, tokenize_entropy
 from entviz.fingerprint import compute_fingerprint
@@ -101,12 +101,12 @@ def test_base64_input_above_threshold_yields_20_tokens():
 
 
 def test_inputs_sharing_head_and_tail_but_differing_middle_now_differ_in_text():
-    # v4→v5: in v4 the truncated tokens were byte-identical for two
-    # inputs sharing head-256 and tail-256 (that was the F5 finding the
-    # v5 spec exists to fix). In v5 the middle group of 4 cells contains
-    # fingerprint-sampled slices that necessarily differ when the inputs
-    # differ at those offsets — so the TEXT channel itself now
-    # discriminates these two inputs. The fingerprint also still differs.
+    # In v4 the truncated tokens were byte-identical for two inputs
+    # sharing head-256 and tail-256 (the F5 finding). v6 makes the middle
+    # group fingerprint-derived, so it differs whenever the fingerprint
+    # does — i.e. on ANY input change — and the TEXT channel discriminates
+    # the two inputs. (v5 used body slices; this is now guaranteed, not
+    # probabilistic.)
     head = "DEADBEEF" * 8   # 64 hex chars (covers v5's first 32 plus margin)
     tail = "FEEDFACE" * 8   # 64 hex chars
     core_a = head + ("A" * 64) + tail  # 192 chars = 96 bytes
@@ -123,7 +123,7 @@ def test_inputs_sharing_head_and_tail_but_differing_middle_now_differ_in_text():
     middle_a = [t.text for t in tokens_a[8:12]]
     middle_b = [t.text for t in tokens_b[8:12]]
     assert middle_a != middle_b, (
-        "v5 middle slices should differ when bodies differ; this is the F5 fix"
+        "fingerprint-derived middle must differ when inputs differ"
     )
     # Fingerprints differ (avalanche is preserved).
     assert compute_fingerprint(core_a) != compute_fingerprint(core_b)

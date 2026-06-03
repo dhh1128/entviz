@@ -179,7 +179,7 @@ def test_disproof_alphabet_label_uses_alphabet_name():
 
 
 def test_truncated_input_label_prefixed_with_loud_marker():
-    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud 'part of '
+    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud 'fingerprint of '
     marker rendered in bold dark-red, followed by the standard
     '<Type>: ...' label in #666. The marker and tail are two adjacent
     <text> elements; this test concatenates them in document order to
@@ -195,18 +195,18 @@ def test_truncated_input_label_prefixed_with_loud_marker():
     joined = "".join(
         el.text or "" for el in top_g[0].xpath('.//*[local-name()="text"]')
     )
-    assert "part of" in joined, f"got: {joined!r}"
+    assert "fingerprint of" in joined, f"got: {joined!r}"
     assert "hex(200):" in joined, f"got: {joined!r}"
 
 
 def test_non_truncated_input_label_has_no_loud_marker():
-    """v4→v5: short inputs render no 'part of' marker, same as
+    """v4→v5: short inputs render no 'fingerprint of' marker, same as
     they previously rendered no '^…$' prefix."""
     svg = _doc(render("deadbeefcafe1234"))  # 16 hex chars = 64 bits
     labels = _labels(svg)
     for t in labels:
         if t.text:
-            assert not t.text.startswith("part of"), f"got: {t.text!r}"
+            assert not t.text.startswith("fingerprint of"), f"got: {t.text!r}"
             assert not t.text.startswith("^…$"), f"got: {t.text!r}"
 
 
