@@ -132,7 +132,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
     When the normalized core is longer than the budget for a 22-cell entviz (in concrete byte terms: when the core's underlying byte length, computed by decoding the core under its declared alphabet, exceeds 64 bytes), tokenize the input in three groups:
 
     * **Head group (H = 8 tokens).** Tokenize the first `24·H = 192` bits of the entropy exactly as you would tokenize a short input. For alphabets whose token length doesn't fall on the corresponding character boundary (e.g., bech32 packs 5 bits per char, so 192 bits crosses a partial-character boundary), round to the nearest aligned character position so the head consumes whole characters of the core; the resulting bit count may be slightly more or less than 192. These are **token indices** 0..7.
-    * **Middle group (M = 4 tokens).** Four tokens taken from the **middle of the fingerprint** — the 3-byte groups `digest[24+3i .. 26+3i]` for `i ∈ [0..3]` (i.e. the bytes behind ftoks 8..11) — each rendered in the input's alphabet (see below). These are token indices 8..11. Because they carry no entropy, their nucleus background is set to the **entviz background color** (so the nucleus reads as neutral/hollow, visually distinct from the entropy-colored head/tail), and each is framed by a **1-px border flush with the nucleus edge** (the stroke's outer edge coincides with the nucleus boundary) — colored gold (`#ffd966`) on a white-background entviz, white (`#ffffff`) otherwise (the same contrast rule as the blank-cell map fill) — to mark the four cells as the fingerprint group. Their surround stays fingerprint-driven and therefore still avalanches.
+    * **Middle group (M = 4 tokens).** Four tokens taken from the **middle of the fingerprint** — the 3-byte groups `digest[24+3i .. 26+3i]` for `i ∈ [0..3]` (i.e. the bytes behind ftoks 8..11) — each rendered in the input's alphabet (see below). These are token indices 8..11. Because they carry no entropy, their nucleus background is set to the **entviz background color** (so the nucleus reads as neutral/hollow, visually distinct from the entropy-colored head/tail), and each is framed by a **1-px border flush with the nucleus edge** (the stroke's outer edge coincides with the nucleus boundary) — colored gold (`#e7be00`) on a white-background entviz, white (`#ffffff`) otherwise (the same contrast rule as the blank-cell map fill) — to mark the four cells as the fingerprint group. Their surround stays fingerprint-driven and therefore still avalanches.
     * **Tail group (T = 8 tokens).** Tokenize the last `24·T = 192` bits of the entropy in the same way (with the same rounding rule when the alphabet doesn't align). These are token indices 12..19.
 
     These 20 tokens carry contiguous token indices 0..19 in head → middle → tail order, preserving reading order. **Cell placement uses the same blank-shift rule as short inputs** (see the blank-cell step below): choose a grid with a few spare cells for the 20 tokens (at `target_ar = 1.0` this is a 4×6 grid → 4 blank cells), then insert blanks at the median ftok's position and the ASCII-sort endpoints. The blanks therefore **vary with the fingerprint** and carry the same CRC-like signal they do for short inputs. There are **no fixed separator blanks**: head/middle/tail are a logical token ordering, not fixed cell positions. (v5 instead placed two fixed separator blanks at cells 8 and 13 and bypassed the shift; v6 drops that special case so a large input's blank layout discriminates inputs exactly as a short input's does. Because the fingerprint cells are individually marked — neutral bg + gold/white frame — and the `fingerprint of` marker already signals a non-linear read, the explicit separators are no longer needed.)
@@ -228,9 +228,11 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     Use the *grid rect* as a clipping region for the ellipse overlay (see below). The color bar and gray border lines are drawn outside the grid rect and need no clipping. Draw all clipped content first; draw the gray border lines last so the borders are never overwritten.
 
-1. Let the array of **possible edge colors** be `[white #ffffff, gold #ffd966, red #ff3f2f, blue #2f3fbf, black #000000]`. The first four entries (indices 0-3) are the **background candidates**; black at index 4 is *always* an edge color and is never selected as the entviz background. This is intentional: black is too visually heavy to serve as a background.
+1. Let the array of **possible edge colors** be `[white #ffffff, gold #e7be00, red #ff3f2f, blue #2f3fbf, black #000000]`. The first four entries (indices 0-3) are the **background candidates**; black at index 4 is *always* an edge color and is never selected as the entviz background. This is intentional: black is too visually heavy to serve as a background.
 
     ![colors](assets/colors.png)
+
+    *Palette rationale.* The five colors are spaced primarily along **lightness** (CIELAB L\*), not hue, because lightness is the one channel that survives every color-vision deficiency, monochrome rendering, and CSS color filtering — the channels (hue, chroma) that read as vivid to normal vision are exactly the ones that collapse under CVD. Their L\* values are white 100, gold ≈78, red ≈57, blue ≈34, black 0. Gold sits at the **maximin** point between its neighbors: the white→gold and gold→red lightness gaps are equalized at ΔL\* ≈ 21, so neither is the weak link. (Gold was darkened from v5's `#ffd966` at L\*≈88, where the white/gold gap was only ΔL\* ≈ 12 — white and gold were near-indistinguishable on a grayscale/achromat rendering and the weakest pair in the whole palette.) Gold/red carries an additional hue cue (yellow vs red) on top of its lightness gap, so it tolerates the smaller gap; white/gold has no such backup, which is why the budget is spent equalizing it. **Honesty caveat:** under *protanopia* the red and blue swatches collapse to ΔL\* ≈ 7 regardless of palette choice — red darkens under protan simulation and no lightness assignment can prevent it; those two remain separable only via the retained blue-yellow axis and the color-bar letters (`r`/`b`). The palette is robust, not CVD-proof; the letters (see the color bar below) are the guaranteed fallback.
 
     Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge palette**. Black is therefore always present in the *edge palette* regardless of which background was chosen.
 
@@ -249,7 +251,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
     | Color | Hex | Letter |
     |---|---|---|
     | white | `#ffffff` | `w` |
-    | gold | `#ffd966` | `g` |
+    | gold | `#e7be00` | `g` |
     | red | `#ff3f2f` | `r` |
     | blue | `#2f3fbf` | `b` |
     | black | `#000000` | `k` |
@@ -277,7 +279,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
         | bg color | hex | overlay fill | opacity |
         |---|---|---|---|
         | white | `#ffffff` | `#000000` (darken) | 20% |
-        | gold  | `#ffd966` | `#000000` (darken) | 30% |
+        | gold  | `#e7be00` | `#000000` (darken) | 30% |
         | red   | `#ff3f2f` | `#000000` (darken)  | 40% |
         | blue  | `#2f3fbf` | `#ffffff` (lighten) | 40% |
 
@@ -380,7 +382,7 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
     * **minftok cell**: among the used ftoks, the one with the smallest 24-bit quant; tie-break = highest cell index of the corresponding cell.
     * **maxftok cell**: among the used ftoks, the one with the largest 24-bit quant; tie-break = highest cell index.
 
-    **Map rendering.** Fill the first blank cell's rounded rect with `#ffffff` when the entviz background color is *not* white, or with the palette gold `#ffd966` when the entviz background *is* white — so the fill always contrasts with the background showing behind it. Then subdivide the rect's interior into a logical grid of `cols × rows` sub-cells mirroring the entviz's own grid dimensions (the subdivision is logical; no grid lines are drawn). The sub-cell at logical position (row, column) corresponds to the full-grid cell at that same position. Draw two filled circles:
+    **Map rendering.** Fill the first blank cell's rounded rect with `#ffffff` when the entviz background color is *not* white, or with the palette gold `#e7be00` when the entviz background *is* white — so the fill always contrasts with the background showing behind it. Then subdivide the rect's interior into a logical grid of `cols × rows` sub-cells mirroring the entviz's own grid dimensions (the subdivision is logical; no grid lines are drawn). The sub-cell at logical position (row, column) corresponds to the full-grid cell at that same position. Draw two filled circles:
 
     * a **red** circle (`#d62828`) centered in the sub-cell whose (row, column) is that of the **maxftok cell**;
     * a **blue** circle (`#1d4ed8`) centered in the sub-cell whose (row, column) is that of the **minftok cell**.

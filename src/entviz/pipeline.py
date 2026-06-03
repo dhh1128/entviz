@@ -332,7 +332,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # input) get a 1-px inset border to frame them: gold on a white-bg
     # entviz, white otherwise — the same contrast rule as the blank-cell map
     # fill, and contrasting against their bg-colored (neutral) nucleus.
-    fp_border = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
+    fp_border = '#e7be00' if style.bg_color == '#ffffff' else '#ffffff'
     for token, ftok, cell, ci, nucleus_bg in token_cells:
         is_fp_middle = is_truncated and 8 <= token.index <= 11
         renderer.render_nucleus(
@@ -379,7 +379,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     corner_radius = nucleus_height / 2   # = 10 at 12pt
     # The map fill must contrast with whatever background shows behind it:
     # white on any non-white entviz background, gold on a white one.
-    map_fill = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
+    map_fill = '#e7be00' if style.bg_color == '#ffffff' else '#ffffff'
 
     for ci in blank_indices:
         cg = cell_groups[ci]
@@ -706,7 +706,7 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
 # where the visible silhouette is smaller and needs more pop.
 _V3_OVERLAY_BY_BG = {
     '#ffffff': ('#000000', 0.20),  # white  → darken at 20%
-    '#ffd966': ('#000000', 0.30),  # gold   → darken at 30%
+    '#e7be00': ('#000000', 0.30),  # gold   → darken at 30%
     '#ff3f2f': ('#000000', 0.40),  # red    → darken at 40%
     '#2f3fbf': ('#ffffff', 0.40),  # blue   → lighten at 40%
 }
@@ -836,7 +836,7 @@ def _two_bit_color_usage(digest: bytes, edge_colors) -> dict:
 # data-color-bar-band="<letter>" attribute without re-deriving this map.
 _BAND_LETTER_BY_COLOR = {
     "#ffffff": "W",
-    "#ffd966": "G",
+    "#e7be00": "G",
     "#ff3f2f": "R",
     "#2f3fbf": "B",
     "#000000": "K",

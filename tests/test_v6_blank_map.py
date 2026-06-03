@@ -26,7 +26,7 @@ FIXTURE = "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
 
 RED = "#d62828"
 BLUE = "#1d4ed8"
-GOLD = "#ffd966"
+GOLD = "#e7be00"
 WHITE = "#ffffff"
 
 

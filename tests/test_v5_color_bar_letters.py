@@ -5,7 +5,7 @@ Each visible band in the color bar carries a single lowercase letter
 centered horizontally and vertically:
 
     #ffffff → w   (black text)
-    #ffd966 → g   (black text)
+    #e7be00 → g   (black text)
     #ff3f2f → r   (white text)
     #2f3fbf → b   (white text)
     #000000 → k   (white text)
@@ -31,7 +31,7 @@ def _doc(svg_str):
 
 BAND_LETTER = {
     "#ffffff": "w",
-    "#ffd966": "g",
+    "#e7be00": "g",
     "#ff3f2f": "r",
     "#2f3fbf": "b",
     "#000000": "k",
@@ -72,7 +72,7 @@ def test_oklab_contrast_rule_produces_expected_letter_colors():
     the codebase."""
     expected = {
         "#ffffff": "#000000",  # W on white → black (L≈1.000)
-        "#ffd966": "#000000",  # G on gold  → black (L≈0.896)
+        "#e7be00": "#000000",  # G on gold  → black (L≈0.814)
         "#ff3f2f": "#000000",  # R on red   → black (L≈0.657, above 0.6)
         "#2f3fbf": "#ffffff",  # B on blue  → white (L≈0.445)
         "#000000": "#ffffff",  # K on black → white (L≈0.000)

@@ -17,7 +17,7 @@ def test_white_bg_opacity_20pct():
 
 
 def test_gold_bg_opacity_30pct():
-    _fill, opacity = _ellipse_overlay_for_bg("#ffd966")
+    _fill, opacity = _ellipse_overlay_for_bg("#e7be00")
     assert opacity == 0.30
 
 
@@ -35,6 +35,6 @@ def test_overlay_fill_directions_unchanged():
     """Fill colors (which side of the dichotomy) are unchanged from v3:
     white/gold/red darken, blue lightens."""
     assert _ellipse_overlay_for_bg("#ffffff")[0] == "#000000"
-    assert _ellipse_overlay_for_bg("#ffd966")[0] == "#000000"
+    assert _ellipse_overlay_for_bg("#e7be00")[0] == "#000000"
     assert _ellipse_overlay_for_bg("#ff3f2f")[0] == "#000000"
     assert _ellipse_overlay_for_bg("#2f3fbf")[0] == "#ffffff"

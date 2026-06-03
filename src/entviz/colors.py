@@ -29,7 +29,7 @@ VisualStyle = namedtuple('VisualStyle', [
 
 POSSIBLE_EDGE_COLORS = [
     '#ffffff',  # white
-    '#ffd966',  # gold
+    '#e7be00',  # gold
     '#ff3f2f',  # red
     '#2f3fbf',  # blue
     '#000000',  # black — always present, never the background

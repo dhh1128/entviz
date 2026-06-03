@@ -43,7 +43,7 @@ def test_weighted_rgb_distance_green_is_highest_weighted():
 
 
 def test_closest_palette_color_returns_palette_member():
-    palette = ['#ffffff', '#ffd966', '#ff3f2f', '#2f3fbf']
+    palette = ['#ffffff', '#e7be00', '#ff3f2f', '#2f3fbf']
     for target in ['#ff0000', '#00ff00', '#0000ff', '#888888', '#10203c']:
         assert closest_palette_color(target, palette) in palette
 

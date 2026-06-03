@@ -1970,3 +1970,41 @@ Entviz = goal:
             `fingerprint of` marker already signals a non-linear read.
             Closes the "all large entvizes share one layout" complaint.
             See [[v6fpmid1]].
+
+        Darken Gold to Maximin Lightness = decision:
+          id: v6goldlt
+          why: >
+            Adversarial finding F3 claimed the palette collapses under CVD.
+            Investigation (the maintainer hand-tuned the original palette by
+            luminance) showed F3's specific diagnosis (gold/red collapse) was
+            WRONG — gold/red is lightness-saved AND hue-backed. The real weak
+            pair was white/gold: at v5's gold `#ffd966` (CIELAB L*≈88) the
+            white→gold gap was only ΔL*≈12, the smallest in the palette, and
+            white/gold blurred together on a grayscale / achromat rendering.
+
+            Lightness is the only channel that survives CVD, monochrome, and
+            color-filtering, so the fix is to space the colors on L*. Holding
+            white(100)/red(57)/blue(34)/black(0) fixed and moving ONLY gold's
+            lightness, the maximin (white/gold gap == gold/red gap) is at
+            L*78.5: both gaps ≈21. Adopted gold `#e7be00` — L*78.4, max chroma
+            at that lightness (C*80, up from #ffd966's 60). Chroma maxed on the
+            maintainer's call: gold/red leans on the yellow-vs-red HUE cue, so
+            a stronger gold hue reinforces the pair that took the smaller
+            lightness gap. White/gold has no hue backup, which is why the
+            lightness budget is spent equalizing it, not gold/red.
+
+            Rejected alternatives: (a) L*80 #ecc300 — I initially recommended
+            it for a marginally better deuteranopia gold/red (ΔL* 18.3 vs 17.2),
+            but the maintainer correctly noted gold/red's hue cue makes that 1.1
+            difference perceptually irrelevant, so the true maximin (78.5) wins.
+            (b) the ΔE76-optimized palette (gold L*75/red L*50/blue L*25) —
+            ΔE76 over-credits chroma (the fragile channel) and regressed
+            perceptual quality; ΔE76 is NOT a safe optimization metric here.
+
+            HONEST LIMIT: protanopia red/blue stays pinned at ΔL*≈7 for ANY
+            gold (red darkens under protan; no lightness assignment fixes it).
+            Those two rely on the retained blue-yellow axis + color-bar letters
+            (`r`/`b`). Palette is robust, not CVD-proof. Spec palette-rationale
+            paragraph + CVD honesty caveat updated to say so. Validated by
+            per-CVD ΔL* sweep and by-eye (.cache/palette_gold_chroma.html);
+            do NOT trust ΔE76. See [[v6fpmid1]].

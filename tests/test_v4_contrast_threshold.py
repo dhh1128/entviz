@@ -79,8 +79,8 @@ def test_midgray_over_threshold_picks_black():
 
 
 def test_mid_luminance_gold_picks_black():
-    """Gold #ffd966 → Oklab L≈0.896 → black."""
-    _bg, fg = get_nucleus_colors(0xFFD966)
+    """Palette gold #e7be00 → Oklab L≈0.814 → black."""
+    _bg, fg = get_nucleus_colors(0x00BEE7)  # r=e7 g=be b=00 → #e7be00
     assert fg == "#000000"
 
 

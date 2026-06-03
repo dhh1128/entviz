@@ -16,8 +16,8 @@ from lxml import etree
 
 from entviz.pipeline import render
 
-BG_CANDIDATES = {"#ffffff", "#ffd966", "#ff3f2f", "#2f3fbf"}
-GOLD, WHITE = "#ffd966", "#ffffff"
+BG_CANDIDATES = {"#ffffff", "#e7be00", "#ff3f2f", "#2f3fbf"}
+GOLD, WHITE = "#e7be00", "#ffffff"
 
 
 def _parse(svg_str):

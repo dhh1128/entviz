@@ -14,7 +14,7 @@ def _doc(svg_str):
 
 def test_two_bit_histogram_sums_to_256():
     """A 64-byte digest yields 256 disjoint 2-bit slices."""
-    palette = ['#ffffff', '#ffd966', '#ff3f2f', '#2f3fbf']
+    palette = ['#ffffff', '#e7be00', '#ff3f2f', '#2f3fbf']
     digest = bytes(range(64))  # arbitrary 64-byte digest
     usage = _two_bit_color_usage(digest, palette)
     assert sum(usage.values()) == 256
@@ -23,10 +23,10 @@ def test_two_bit_histogram_sums_to_256():
 def test_two_bit_histogram_uniform_for_uniform_digest():
     """A digest of all 0x55 (binary 01010101) puts every 2-bit slice
     at value 01 → all 256 slices land in palette[1]."""
-    palette = ['#ffffff', '#ffd966', '#ff3f2f', '#2f3fbf']
+    palette = ['#ffffff', '#e7be00', '#ff3f2f', '#2f3fbf']
     digest = b"\x55" * 64
     usage = _two_bit_color_usage(digest, palette)
-    assert usage['#ffd966'] == 256
+    assert usage['#e7be00'] == 256
     assert usage['#ffffff'] == 0
     assert usage['#ff3f2f'] == 0
     assert usage['#2f3fbf'] == 0
@@ -34,7 +34,7 @@ def test_two_bit_histogram_uniform_for_uniform_digest():
 
 def test_two_bit_histogram_all_zero():
     """All-zero digest → all slices are 00 → all in palette[0]."""
-    palette = ['#ffffff', '#ffd966', '#ff3f2f', '#2f3fbf']
+    palette = ['#ffffff', '#e7be00', '#ff3f2f', '#2f3fbf']
     digest = b"\x00" * 64
     usage = _two_bit_color_usage(digest, palette)
     assert usage['#ffffff'] == 256
@@ -42,7 +42,7 @@ def test_two_bit_histogram_all_zero():
 
 def test_two_bit_histogram_all_one():
     """All-0xff digest → all slices are 11 → all in palette[3]."""
-    palette = ['#ffffff', '#ffd966', '#ff3f2f', '#2f3fbf']
+    palette = ['#ffffff', '#e7be00', '#ff3f2f', '#2f3fbf']
     digest = b"\xff" * 64
     usage = _two_bit_color_usage(digest, palette)
     assert usage['#2f3fbf'] == 256
