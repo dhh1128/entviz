@@ -583,6 +583,17 @@ def parse_eos_address(text) -> Parsed:
     """
     m = EOS_REGEX.match(text)
     if m:
+        # F6 (adversarial-2026-06-02): don't let EOS claim a string that is
+        # entirely hex-alphabet characters. parse_hex runs before this and
+        # already wins for EVEN-length hex, but it returns None for ODD-length
+        # hex, so an odd-length all-[a-f1-5] fragment like 'badcafe' would
+        # otherwise be mislabeled EOS (and base64-tokenized) when the user
+        # means a hex fragment. Real EOS names contain a char in [g-z] or '.'
+        # (the EOS alphabet minus the hex overlap), so requiring at least one
+        # such character cleanly separates the two without a length floor
+        # (which would reject legitimately short EOS system names).
+        if all(c in "0123456789abcdef" for c in m.group(0)):
+            return None
         # EOS uses a constrained alphabet [a-z1-5.] (32 chars + dot, ~5 bits).
         # Treated as BASE64 alphabet for tokenization for now; a proper
         # narrow-alphabet treatment is a deferred follow-up.

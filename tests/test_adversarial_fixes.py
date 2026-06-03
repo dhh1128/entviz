@@ -170,3 +170,29 @@ def test_fa11_svg_injection_is_escaped():
     assert "<script" not in out, (
         "raw <script substring must NOT appear anywhere in the SVG"
     )
+
+
+# ---------------------------------------------------------------------------
+# F6 (adversarial-2026-06-02) — short odd-length all-hex fragments were
+# mislabeled EOS (base64-tokenized) because parse_hex returns None for
+# odd-length input and EOS caught the fall-through. EOS must not claim a
+# string that is entirely hex-alphabet characters.
+# ---------------------------------------------------------------------------
+
+def test_f6_short_odd_length_hex_fragment_is_not_eos():
+    """'badcafe' is a 7-char hex fragment, not an EOS account."""
+    p = parse("badcafe")
+    assert p.type != "EOS", f"expected non-EOS, got {p.type!r}"
+    assert p.type == "hex"
+
+
+def test_f6_hex_fragment_classification_is_length_parity_stable():
+    """A hex fragment and the same fragment with one more nibble classify
+    the same way (both hex), instead of flipping EOS<->hex across parity."""
+    assert parse("badcafe").type == parse("badcafe0").type == "hex"
+
+
+def test_f6_genuine_eos_with_nonhex_chars_still_parses_as_eos():
+    """EOS names containing a char outside the hex alphabet are unaffected."""
+    assert parse("gqgpv4222oyz").type == "EOS"
+    assert parse("eosio.token").type == "EOS"

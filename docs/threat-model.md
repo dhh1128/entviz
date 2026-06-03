@@ -72,9 +72,21 @@ name which tier(s) it applies to.
 * **T4.** Can manipulate the user's environment: induce a CVD-simulating
   filter, force a monochrome display, force a small viewport, substitute a
   hostile or narrow-glyph font.
-* **T5.** Can construct long inputs (>512 bits) whose head-256 and tail-256
-  match a target — the only differences live in the truncated middle, which
-  the text channel does not display.
+* **T5.** Can construct long inputs (>512 bits) whose displayed **head**
+  (first 192 bits / 8 tokens) and **tail** (last 192 bits / 8 tokens) match a
+  target. In v6 the 4 middle cells additionally display a **96-bit hex readout
+  of a second, domain-separated SHA-512** of the whole input, so T5 must also
+  produce a 96-bit (injective, uniform across alphabets) partial preimage of
+  that second digest to match the text channel — and, because every gestalt
+  channel binds the full input through the *primary* fingerprint, must
+  independently match the gestalt as well.
+  *(v6 note, closing adversarial-2026-06-02 F2: the displayed middle is
+  derived from a digest that is **domain-separated** from the primary
+  fingerprint, so matching the middle text does NOT also match the color bar
+  or surround "for free" — the middle-text preimage and the gestalt match are
+  independent requirements. The first v6 draft read the middle from primary
+  digest bytes that also drove those channels, making the two correlated; that
+  is no longer the case.)*
 * **T6.** Habituated insider — the user has seen the "correct" entviz many
   times and now checks only one or two landmarks (color bar gestalt, blank
   positions, ellipse silhouette). The attacker only has to match those.
