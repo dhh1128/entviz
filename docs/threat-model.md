@@ -73,7 +73,7 @@ name which tier(s) it applies to.
   filter, force a monochrome display, force a small viewport, substitute a
   hostile or narrow-glyph font.
 * **T5.** Can construct long inputs (>512 bits) whose displayed **head**
-  (first 192 bits / 8 tokens) and **tail** (last 192 bits / 8 tokens) match a
+  (first 8 tokens) and **tail** (last 8 tokens) match a
   target. In v6 the 4 middle cells additionally display a **96-bit hex readout
   of a second, domain-separated SHA-512** of the whole input, so T5 must also
   produce a 96-bit (injective, uniform across alphabets) partial preimage of
