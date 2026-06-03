@@ -148,7 +148,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     With both refinements, an attacker who matches the head, the tail, and the 4 displayed fingerprint tokens must produce a **96-bit partial preimage** of the second digest (4 cells × 24 injective bits, ≈2⁹⁶) *and* — independently — match the primary-fingerprint gestalt channels. The 96-bit figure is now exact and uniform across alphabets (it was 80 bits, non-injective, for 5-bit alphabets in the first draft). The losslessness promise is unaffected: the text channel is only promised lossless for ≤512-bit inputs, and that path does not use this rule at all.
 
-    **Middle cell text rendering.** Each middle token reads its 3 bytes from the second digest, `second = SHA-512(DOMAIN_TAG ‖ core)` with `DOMAIN_TAG = "entviz/fingerprint-middle/v6\0"`, as a 24-bit big-endian value `second[3i] · 2¹⁶ + second[3i+1] · 2⁸ + second[3i+2]`, and renders it as exactly **6 lowercase hexadecimal characters**. This is the same width and font size as a hex head/tail cell, and is independent of the input's alphabet (the middle is a digest readout, not lossless input, so it need not share the input's character set). The rendering is injective on the 12 displayed digest bytes for every input.
+    **Middle cell text rendering.** Each middle token reads its 3 bytes from the second digest, `second = SHA-512(DOMAIN_TAG ‖ core)` with `DOMAIN_TAG = "entviz/fingerprint-middle/v6\0"`, as a 24-bit big-endian value `second[3i] · 2¹⁶ + second[3i+1] · 2⁸ + second[3i+2]`, and renders it as exactly **6 lowercase hexadecimal characters**, independent of the input's alphabet (the middle is a digest readout, not lossless input, so it need not share the input's character set). Because these cells are 6 characters, they are drawn at the **6-character rendered font size (`round(0.75 × reference)`)** per the cell-text rendered-size rule — applied per cell on the middle's own character count, *not* the entviz's input alphabet. On a hex input the head/tail are already 6-character cells at this size; on a 5-/6-bit-alphabet input the head/tail render at full size and the middle cells are correctly smaller (otherwise the 6 hex glyphs overflow the nucleus). The rendering is injective on the 12 displayed digest bytes for every input.
 
     **Used ftoks** follow the same one-to-one rule as for short inputs: the used ftok at *token index i* drives the token with that token index (per the used-ftoks step below), regardless of which *cell* that token lands in after the blank shift. The 20 large-input tokens carry token indices 0..19 and so use ftoks 0..19; ftoks 20 and 21 are unused. The fingerprint is still SHA-512 over the entire normalized entropy.
 
@@ -371,15 +371,15 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
 
 1. Draw a **nucleus rect**. Dimensions are *nucleus width* x *nucleus height*. Top left corner is at `x + box_width`, `y + box_height`. Fill color = *nucleus background color*. The nucleus is drawn *after* the surround boxes (and after the ellipse overlay), so the overlay never tints the nucleus.
 
-1. Determine the **cell text rendered font size** based on the token character count:
+1. Determine the **cell text rendered font size** from **that cell's own token character count** — independently per cell, NOT from the entviz's input alphabet. (This distinction matters on a large input: the hex middle cells are 6 characters even when the head/tail are 4-character tokens of a 5-/6-bit alphabet, so the middle cells MUST be sized down independently or their 6 hex glyphs overflow the nucleus.)
 
-    * If the token is 4 characters (base64, base58): rendered font size = the reference font size.
-    * If the token is 6 characters (hex): rendered font size = `round(0.75 × reference_font_size)` (rounded to the nearest whole point, with ties broken toward even). The 75% factor leaves ~4.8 px of horizontal slack inside the nucleus even on monospace fonts with the widest char-width ratios.
+    * If the token is 4 characters (e.g. base64, base58, bech32/base32 head/tail): rendered font size = the reference font size.
+    * If the token is 6 characters (hex head/tail, **and the hex middle cells of any large input regardless of the input alphabet**): rendered font size = `round(0.75 × reference_font_size)` (rounded to the nearest whole point, with ties broken toward even). The 75% factor leaves ~4.8 px of horizontal slack inside the nucleus even on monospace fonts with the widest char-width ratios.
     * Generalized rule, in case future spec revisions introduce additional token character counts:
       ```
       rendered_font_size_pt = round(reference_font_size_pt × max(0.75, min(1.0, 4 / token_chars)))
       ```
-      This collapses to the two cases above for current token types: 4-char → reference, 6-char → 75% of reference. The 0.75 floor ensures readability remains acceptable even if a future token type would technically permit further shrinking.
+      This collapses to the two cases above for current token types: 4-char → reference, 6-char → 75% of reference. The 0.75 floor ensures readability remains acceptable even if a future token type would technically permit further shrinking. Because the rule is keyed on `token_chars` per cell, a single entviz MAY mix rendered sizes (full-size 4-char head/tail and 0.75× 6-char hex middle on the same large input).
 
     Geometry (grid, nucleus, cell positions) does not change with the rendered font size — only the size of the glyphs drawn inside the nucleus does. Using the *foreground color*, write the text of the token on top of the *nucleus rect* at the rendered font size, centering it vertically and horizontally.
 

@@ -325,6 +325,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     )
     cell_text_px = cell_text_pt * _DPI / 72
     label_text_px = round(font_size_pt * 0.75) * _DPI / 72
+    # The v6 fingerprint-middle cells always render 6 hex chars regardless of
+    # the input alphabet, so they use the 6-char (0.75×) rendered size even
+    # when the input's own tokens are 4 chars (5-/6-bit alphabets render at
+    # full size). Without this the 6 hex chars overflow the nucleus.
+    fp_middle_text_px = round(font_size_pt * 0.75) * _DPI / 72
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
@@ -336,7 +341,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     for token, ftok, cell, ci, nucleus_bg in token_cells:
         is_fp_middle = is_truncated and 8 <= token.index <= 11
         renderer.render_nucleus(
-            cell_groups[ci], token, cell, text_size_px=cell_text_px,
+            cell_groups[ci], token, cell,
+            text_size_px=(fp_middle_text_px if is_fp_middle else cell_text_px),
             bg_override=nucleus_bg,
             inner_border=(fp_border if is_fp_middle else None),
         )

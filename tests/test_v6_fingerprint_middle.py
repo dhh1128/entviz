@@ -29,6 +29,8 @@ from lxml import etree
 from entviz.entropy import parse, _MIDDLE_DOMAIN_TAG
 from entviz.pipeline import render
 
+_FONT_SIZE_RE = re.compile(r"font-size:\s*([\d.]+)px")
+
 BG_CANDIDATES = {"#ffffff", "#e7be00", "#ff3f2f", "#2f3fbf"}
 GOLD, WHITE = "#e7be00", "#ffffff"
 
@@ -80,6 +82,15 @@ def _fp_indices(svg):
 def _used_texts_in_order(svg, groups):
     return [_cell_text(groups[ci]) for ci in sorted(groups)
             if groups[ci].get("data-cell-blank") is None]
+
+
+def _cell_font_px(g):
+    for t in g:
+        if t.tag.endswith("}text"):
+            m = _FONT_SIZE_RE.search(t.get("style", ""))
+            if m:
+                return float(m.group(1))
+    return None
 
 
 def _middle_in_order(raw):
@@ -160,6 +171,35 @@ def test_middle_is_independent_of_primary_digest():
     digests differ, so the middle is independent evidence."""
     for raw in (BASE, B32, B64):
         assert _middle_in_order(raw) != _primary_middle_bytes(raw), raw
+
+
+def test_middle_text_is_downsized_to_fit_six_chars_for_nonhex_alphabet():
+    """The 6-char hex middle must use the 6-char (0.75x) rendered font size
+    even when the input alphabet's own tokens are 4 chars (5-/6-bit alphabets
+    render at full size). Otherwise the 6 hex chars overflow the nucleus — the
+    Cardano-Shelley gallery bug. B32 is a 5-bit alphabet: head/tail are 4-char
+    full-size cells; the middle is 6-char and must be smaller."""
+    svg, g = _parse(render(B32))
+    fp = set(_fp_indices(svg))
+    head = [ci for ci in sorted(g)
+            if ci not in fp and g[ci].get("data-cell-blank") is None]
+    head_px = _cell_font_px(g[head[0]])
+    for ci in fp:
+        mid_px = _cell_font_px(g[ci])
+        assert mid_px < head_px, (
+            f"fp cell {ci} font {mid_px}px not downsized below head {head_px}px")
+        # 6-char size is 0.75x the reference (12pt -> 9pt -> 12px at 96dpi).
+        assert mid_px == 12.0, mid_px
+
+
+def test_hex_input_middle_font_matches_six_char_head():
+    """For a hex input the head/tail are already 6-char (0.75x) cells, so the
+    6-char middle uses the same size — no regression."""
+    svg, g = _parse(render(BASE))
+    fp = _fp_indices(svg)
+    head = [ci for ci in sorted(g)
+            if ci not in set(fp) and g[ci].get("data-cell-blank") is None]
+    assert {_cell_font_px(g[ci]) for ci in fp} == {_cell_font_px(g[head[0]])} == {12.0}
 
 
 def test_middle_token_length_is_six_hex_chars():
