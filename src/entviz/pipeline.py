@@ -67,20 +67,20 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
 
-    # v5: when the input exceeds 512 bits, tokenize_entropy returns 20
-    # tokens — 8 head + 4 middle slices + 8 tail. The label gets a loud
-    # `fingerprint of` prefix rendered in bold dark-red; assembly is
-    # done in _draw_label_strips where the styling lives. We carry the
-    # byte count separately so the label rendering doesn't have to peek
-    # at the raw input.
+    # v6: when the input exceeds 512 bits, tokenize_entropy returns 20
+    # tokens — 8 head (real entropy) + 4 middle (hex fingerprint readout) +
+    # 8 tail (real entropy). The label gets a loud `fingerprint of` prefix
+    # rendered in bold dark-red; assembly is done in _draw_label_strips where
+    # the styling lives. We carry the byte count separately so the label
+    # rendering doesn't have to peek at the raw input.
     truncated_bytes = len(raw_input.encode("utf-8")) if is_truncated else None
 
-    # v5 large-input layout uses a fixed 22-cell budget: H=8 + 1 blank +
-    # M=4 + 1 blank + T=8. The 20 returned tokens map to cell indices
-    # 0..7 (head), 9..12 (middle), and 14..21 (tail); cell indices 8 and
-    # 13 are the separator blanks. We bypass the median/quartile blank
-    # insertion entirely in this path because the cell layout is fully
-    # determined by the spec.
+    # v6 large inputs do NOT use fixed separator blanks. The 20 tokens keep
+    # logical order (head 0..7, middle 8..11, tail 12..19) but blank cells are
+    # placed by the same median/quartile shift as short inputs (see the
+    # assign_cell_indices call below), so a large input's blank layout varies
+    # per input instead of being identical for every large input. The 4 middle
+    # cells are identified by token index 8..11, not by a fixed cell position.
     token_count = len(tokens)
 
     # --- Compute the fingerprint and derive used ftoks ---

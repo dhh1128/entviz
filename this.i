@@ -1942,6 +1942,47 @@ Entviz = goal:
             head/tail) resolved by rendering in the input alphabet. AGREED
             follow-up: re-run the adversarial lens on the new text channel.
 
+        Middle = Domain-Separated Second Hash, Rendered Hex = decision:
+          id: v6fpmid2
+          why: >
+            The agreed follow-up adversarial pass (adversarial-2026-06-02)
+            found two real defects in v6fpmid1's "primary-digest bytes 24-35,
+            rendered in the input's alphabet" scheme:
+
+            F1 (avalanche not actually guaranteed). Rendering 24 bits in the
+            input's alphabet via _fingerprint_token_text drops bits on
+            non-hex alphabets: 5-bit alphabets (bech32/base32/crockford32)
+            show only the top 20 of each cell's 24 bits (token_len=4), so the
+            low nibble of every 3rd middle byte is NEVER shown — two inputs
+            whose digests differ only there render IDENTICAL middle text
+            (measured). And the spec falsely claimed non-power-of-2 alphabets
+            "never reach the path" — a 200-char base58/base36 paste DOES
+            truncate, and the mod-fallback aliases group values badly. So the
+            "guaranteed avalanche for read-aloud" promise was false for those
+            alphabets; real displayed entropy was 80 bits (5-bit) or less.
+
+            F2 (middle not independent of gestalt). Bytes 24-35 of the PRIMARY
+            digest also feed the color bar and the middle cells' own surround,
+            so matching the displayed middle matched those gestalt channels for
+            free; the spec's "match the middle AND independently match the
+            gestalt" overstated a barrier that was actually correlated.
+
+            Fix (maintainer agreed both): (1) render the middle as HEX, 6
+            lowercase chars = a full 24 injective bits per cell, regardless of
+            input alphabet — the cells are already marked as a hash readout
+            (neutral bg + frame + `fingerprint of`), so hex is appropriate and
+            signals "digest, not your data". (2) derive the middle from a
+            SECOND, domain-separated digest second = SHA-512(DOMAIN_TAG||core),
+            DOMAIN_TAG = b"entviz/fingerprint-middle/v6\0", uncorrelated with
+            the primary fingerprint. Now the 96-bit (4×24) partial-preimage
+            claim is EXACT and uniform across alphabets, and is independent of
+            matching the gestalt. _fingerprint_token_text and _match_core_case
+            deleted (dead). Spec lines (summary, goals, middle group, "why",
+            "rendering", threat para) rewritten; the false "never reach the
+            path" claim removed. Tests rewritten to prove hex-regardless-of-
+            alphabet, 5-bit injectivity, exact second-digest value, and
+            primary-digest independence. See [[v6fpmid1]].
+
         Unify Large-Input Blank Placement = decision:
           id: v6blnkun
           why: >
