@@ -39,7 +39,50 @@ Code is a human language.
 4. **Validation:** Run all project tests to ensure no regressions.
 5. **Regenerate the gallery:** Any time a change can alter rendered output — anything in `src/entviz/` touching tokenization, geometry, color, layout, or SVG emission, or any spec change that flows into the renderer — regenerate the visual gallery with `uv run python scripts/gallery.py` and commit the updated `docs/gallery.html` and `docs/assets/gallery/*.svg` alongside the code. The gallery is the project's visual regression surface; stale SVGs hide rendering changes from review. Skip this step only for changes that provably cannot affect output (pure docs, comments, test-only edits). (Note: `scripts/release.py` regenerates the gallery automatically, since the gallery title embeds the library version.)
 
-## 5. Navigation
+## 5. Defect Management (GitHub Issues)
+
+This repo tracks defects as **GitHub Issues** on `dhh1128/entviz`, managed with the `gh` CLI (no issue tracker MCP server is used). Issues are enabled and the standard `bug` label exists.
+
+**Logging a bug.** When a maintainer says "log a bug about X" (or an agent discovers a defect worth tracking), create the issue immediately — do not wait for further confirmation — and report the issue number and URL:
+
+```
+gh issue create --repo dhh1128/entviz --label bug \
+  --title "<concise summary of the defect>" \
+  --body "$(cat <<'EOF'
+## Summary
+<one-paragraph description>
+
+## Steps to reproduce
+1. ...
+
+## Expected
+<what should happen>
+
+## Actual
+<what happens instead>
+
+## Environment
+<version / OS / config relevant to the bug, if any>
+
+## Notes
+<logs, stack traces, suspected cause, related issues>
+EOF
+)"
+```
+
+Fill in every section you can; omit a section's body only when it genuinely does not apply. The only triage label is `bug` — no severity/priority labels. Use milestones or comments if prioritization is needed later.
+
+**Fixing a bug.** When a maintainer says "let's fix bug X":
+
+1. Resolve X to an issue: `gh issue list --repo dhh1128/entviz --label bug --state open --search "X"`, or `gh issue view <n>` if given a number. Confirm the match before proceeding.
+2. Branch `fix/<issue#>-<short-slug>` off the default branch.
+3. Fix it TDD-style per §3 (failing test first, then the minimal fix, then refactor).
+4. If the fix can alter rendered output, regenerate the gallery per §4 step 5 and commit the updated SVGs alongside the code.
+5. Reference `Fixes #<n>` in the commit message and/or PR body so the issue auto-closes when the change merges to the default branch.
+
+**Finding bugs.** `gh issue list --repo dhh1128/entviz --label bug --state open` lists the open defect backlog; `gh issue view <n>` shows one.
+
+## 6. Navigation
 
 - [README.md](README.md) - Developer onboarding.
 - [docs/spec.md](docs/spec.md) - Algorithm specification (current: v5).
