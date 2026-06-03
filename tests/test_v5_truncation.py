@@ -1,6 +1,6 @@
 """
 Large-input handling: head (8 tokens) + 4 middle tokens + tail (8 tokens),
-separated by two blank cells.
+placed by the same median/quartile shift as short inputs.
 
 v6 changed the middle: it is now taken from the middle of the SHA-512
 fingerprint (digest bytes 24-35), rendered in the input's alphabet — see
@@ -21,7 +21,7 @@ from entviz.pipeline import render
 
 def test_above_512_bit_hex_produces_8_head_4_middle_8_tail_tokens():
     """Large-input layout: 20 tokens (8 head + 4 middle + 8 tail) plus two
-    separator blanks rendered by the pipeline. tokenize_entropy returns the
+    blank cells placed by the pipeline. tokenize_entropy returns the
     20 tokens with indices 0..19; head/tail are real entropy, the middle 4
     are fingerprint-derived (v6)."""
     core = "ab" * 200  # 400 hex chars; way over the 22-token budget
@@ -53,14 +53,15 @@ def test_head_and_tail_collision_inputs_differ_in_middle_text():
     db = etree.fromstring(render(core_b).encode())
 
     def middle_texts(svg):
-        out = []
-        for ci in (9, 10, 11, 12):
-            cell = svg.xpath(f'//*[local-name()="g" and @data-cell-index="{ci}"]')
-            assert cell, f"missing cell {ci}"
-            texts = cell[0].xpath('.//*[local-name()="text"]')
-            assert texts, f"no <text> in cell {ci}"
-            out.append(texts[0].text)
-        return out
+        # The 4 fingerprint cells, in reading order (blank shifts may move
+        # their absolute cell indices, so sort rather than assume 9..12).
+        cells = sorted(
+            svg.xpath('//*[local-name()="g"][@data-cell-fingerprint="true"]'),
+            key=lambda e: int(e.get("data-cell-index")),
+        )
+        assert len(cells) == 4
+        return ["".join(t.text or "" for t in c.xpath('.//*[local-name()="text"]'))
+                for c in cells]
 
     assert middle_texts(da) != middle_texts(db)
 

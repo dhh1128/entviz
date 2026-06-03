@@ -90,7 +90,9 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # --- Choose grid ---
     if is_truncated:
-        # v5: fixed 22 cells (20 tokens + 2 separators).
+        # Large inputs have 20 tokens; pick a grid with a few spare cells so
+        # the blank-shift below has slack to place fingerprint-derived blanks
+        # (choose_grid(22) → 4x6 = 24 cells → 4 blanks, 3 of them shifted).
         grid = choose_grid(22, target_ar)
     else:
         grid = choose_grid(token_count, target_ar)
@@ -102,25 +104,16 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     style = select_visual_style(median_ftok, second_quartile_ftok)
 
     # --- Blank cell placement keyed off ftok ASCII sort ---
-    if is_truncated:
-        # v5: deterministic mapping. tokens[0..7] → cells 0..7;
-        # tokens[8..11] → cells 9..12 (skipping separator at cell 8);
-        # tokens[12..19] → cells 14..21 (skipping separator at cell 13).
-        # The median/quartile blank-insertion rule does NOT apply here:
-        # the spec says >512-bit inputs always have token_count = 20 and
-        # use a 22-cell grid with the two separators fixed at 8 and 13.
-        cell_indices = {}
-        for t_idx in range(token_count):
-            if t_idx < 8:
-                cell_indices[t_idx] = t_idx
-            elif t_idx < 12:
-                cell_indices[t_idx] = t_idx + 1  # skip cell 8
-            else:
-                cell_indices[t_idx] = t_idx + 2  # skip cells 8 and 13
-    else:
-        cell_indices = assign_cell_indices(
-            tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
-        )
+    # v6: large inputs use the SAME median/quartile blank-shift as short
+    # inputs (no more fixed separator blanks at cells 8/13). Head/middle/tail
+    # are a logical token ordering, not fixed cell positions, so blanks here
+    # vary with the fingerprint and carry the same CRC-like signal they do for
+    # short inputs. Token order is preserved, so reading order is unchanged;
+    # the fingerprint-middle cells (token indices 8-11) stay identifiable by
+    # their neutral bg + gold/white frame wherever they land.
+    cell_indices = assign_cell_indices(
+        tokens, grid, median_token=median_ftok, sort_keys=used_ftoks
+    )
 
     # --- Pixel dimensions ---
     # font_size_px is the rendered text size for full-size cells (base64).
@@ -297,6 +290,12 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # quartile-mark, and blank-marker children get attached to the
     # appropriate group below.
     nuclei_g = etree.SubElement(grid_g, 'g')  # holds all cell groups
+    # Cells holding the fingerprint-middle tokens (token indices 8-11 on a
+    # >512-bit input). Now that blanks shift, these no longer sit at fixed
+    # cell indices, so tag them so overlays/tests can find them by position.
+    fingerprint_cells = (
+        {cell_indices[t] for t in range(8, 12)} if is_truncated else set()
+    )
     cell_groups = {}
     for ci in range(grid.cols * grid.rows):
         col = ci % grid.cols
@@ -309,6 +308,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         }
         if ci not in used_cell_indices:
             attrs["data-cell-blank"] = "true"
+        if ci in fingerprint_cells:
+            attrs["data-cell-fingerprint"] = "true"
         cell_groups[ci] = etree.SubElement(nuclei_g, 'g', **attrs)
 
     # V3-4: per-token cell-text rendered size. Reference drives all

@@ -1941,3 +1941,32 @@ Entviz = goal:
             the maintainer (base64url ftoks would mismatch a hex input's
             head/tail) resolved by rendering in the input alphabet. AGREED
             follow-up: re-run the adversarial lens on the new text channel.
+
+        Unify Large-Input Blank Placement = decision:
+          id: v6blnkun
+          why: >
+            v5 (and v6.0) gave every >512-bit entviz an IDENTICAL blank
+            layout: the large-input path bypassed the median/quartile
+            blank-shift and hard-coded two "separator" blanks at cell
+            indices 8 and 13 to visually delimit head|middle|tail. The
+            maintainer (author) flagged that two very different large inputs
+            looked structurally identical, and correctly noted head/middle/
+            tail are a LOGICAL token ordering, not fixed cell positions —
+            there was no real reason to bypass the shift.
+
+            v6 removes the bypass: large inputs now call the same
+            assign_cell_indices(median, ASCII-endpoints) shift as short
+            inputs. Token order (head→middle→tail, indices 0..19) is
+            preserved, so reading order is unchanged, but blanks are now
+            placed by the fingerprint and VARY per input — restoring the
+            CRC-like blank-position channel for large inputs. The grid stays
+            choose_grid(22) (4x6 = 24 cells → 4 blanks) so the shift has
+            slack. No fixed separators remain.
+
+            The explicit head|middle|tail delimiter is dropped, but it's
+            redundant now: the 4 fingerprint cells are individually marked
+            (neutral bg + gold/white frame, and a new data-cell-fingerprint
+            attribute so overlays/tests can find them by position), and the
+            `fingerprint of` marker already signals a non-linear read.
+            Closes the "all large entvizes share one layout" complaint.
+            See [[v6fpmid1]].

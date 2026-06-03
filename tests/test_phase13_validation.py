@@ -1,5 +1,5 @@
 """
-Phase 13 end-to-end validation suite, plus the >512-bit blank-separator
+Phase 13 end-to-end validation suite, plus the >512-bit blank-gap
 wiring.
 
 Validation properties (per the migration brief's "Suggested validation"):
@@ -108,7 +108,7 @@ def test_no_degenerate_grids_across_input_sizes():
 
 def test_large_input_grid_has_room_for_separator_plus_blanks():
     # v4→v5: the grid for a >512-bit input is now exactly 22 cells
-    # (20 tokens + 2 separator blanks at fixed cell indices 8 and 13).
+    # (20 tokens + blank cells placed by the median/quartile shift).
     # The v4 spec reserved 26 cells (22 tokens + up to 4 blanks); the
     # v5 spec collapses median/quartile blank insertion into the fixed
     # 22-cell budget for the large-input path.
@@ -120,17 +120,14 @@ def test_large_input_grid_has_room_for_separator_plus_blanks():
     grid_w = bw - 3 - bar_width - 2 * GM
     grid_h = bh - 2 * GM - 2 - 2 * GM - 20  # account for top label strip
     cells = int(round(grid_w / cell_w)) * int(round(grid_h / cell_h))
-    assert cells >= 22, f"grid has only {cells} cells; need ≥ 22 for 20 tokens + 2 separators"
+    assert cells >= 22, f"grid has only {cells} cells; need ≥ 22 for 20 tokens + blanks"
 
 
-def test_large_input_blank_separator_creates_a_gap():
-    # The separator blank sits at the cell_index between the last head
-    # token (token 10 after any shifts) and the first tail token
-    # (token 11 after any shifts). Concretely, the gap between
-    # head's max cell_index and tail's min cell_index must be ≥ 2.
-    # We can't read cell_indices directly from the SVG, but we can read
-    # nucleus positions and check that at least one cell position inside
-    # the grid is empty between the populated head and tail.
+def test_large_input_blank_gap_exists():
+    # v6: large-input blanks are placed by the median/quartile shift (no
+    # fixed separators), so at least one blank lands between tokens, leaving
+    # a >=2 gap in the populated cell_index sequence. We read nucleus
+    # positions and check at least one such interior gap exists.
     svg = _doc(render("deadbeef" * 18))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
@@ -155,17 +152,17 @@ def test_large_input_blank_separator_creates_a_gap():
     cols = max(c for c, _ in indices) + 1
     cell_indices = sorted({r * cols + c for c, r in indices})
     # There must be a gap of at least 2 somewhere in the cell_index list
-    # (one for the separator; possibly more from median/quartile blanks).
+    # (at least one interior blank from the median/quartile shift).
     gaps = [b - a for a, b in zip(cell_indices, cell_indices[1:])]
     assert any(g >= 2 for g in gaps), (
-        f"no separator gap in {cell_indices}; gaps={gaps}"
+        f"no interior blank gap in {cell_indices}; gaps={gaps}"
     )
 
 
 def test_large_input_renders_exactly_token_count_nuclei():
     # v4→v5: token count dropped from 22 to 20 for the large-input path;
-    # the two extra cells (indices 8 and 13) are separator blanks with
-    # no nucleus rendered.
+    # the extra cells are blank cells (median/quartile shift) with no
+    # nucleus rendered.
     svg = _doc(render("deadbeef" * 18))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
@@ -175,8 +172,8 @@ def test_large_input_renders_exactly_token_count_nuclei():
     assert len(nuclei) == 20
 
 
-def test_small_input_has_no_extra_separator():
-    # For a ≤512-bit input, no separator should be inserted. The grid
+def test_small_input_token_count_nuclei():
+    # For a ≤512-bit input, nuclei count == token count. The grid
     # uses token_count cells directly (plus the standard up-to-3
     # median/quartile blanks).
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))

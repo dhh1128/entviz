@@ -44,8 +44,8 @@ def test_exact_512_bit_input_passes_through():
 
 def test_above_512_bits_truncates_hex():
     # v4→v5: 576 bits = 144 hex chars; v5 returns 20 tokens (head 8 +
-    # middle 4 + tail 8). The two separator blanks are inserted at
-    # render time, not by tokenize_entropy.
+    # middle 4 + tail 8). Blank cells are placed at render time by the
+    # median/quartile shift, not by tokenize_entropy.
     core = "DEADBEEF" * 18  # 144 chars
     tokens, is_truncated = tokenize_entropy(core, "hex")
     assert is_truncated
@@ -76,7 +76,7 @@ def test_above_512_truncation_keeps_first_and_last_192_bits():
 
 def test_truncated_indices_are_renumbered_0_to_19():
     # v4→v5: token range shrinks from 0..21 to 0..19; two extra cells (8
-    # and 13) are the separator blanks inserted by the pipeline.
+    # blanks are inserted by the pipeline's median/quartile shift.
     core = "DEADBEEF" * 18
     tokens, _ = tokenize_entropy(core, "hex")
     assert [t.index for t in tokens] == list(range(20))
