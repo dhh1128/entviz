@@ -1,0 +1,41 @@
+# entviz Spec Change Log
+
+This file records what changed in each version of the entviz specification. The current algorithm is defined in [spec.md](spec.md).
+
+Earlier versions (v1–v3) are archived in the project's git history (browse the `docs/v1`…`docs/v5` folders, or earlier `docs/index.md`, at the corresponding release commits on [GitHub](https://github.com/dhh1128/entviz)).
+
+---
+
+## What's new in v6
+
+1. **Long-input middle = the fingerprint, not body slices.** For >512-bit inputs, v5 filled the 4 middle text cells with body slices sampled at fingerprint-derived offsets. That made the middle text differ between inputs only *probabilistically* — a low-entropy/structured body could render identical middle cells for two different inputs, so a **screen-reader / read-aloud** comparison (which can't see the gestalt) could miss a difference. v6 fills the middle from a **second, domain-separated fingerprint** — `SHA-512("entviz/fingerprint-middle/v6\0" ‖ core)` — rendered as **hex** (6 chars = 24 bits per cell), so the middle text is **injective and guaranteed** to avalanche on any input change for every alphabet, and is **independent** of the primary fingerprint that drives the gestalt. Head and tail stay real entropy (recognition + verification); matching the 4 displayed fingerprint tokens is an injective ≈2⁹⁶ partial preimage, independent of matching the gestalt. The middle nuclei are painted with the entviz background color (neutral, framed with a gold/white border) since they no longer carry entropy in their bg. **Blank placement for long inputs** also now uses the same median/quartile shift as short inputs — v5's two fixed separator blanks are gone — so a long input's blank layout varies per input instead of being identical for every long input. See the "Large-input handling" subsection in the spec.
+2. **Wider color bar.** The color bar's width doubles from `box_height` to `bar_width = 2·box_height`, so the per-band color letters (`w`/`g`/`r`/`b`/`k`) render legibly. The bar width is now a named geometry term. The letters render at the cell-text size, bottom-anchored within each band. See the geometry and color-bar steps in the spec.
+3. **Redesigned blank-cell marker.** v5's white-disc-with-clock-hands marker is replaced. Every blank cell carries a black-outlined rounded rectangle; the first blank cell additionally becomes a **map** — a miniature scale model of the grid, filled white (or gold on a white-background entviz), with a red dot at the *maxftok* cell's position and a blue dot at the *minftok* cell's. This conveys *positions* (not directions) and uses no `mix-blend-mode`, so it renders identically in browsers and non-browser rasterizers (closing adversarial finding F-A6 for this channel). See the blank-cell step in the spec.
+4. **Clamped ellipse overlay.** The ellipse's `rx`/`ry` bounds change from `[nucleus_height, d_far − cell_width]` to `[0.22·d_far, 0.58·d_far]`, so the overlay covers a *noticeable but partial* share of the grid on every grid size — never an invisible sliver, never swamping the grid. See the ellipse-overlay step in the spec and `reviews/ellipse-audit-2026-06-02.md`.
+5. **Refreshed font fallback chain.** The monospace fallback chain is reordered and extended to cover iOS and Android explicitly (not just Linux/Windows/macOS). See the font-family note in the spec.
+
+---
+
+## What's new in v5
+
+The v5 changes are concentrated in three places:
+
+1. **Head + tail + fingerprint-selected middle slices for long inputs.** v4 truncated >512-bit inputs to head-256 + tail-256 only; an attacker who could match those 64 bytes had a byte-identical text channel and only had to grind the fingerprint-driven gestalt channels. v5 reserves four of the 22 cells for **middle slices** sampled at byte offsets derived from the fingerprint, so two long inputs that share their head and tail still differ in the text channel unless the attacker can *also* match four specific 3-byte windows inside the body — and those windows move as a function of the full input. See the tokenization step in the algorithm and the "Large-input handling" subsection in the spec.
+2. **Loud truncation marker.** The quiet `^…$ ` marker on the top label strip is replaced by a bold red `fingerprint of` prefix (read as "fingerprint of \<the type\>" once the type label follows it). The marker now reads as a warning rather than a footnote. The original entropy byte length is conveyed by the type-label parenthetical (e.g. `hex(200)`, `b64(119)`) immediately after the marker, so it is not repeated inside the marker itself. See the label-strips step in the spec.
+3. **Color-bar letters.** Each color-bar band now carries a centered lowercase letter naming its color (`w`, `g`, `r`, `b`, `k`). This gives the color bar a verbal label that survives complete color blindness, monochrome display, and CSS color filtering, and makes spot-check verification ("what's the top band?") possible without trusting hue discrimination. See the color-bar step in the spec.
+
+The v4 base — described in the main spec — is otherwise unchanged from the v4 spec. Implementations that supported v4 need only make the three changes above to support v5.
+
+---
+
+## What v4 changed
+
+v4 kept v2's fingerprint, large-input handling skeleton, and overall structure, and kept v3's color bar skew, color bar frame, ellipse overlay rework, and hex font fitting. The substantive v4 changes are concentrated in the edge channel and a couple of geometry/layout choices that follow from it:
+
+* The v3 edge channel — 6 edge rects per cell, each filled with a cubist or polygon shape using a per-edge XOR rotation through a 4-color edge palette — is replaced by a **24-box surround** per cell. Bit *i* of the ftok's quant (LSB = bit 0) controls whether box *i* is filled or empty. The surround tiles the entire region around the nucleus with no corner rects.
+* Each cell has a **single edge color** chosen as the palette entry (one of the 4 non-bg colors) perceptually closest to that cell's nucleus background. Per-edge color rotation, `color_shift`, and `shape_shift` are gone.
+* **Nucleus geometry** decouples from font size in the vertical direction: `nucleus_width = 3·font_size_px` (unchanged) but `nucleus_height = 1.25·font_size_px` (was equal to font_size_px). The 25% vertical extra makes room for the glyph descenders of monospace fonts whose bounding boxes extend below the em-box (most of them); v3 had this descender-protrusion latent but it was masked by sparsely-filled edge shapes. With v4's densely solid surround, descenders protruding into the surround region became visible.
+* **Cell aspect ratio** is therefore 3:2 (not v3's 2:1). cell_width = nucleus_width + 2·box_width = 10·box_width = 3.75·font_size_px; cell_height = nucleus_height + 2·box_height = 4·box_height = 2.5·font_size_px. Surround boxes are no longer square: `box_width = nucleus_width/8 = 0.375·font_size_px` (derived from the horizontal tiling — 10 top-row boxes span nucleus_width + 2·box_width); `box_height = nucleus_height/2 = 0.625·font_size_px` (derived from the vertical tiling — 2 side-column boxes stack to nucleus_height).
+* The **shape count summary** (SCS) is removed entirely; there are no shapes left to count. The bounding rect contracts by (nucleus_height + GM) on the bottom.
+* The **color bar's data source** changes: v3 tallied per-edge color usage; v4 tallies the four 2-bit patterns (00, 01, 10, 11) across the 256 disjoint 2-bit slices of the SHA-512 digest. The count⁴ skew, descending sort, and rendering geometry are unchanged.
+* A small **SVG-portability fix** for the ellipse overlay: the clipPath id is salted with the fingerprint and grid dimensions so that multiple entvizes embedded in the same HTML document do not collide on a shared id (which silently makes the browser resolve every `url(#…)` to the first matching id document-wide).

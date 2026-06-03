@@ -4,9 +4,9 @@
 
 ## [`daniel.hardman@gmail.com`](mailto:daniel.hardman@gmail.com)
 
-## September 2025
+## June 2026
 
-# 1\. Introduction
+# 1. Introduction
 
 ## 1.1. The Human Bottleneck in Cryptographic Verification
 
