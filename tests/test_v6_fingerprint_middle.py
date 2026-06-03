@@ -146,3 +146,30 @@ def test_middle_text_matches_head_tail_case():
     for ci in MIDDLE_CELLS:
         t = _cell_text(g[ci])
         assert t == t.lower(), f"middle cell {ci} not lowercase: {t!r}"
+
+
+def test_middle_cells_have_inner_border():
+    """Each fingerprint-middle nucleus is framed by a 1-px inset border:
+    gold on a white-bg entviz, white otherwise (contrasting with the
+    neutral bg-colored nucleus)."""
+    svg, g = _parse(render(BASE))
+    bg = _entviz_bg(svg)
+    expected = "#ffd966" if bg == "#ffffff" else "#ffffff"
+    for ci in MIDDLE_CELLS:
+        borders = [r for r in g[ci]
+                   if r.tag.endswith("}rect") and r.get("fill") == "none"
+                   and r.get("stroke") == expected
+                   and r.get("stroke-width") == "1"]
+        assert borders, (
+            f"middle cell {ci} missing inner border stroke={expected} (bg={bg})"
+        )
+
+
+def test_non_middle_cells_have_no_inner_border():
+    """Head/tail nuclei are NOT framed (only the fingerprint middle is)."""
+    svg, g = _parse(render(BASE))
+    for ci in list(range(0, 8)) + list(range(14, 22)):
+        stroked = [r for r in g[ci]
+                   if r.tag.endswith("}rect") and r.get("fill") == "none"
+                   and r.get("stroke") in ("#ffd966", "#ffffff")]
+        assert not stroked, f"head/tail cell {ci} unexpectedly has an inner border"

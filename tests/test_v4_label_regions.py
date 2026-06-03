@@ -181,10 +181,10 @@ def test_disproof_alphabet_label_uses_alphabet_name():
 def test_truncated_input_label_prefixed_with_loud_marker():
     """v4→v5: the quiet '^…$ ' prefix is replaced by a loud 'fingerprint of '
     marker rendered in bold dark-red, followed by the standard
-    '<Type>: ...' label in #666. The marker and tail are two adjacent
-    <text> elements; this test concatenates them in document order to
-    assert the joined label content. The byte count is conveyed by the
-    type-label parenthetical (e.g. 'hex(200)'), not by the marker."""
+    '<Type>: ...' label in #666. The marker is a bold-red <tspan> and the
+    rest is its tail, inside one <text>; this test concatenates all text
+    (itertext) to assert the joined label content. The byte count is
+    conveyed by the type-label parenthetical (e.g. 'hex(200)')."""
     long_hex = "ab" * 100  # 200 hex chars = 800 bits ≫ 512
     svg = _doc(render(long_hex))
     # v4→v5: the loud marker has fill="#a00000" rather than #666666, so
@@ -192,11 +192,8 @@ def test_truncated_input_label_prefixed_with_loud_marker():
     # label-top group directly and concatenate in document order.
     top_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
     assert top_g, "missing label-top group"
-    joined = "".join(
-        el.text or "" for el in top_g[0].xpath('.//*[local-name()="text"]')
-    )
-    assert "fingerprint of" in joined, f"got: {joined!r}"
-    assert "hex(200):" in joined, f"got: {joined!r}"
+    joined = "".join(top_g[0].itertext())
+    assert "fingerprint of hex(200):" in joined, f"got: {joined!r}"
 
 
 def test_non_truncated_input_label_has_no_loud_marker():

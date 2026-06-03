@@ -74,17 +74,17 @@ def test_every_blank_cell_has_rounded_outline_rect():
         assert float(r.get("width")) == 48 and float(r.get("height")) == 20
         assert r.get("stroke") == "#000000"
         assert r.get("stroke-width") == "1"
-        assert float(r.get("rx")) == 5  # nucleus_height / 4 at 12pt
+        assert float(r.get("rx")) == 10  # nucleus_height / 2 at 12pt
 
 
 def test_corner_radius_scales_with_font_size():
-    # rx = nucleus_height / 4 = (1.25 * pt*96/72) / 4. 12pt → 5; 24pt → 10.
+    # rx = nucleus_height / 2 = (1.25 * pt*96/72) / 2. 12pt → 10; 24pt → 20.
     svg12 = _doc(render(FIXTURE, font_size_pt=12))
     svg24 = _doc(render(FIXTURE, font_size_pt=24))
     rx12 = float(_children(_blank_groups(svg12)[0], "rect")[0].get("rx"))
     rx24 = float(_children(_blank_groups(svg24)[0], "rect")[0].get("rx"))
-    assert rx12 == 5
-    assert rx24 == 10
+    assert rx12 == 10
+    assert rx24 == 20
 
 
 # ---- Exactly one map cell, the first blank ------------------------------

@@ -47,7 +47,7 @@ class Renderer:
             )
 
     def render_nucleus(self, svg: etree.Element, token, cell: Cell,
-                       text_size_px=None, bg_override=None):
+                       text_size_px=None, bg_override=None, inner_border=None):
         """Nucleus rect + centered token text.
 
         `bg_override` (a hex color) forces the nucleus background — used for
@@ -56,6 +56,10 @@ class Renderer:
         contrast rule (computed by re-deriving via get_nucleus_colors on the
         override color's quant). When None, the bg is the token's entropy
         color as usual.
+
+        `inner_border` (a hex color) draws a 1-px stroke inset 1 px inside the
+        nucleus rect — used to frame the v6 fingerprint-middle cells so they
+        read as distinct from the entropy cells. When None, no border.
         """
         if bg_override is not None:
             r = int(bg_override[1:3], 16)
@@ -69,6 +73,14 @@ class Renderer:
                          x=str(n.left), y=str(n.top),
                          width=str(n.size.width), height=str(n.size.height),
                          fill=bg_color)
+        if inner_border is not None:
+            # 1-px stroke inset 1 px inside the nucleus edge (centered on the
+            # 0.5-px line so it paints a crisp 1-px frame just inside the rect).
+            etree.SubElement(svg, 'rect',
+                             x=str(n.left + 1.5), y=str(n.top + 1.5),
+                             width=str(n.size.width - 3), height=str(n.size.height - 3),
+                             fill='none', stroke=inner_border,
+                             **{'stroke-width': '1'})
         if text_size_px is None:
             text_size_px = cell.size.height / 2
         text_el = etree.SubElement(svg, 'text',

@@ -105,6 +105,10 @@ def test_truncated_label_text_contains_type_with_byte_count():
     svg = etree.fromstring(render(long_hex).encode())
     label_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
     assert label_g
-    joined = "".join(el.text for el in label_g[0].iter() if el.text)
+    joined = "".join(label_g[0].itertext())
     assert "fingerprint of" in joined
     assert "hex(200):" in joined
+    # Exactly one space between the marker and the type label (the v6.0
+    # double-space bug came from absolute positioning with a guessed advance).
+    assert "fingerprint of hex(200):" in joined
+    assert "fingerprint of  hex" not in joined

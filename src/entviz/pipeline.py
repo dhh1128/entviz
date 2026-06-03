@@ -325,10 +325,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
+    # The fingerprint-middle cells (v6, token indices 8-11 on a >512-bit
+    # input) get a 1-px inset border to frame them: gold on a white-bg
+    # entviz, white otherwise — the same contrast rule as the blank-cell map
+    # fill, and contrasting against their bg-colored (neutral) nucleus.
+    fp_border = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
     for token, ftok, cell, ci, nucleus_bg in token_cells:
+        is_fp_middle = is_truncated and 8 <= token.index <= 11
         renderer.render_nucleus(
             cell_groups[ci], token, cell, text_size_px=cell_text_px,
             bg_override=nucleus_bg,
+            inner_border=(fp_border if is_fp_middle else None),
         )
 
     # Layer 3b: blank cells — every cell index in the grid that no token
@@ -366,7 +373,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     blank_indices = [ci for ci in range(grid.cols * grid.rows)
                      if ci not in used_cell_indices]
     map_cell_idx = min(blank_indices) if blank_indices else None
-    corner_radius = nucleus_height / 4   # = 5 at 12pt
+    corner_radius = nucleus_height / 2   # = 10 at 12pt
     # The map fill must contrast with whatever background shows behind it:
     # white on any non-white entviz background, gold on a white one.
     map_fill = '#ffd966' if style.bg_color == '#ffffff' else '#ffffff'
@@ -526,37 +533,23 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     # Vertical center of the top strip is at grid_rect.top - GM - nucleus_height/2.
     top_cy = grid_rect.top - gm - nucleus_height / 2
     if truncated_bytes is not None:
-        # Loud marker in bold dark red, followed by the standard label
-        # in #666. Use two adjacent <text> elements so each carries its
-        # own styling unambiguously; the second is positioned with `dx`
-        # equal to the rendered width of the marker text in monospace
-        # ems. Monospace assumption: char width ≈ 0.6 · font_size_px is
-        # a safe approximation across DejaVu Sans Mono / Menlo /
-        # Consolas (all sit in 0.55–0.62). We pad with a single ascii
-        # space between marker and tail to make the visual break crisp.
-        marker_text = "fingerprint of "
-        marker_el = etree.SubElement(
+        # Loud marker in bold dark red, then the standard label in #666 —
+        # rendered as a bold-red <tspan> plus its tail inside ONE <text>, so
+        # they flow with exactly one space between them. (v5/v6.0 used two
+        # absolutely-positioned <text> elements with a guessed monospace
+        # advance, which overshot and left a ~2-space gap.)
+        label_el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
-            fill='#a00000', style=style,
-            **{
-                "dominant-baseline": "central",
-                "font-weight": "bold",
-            },
-        )
-        marker_el.text = marker_text
-        # Approximate monospace advance per char. Slight overestimate is
-        # fine — it just leaves a tiny visual gap; underestimate would
-        # cause overlap, which is worse.
-        char_advance = text_size_px * 0.6
-        tail_x = grid_rect.left + len(marker_text) * char_advance
-        tail_el = etree.SubElement(
-            top_g, 'text',
-            x=str(tail_x), y=str(top_cy),
             fill='#666666', style=style,
             **{"dominant-baseline": "central"},
         )
-        tail_el.text = rest_text
+        marker_tspan = etree.SubElement(
+            label_el, 'tspan',
+            fill='#a00000', **{"font-weight": "bold"},
+        )
+        marker_tspan.text = "fingerprint of "
+        marker_tspan.tail = rest_text   # flows right after the marker, in #666
     else:
         el = etree.SubElement(
             top_g, 'text',
