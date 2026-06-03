@@ -127,9 +127,9 @@ def test_map_has_one_red_and_one_blue_dot():
 
 
 def test_dot_radius_is_fixed_regardless_of_grid():
-    """The red/blue dots have a fixed radius (nucleus_height / 8 = 2.5 at
-    12pt), independent of grid dimensions — so dot size is consistent across
-    entvizes rather than shrinking on denser grids."""
+    """The red/blue dots have a fixed radius (nucleus_height / 8 + font_size_px
+    / 16 = 3.5 at 12pt), independent of grid dimensions — so dot size is
+    consistent across entvizes rather than shrinking on denser grids."""
     # Two inputs with different grids (and thus different sub-cell sizes):
     # a small 2x3-ish grid vs a dense large-input grid.
     for inp in [FIXTURE, "deadbeef", "0123456789abcdef" * 16]:
@@ -139,8 +139,8 @@ def test_dot_radius_is_fixed_regardless_of_grid():
             continue
         for c in _circles(maps[0]):
             if c.get("fill") in (RED, BLUE):
-                assert float(c.get("r")) == 2.5, (
-                    f"{inp!r}: dot r={c.get('r')} (expected fixed 2.5)"
+                assert float(c.get("r")) == 3.5, (
+                    f"{inp!r}: dot r={c.get('r')} (expected fixed 3.5)"
                 )
 
 

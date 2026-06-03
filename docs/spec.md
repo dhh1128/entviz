@@ -287,12 +287,12 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
         | bg color | hex | overlay fill | opacity |
         |---|---|---|---|
-        | white | `#ffffff` | `#000000` (darken) | 20% |
+        | white | `#ffffff` | `#000000` (darken) | 30% |
         | gold  | `#e7be00` | `#000000` (darken) | 30% |
-        | red   | `#ff3f2f` | `#000000` (darken)  | 40% |
-        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 40% |
+        | red   | `#ff3f2f` | `#000000` (darken)  | 35% |
+        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 45% |
 
-        Saturated bgs need higher opacity to read against the surround boxes; white is least demanding because its darkened overlay is high luminance contrast against the bg already. Blue darkens to near-black, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity. The v4 opacity values (20/30/40/40) were tuned against the hybrid-anchored small-grid overlays, where the visible silhouette is smaller and needs more pop than v3's centered curves did.
+        Saturated bgs need higher opacity to read against the surround boxes; white is least demanding because its darkened overlay is high luminance contrast against the bg already. Blue darkens to near-black, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity. The opacity values (white 30 / gold 30 / red 35 / blue 45) were tuned against the hybrid-anchored small-grid overlays, where the visible silhouette is smaller and needs more pop than v3's centered curves did; the v6 rebalance lifted white to read more clearly, eased red (which was too heavy), and gave blue's lightening a touch more presence.
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
 
@@ -396,7 +396,7 @@ A cell is rendered from a token T and the used ftok F that corresponds to it. Th
     * a **red** circle (`#d62828`) centered in the sub-cell whose (row, column) is that of the **maxftok cell**;
     * a **blue** circle (`#1d4ed8`) centered in the sub-cell whose (row, column) is that of the **minftok cell**.
 
-    Each dot is centered in its sub-cell at `(sub_cell_width = nucleus_width / cols, sub_cell_height = nucleus_height / rows)` spacing, but its **radius is a fixed `nucleus_height / 8`** (= 2.5 at 12pt), *independent of grid dimensions* — so the dots are the same size on every entviz rather than shrinking on denser grids. On a dense grid a dot MAY overflow its sub-cell; that is acceptable (the dot still reads as marking that cell's position). In the degenerate case where the maxftok and minftok cells coincide (possible only when a single used ftok makes the smallest and largest quant the same cell), draw the blue marker as a stroked ring of radius `nucleus_height / 8` (`fill = none`, `stroke = #1d4ed8`, `stroke-width = 1`) with the red marker as a filled dot of half that radius concentric inside it, so both remain visible.
+    Each dot is centered in its sub-cell at `(sub_cell_width = nucleus_width / cols, sub_cell_height = nucleus_height / rows)` spacing, but its **radius is a fixed `nucleus_height / 8 + font_size_px / 16`** (= 3.5 at 12pt; the `font_size_px / 16` term is exactly 1 px at the 12pt/96dpi nominal size and scales with the entviz), *independent of grid dimensions* — so the dots are the same size on every entviz rather than shrinking on denser grids. On a dense grid a dot MAY overflow its sub-cell; that is acceptable (the dot still reads as marking that cell's position). In the degenerate case where the maxftok and minftok cells coincide (possible only when a single used ftok makes the smallest and largest quant the same cell), draw the blue marker as a stroked ring of that same radius (`fill = none`, `stroke = #1d4ed8`, `stroke-width = 1`) with the red marker as a filled dot of half that radius concentric inside it, so both remain visible.
 
     This map replaces v5's white-disc-with-clock-hands marker. Where the clock hands indicated the maxftok/minftok cells by *direction* (an angle, ambiguous about which cell along the ray), the map indicates them by *position* in a scale model of the grid — it names the exact cell. The map also uses no `mix-blend-mode`, so it renders identically in browsers and in non-browser SVG rasterizers, closing adversarial finding F-A6 (the v5 long hand was invisible outside browsers) for this channel.
 

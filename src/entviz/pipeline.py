@@ -409,8 +409,9 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         sub_h = nucleus_height / grid.rows
         # Fixed dot radius (independent of grid dims) so dots are a consistent
         # size across entvizes; centered in the sub-cell, may overflow it on
-        # dense grids (acceptable).
-        dot_r = nucleus_height / 8
+        # dense grids (acceptable). The `+ font_size_px / 16` term adds exactly
+        # 1 px at the 12 pt / 96 dpi nominal size and scales with the entviz.
+        dot_r = nucleus_height / 8 + font_size_px / 16
 
         def _sub_center(cell_idx):
             return (nx + (cell_idx % grid.cols + 0.5) * sub_w,
@@ -711,10 +712,10 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
 # below were tuned against the hybrid-anchored small-grid overlays,
 # where the visible silhouette is smaller and needs more pop.
 _V3_OVERLAY_BY_BG = {
-    '#ffffff': ('#000000', 0.20),  # white  → darken at 20%
+    '#ffffff': ('#000000', 0.30),  # white  → darken at 30%
     '#e7be00': ('#000000', 0.30),  # gold   → darken at 30%
-    '#ff3f2f': ('#000000', 0.40),  # red    → darken at 40%
-    '#2f3fbf': ('#ffffff', 0.40),  # blue   → lighten at 40%
+    '#ff3f2f': ('#000000', 0.35),  # red    → darken at 35%
+    '#2f3fbf': ('#ffffff', 0.45),  # blue   → lighten at 45%
 }
 
 
