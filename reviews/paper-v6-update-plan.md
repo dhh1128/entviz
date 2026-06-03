@@ -10,6 +10,34 @@
 
 ---
 
+## 0. Reconciliation overlay (added 2026-06-02, post-hardening)
+
+> **Read this first.** This plan was written earlier on 2026-06-02, *before* the v6 hardening commits landed later the same day (palette/CVD rework, the F1/F2 fingerprint-middle redesign, the overlay edge-stroke, and the F4–F7 fixes). The plan's **framework analysis (§1–§3, §5), figure list (§4.2), citation list (§5.2), and effort model (§6) all stand.** But several specifics it treats as *open/concurrent* or describes *from the then-current spec* have since changed. Apply this overlay on top of the rest of the document; where they conflict, this section wins.
+
+**Now resolved (no longer "concurrent"):**
+- **`reviews/adversarial-2026-06-02.md` exists and is committed** — the "hard dependency / do not block / if not ready" caveats (P3, §4.1.1, §5.1) are moot. ⚠️ But that review did **not** produce a fresh full per-channel budget; it *inherited* the v4-era numbers (~220–270 bits careful / ~25–40 habituated) plus a **v6-deltas** table. Table 3 still needs the full re-derivation — the review supplies the deltas, not the table.
+- **All seven findings F1–F7 are now fixed/addressed** (review + commits). The three that change what the paper should say:
+
+**① Palette / CVD — supersedes §4.1.3, the §4.3 "Color Palette" row, Table 4, and open-question #3:**
+- **F6's diagnosis was wrong and was corrected.** Gold/red is *not* the weak pair (it is both lightness- and hue-separated). The real weak pair was **white/gold**.
+- **Gold was darkened** from `#ffd966` (L\*≈88) to **`#e7be00`** (L\*≈78, the maximin between white L\*100 and red L\*57). **Wherever this plan writes `#ffd966`, the current gold is `#e7be00`.**
+- **The CVD metric is ΔL\* (lightness), NOT ΔE.** ΔE76 over-credits chroma — the channel that *collapses* under CVD/mono — so it is the wrong metric. Every "recompute pairwise ΔE under CVD" / "Table 4 ΔE-under-CVD" instruction in this plan should become **ΔL\* under CVD**, with the honest note that **protanopia red/blue collapses to ΔL\*≈7 regardless of palette** (unfixable; the color-bar letters are the guaranteed fallback).
+- **The spec's CVD claim was downgraded** (honest caveat added) — i.e. the plan's recommended option (a) for open-question #3 was taken; paper and spec now agree.
+- **Authoritative source: `reviews/palette-optimization-findings.md`** (the maximin derivation, why ΔE76 is rejected, the rejected alternatives, the honest limits, citations). This supersedes the plan's §4.1.3 and is the primary input for the paper's palette/CVD discussion. **Figures already exist:** `docs/assets/palette-swatch.svg` and `docs/assets/palette-cvd.svg` (the CVD-simulated grid the plan asks for in F-c / Table 4 — normal + 3 dichromacies + achromatopsia, regenerable via `scripts/palette_figures.py`).
+
+**② Large-input middle — supersedes §4.3.8, §4.1.2, and figure F-f's caption:**
+- The middle is **no longer "digest bytes 24–35 in the input alphabet."** v6 now uses a **domain-separated second hash** — `SHA-512("entviz/fingerprint-middle/v6\0" ‖ core)` — rendered as **hex** (6 hex chars = 24 bits per cell). This makes the ≈2⁹⁶ partial-preimage **exact and injective for every alphabet** (it was 80-bit and non-injective for 5-bit alphabets in the first v6 draft) **and independent of the gestalt** (domain separation, closing F2). The F-f caption should read "hex fingerprint-middle," not "input alphabet."
+- Head/tail cover **192 bits for 4-/6-bit alphabets but 160 bits for 5-bit alphabets** (the plan's/paper's "first 192 bits" is only right for hex/base64).
+
+**③ Ellipse overlay — refines §4.3.6 / figure F-d:**
+- Beyond the coverage clamp the plan already notes, the overlay is now a **subtler interior fill + a 2px edge stroke** at higher opacity (per-bg fill/edge: white 20/30, gold 20/30, red 25/35, blue 35/45). Describe the edge-emphasis split if §4.3.6 covers the overlay's rendering.
+
+**Minor (no paper impact):** blank-map dot radius +1px (2.5→3.5 nominal); fingerprint-middle cells correctly downsized to the 6-char font on non-hex inputs.
+
+**Effect on the effort model (§6):** **P4 (CVD) is largely pre-done** — the analysis, the correct metric (ΔL\*), the honest framing, the two figures, and the citations already exist in `palette-optimization-findings.md`; P4 becomes "import + cite," not "derive." P3's dependency is unblocked (with the budget-table caveat above). All other phases stand.
+
+---
+
 ## 1. Summary
 
 **How stale is the paper?** The paper's *framework* (Sections 1, 2, 3, the Gestalt/JND theory, the perceptual-vs-authentication-hashing dichotomy) is **largely sound and reusable** — roughly 55–60% of the text survives with light touch-ups. But every concrete description of **how entviz works** is written against v1 and is now **factually wrong**. The algorithm has been through five major revisions (v2 added the fingerprint + color bar + SCS + ellipse; v3 reworked edges/color-bar-skew/ellipse; v4 replaced the entire edge channel with a 24-box surround, removed the SCS, switched the color-bar data source, added hybrid ellipse anchoring; v5 added head+middle+tail large-input handling, color-bar letters, the loud truncation marker; v6 changed the long-input middle to a fingerprint readout, widened the color bar, replaced the blank-cell clock-hands marker with a map, and clamped the ellipse). **Section 4.3 (the entviz description) and the two comparison tables must be substantially rewritten**, and the central quantitative thesis — that entviz's multi-channel design beats randomart's ~20–24 perceptual bits — **must be re-derived for the v6 channel set**, because the v1 channels the paper credits (8 named edge shapes, a tertiary nucleus-color hint, "quartile marks") are not the v6 channels.
