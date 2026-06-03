@@ -1,12 +1,18 @@
 version: 2
 
 updates:
-  # GitHub Actions used by the CI and release workflows.
+  # GitHub Actions used by the CI and release workflows. Actions are pinned to
+  # full commit SHAs; Dependabot bumps each SHA and its "# vN.N.N" comment
+  # together. Group all action bumps into a single PR so a weekly batch of SHA
+  # updates doesn't fan out into one PR per action.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     labels: ["dependencies", "github-actions"]
+    groups:
+      actions:
+        patterns: ["*"]
 
   # Python dependencies. Use the native "uv" ecosystem (GA March 2025) rather
   # than "pip": only the uv ecosystem regenerates uv.lock alongside
