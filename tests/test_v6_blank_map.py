@@ -154,11 +154,11 @@ def test_map_fill_contrasts_with_entviz_background():
             continue
         cols = int(svg.get("data-cols"))
         rows = int(svg.get("data-rows"))
-        # The entviz background is the rect filling grid_rect (top-left 27,31).
+        # The entviz background is the rect filling grid_rect (top-left 27,26).
         bg = None
         bg_candidates = {WHITE, GOLD, "#ff3f2f", "#2f3fbf"}
         for r in svg.xpath('//*[local-name()="rect"]'):
-            if (float(r.get("x", -1)) == 27 and float(r.get("y", -1)) == 31
+            if (float(r.get("x", -1)) == 27 and float(r.get("y", -1)) == 26
                     and float(r.get("width", 0)) == cols * 60
                     and r.get("fill") in bg_candidates):
                 bg = r.get("fill")

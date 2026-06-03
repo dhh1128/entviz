@@ -29,10 +29,10 @@ def test_canvas_size_matches_bounding_rect_formula():
     # "deadbeef" → hex (no prefix, no suffix), 2 tokens → 2x2 grid
     # → grid_w=120, grid_h=80. Top label only (no suffix → no bottom).
     # width  = 1 + 20 + 1 + 5 + 120 + 5 + 1 = 153
-    # height = 1 + 5 + 20 + 5 + 80 + 5 + 1 = 117
+    # height = 1 + 5 + 20 + 80 + 5 + 1 = 112
     svg = _parse(render("deadbeef"))
     assert float(svg.get("width")) == 153
-    assert float(svg.get("height")) == 117
+    assert float(svg.get("height")) == 112
 
 
 def test_first_rect_is_white_bounding_rect():
@@ -43,7 +43,7 @@ def test_first_rect_is_white_bounding_rect():
     assert float(first.get("x")) == 0
     assert float(first.get("y")) == 0
     assert float(first.get("width")) == 153
-    assert float(first.get("height")) == 117
+    assert float(first.get("height")) == 112
 
 
 def test_gray_borders_present():
@@ -56,10 +56,10 @@ def test_gray_borders_present():
 
 def test_grid_rect_offset_inside_bounding():
     # v6 grid_rect sits at (1 + bar_width + 1 + GM,
-    #                       1 + GM + nucleus_height + GM)
-    # = (27, 31). In a 2x2 grid, nuclei land at:
+    #                       1 + GM + nucleus_height)   ← band abuts grid (v6)
+    # = (27, 26). In a 2x2 grid, nuclei land at:
     #   x ∈ {27 + 6, 27 + 6 + 60} = {33, 93}
-    #   y ∈ {31 + 10, 31 + 10 + 40} = {41, 81}
+    #   y ∈ {26 + 10, 26 + 10 + 40} = {36, 76}
     svg = _parse(render("deadbeef"))
     nuclei = [
         r for r in svg.xpath('//*[local-name()="rect"]')
@@ -68,14 +68,14 @@ def test_grid_rect_offset_inside_bounding():
     assert nuclei, "no nucleus rect found"
     for n in nuclei:
         assert float(n.get("x")) in (33, 93), f"nucleus x={n.get('x')}"
-        assert float(n.get("y")) in (41, 81), f"nucleus y={n.get('y')}"
+        assert float(n.get("y")) in (36, 76), f"nucleus y={n.get('y')}"
 
 
 def test_bounding_rect_scales_with_grid_size():
     # UUID → 6 hex tokens → 2x3 grid → grid_w=120, grid_h=120.
     # No suffix → top label only.
     # width  = 1 + 20 + 1 + 5 + 120 + 5 + 1 = 153
-    # height = 1 + 5 + 20 + 5 + 120 + 5 + 1 = 157
+    # height = 1 + 5 + 20 + 120 + 5 + 1 = 152
     svg = _parse(render("550e8400-e29b-41d4-a716-446655440000"))
     assert float(svg.get("width")) == 153
-    assert float(svg.get("height")) == 157
+    assert float(svg.get("height")) == 152

@@ -143,22 +143,24 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
     # Bounding rect dimensions (v6):
     #   width  = 1 + bar_width + 1 + GM + grid_width + GM + 1
-    #   height = 1 + GM + nucleus_height + GM + grid_height
-    #              + [GM + nucleus_height +] GM + 1
-    # The top "type label" strip is always present (the entviz declares
-    # the detected type / alphabet). The bottom "suffix label" strip
-    # appears only when the parsed result has a suffix.
+    #   height = 1 + GM + nucleus_height + grid_height
+    #              + [nucleus_height +] GM + 1
+    # The top "type label" strip is always present (the entviz declares the
+    # detected type / alphabet). The bottom "suffix label" strip appears only
+    # when the parsed result has a suffix. v6: each label band ABUTS the grid
+    # (no GM between band and grid) — the GM sits only on the border side — so
+    # the label text is the same distance from the grid as nucleus text is
+    # from a nucleus edge. (When there's no suffix, the GM below the grid is
+    # just the bottom margin and is unchanged.)
     bounding_w = 1 + bar_width + 1 + gm + grid_w + gm + 1
     has_suffix_label = bool(suffix)
-    suffix_strip_h = nucleus_height + gm if has_suffix_label else 0
-    bounding_h = (
-        1 + gm + nucleus_height + gm + grid_h + gm + suffix_strip_h + 1
-    )
+    bottom_region = (nucleus_height + gm) if has_suffix_label else gm
+    bounding_h = 1 + gm + nucleus_height + grid_h + bottom_region + 1
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
 
-    # grid_rect sits below the top label strip.
+    # grid_rect sits directly below the top label band (which abuts it).
     grid_rect = Rect(
-        Point(1 + bar_width + 1 + gm, 1 + gm + nucleus_height + gm),
+        Point(1 + bar_width + 1 + gm, 1 + gm + nucleus_height),
         Size(grid_w, grid_h),
     )
 
@@ -531,8 +533,10 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     rest_text = f"{type_name}:"
     if prefix:
         rest_text += f" {prefix}..."
-    # Vertical center of the top strip is at grid_rect.top - GM - nucleus_height/2.
-    top_cy = grid_rect.top - gm - nucleus_height / 2
+    # v6: the top label band abuts the grid, so its text centers a
+    # nucleus_height/2 above the grid — the same gap nucleus text has from the
+    # nucleus's bottom edge. (The GM sits above the band, on the border side.)
+    top_cy = grid_rect.top - nucleus_height / 2
     if truncated_bytes is not None:
         # Loud marker in bold dark red, then the standard label in #666 —
         # rendered as a bold-red <tspan> plus its tail inside ONE <text>, so
@@ -563,7 +567,8 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     if suffix:
         bottom_g = etree.SubElement(svg, 'g', **{"data-channel": "label-bottom"})
         bottom_text = f"...{suffix}"
-        bottom_cy = grid_rect.bottom + gm + nucleus_height / 2
+        # Bottom band abuts the grid; text centers nucleus_height/2 below it.
+        bottom_cy = grid_rect.bottom + nucleus_height / 2
         el = etree.SubElement(
             bottom_g, 'text',
             x=str(grid_rect.right), y=str(bottom_cy),

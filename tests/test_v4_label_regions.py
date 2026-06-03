@@ -208,21 +208,22 @@ def test_non_truncated_input_label_has_no_loud_marker():
 
 
 def test_canvas_height_grows_with_top_label_only():
-    """Hex input → top label, no bottom label. Canvas height grows by
-    nucleus_height + GM (= 20 + 5 = 25 at 12pt) over the no-label v4."""
+    """Hex input → top label, no bottom label. v6: the label band abuts the
+    grid (GM only on the border side), so the top label adds just
+    nucleus_height (= 20 at 12pt) over the no-label baseline."""
     svg = _doc(render("deadbeef"))
-    # deadbeef → 2 tokens → 2x2 grid; previously bounding_h = 92.
-    # With top label only: 92 + 25 = 117.
-    assert float(svg.get("height")) == 117
+    # deadbeef → 2 tokens → 2x2 grid; no-label bounding_h = 92.
+    # With top label only: 92 + 20 = 112.
+    assert float(svg.get("height")) == 112
 
 
 def test_canvas_height_grows_with_both_labels():
     """Input with both prefix and suffix → top + bottom labels.
-    Canvas grows by 2·(nucleus_height + GM) = 50 over the no-label v4."""
+    v6: each band abuts the grid, so canvas grows by 2·nucleus_height = 40."""
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     # Bitcoin Legacy: 34 chars - 1 prefix - 4 suffix = 29-char body →
     # 8 base58 tokens. choose_grid(8, 1.0) → 3x3 (v4 cell AR 3:2 means
     # 2x4 = 0.75 is below 1.0; 3x3 = 1.5 is the closest from above).
     # No labels: bounding_h = 1+5+(3·40)+5+1 = 132. With both labels:
-    # 132 + 50 = 182.
-    assert float(svg.get("height")) == 182
+    # 132 + 40 = 172.
+    assert float(svg.get("height")) == 172
