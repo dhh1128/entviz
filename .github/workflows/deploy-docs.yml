@@ -5,9 +5,11 @@
 # Settings -> Pages -> Source = "GitHub Actions". The first deploy fails
 # without it.
 #
-# Actions pinned to node24 / composite runtimes (verified): checkout@v6,
-# astral-sh/setup-uv@v7, configure-pages@v6, upload-pages-artifact@v5
-# (composite), deploy-pages@v5.
+# Actions pinned to full commit SHAs (a mutable @vN tag can be silently
+# retargeted — the tj-actions class of attack); the # vN.N.N comment is what
+# humans and Dependabot read. All resolve to node24 / composite runtimes
+# (verified): checkout@v6.0.3, astral-sh/setup-uv@v7.6.0, configure-pages@v6.0.0,
+# upload-pages-artifact@v5.0.0 (composite), deploy-pages@v5.0.0.
 name: Deploy Docs
 
 on:
@@ -36,24 +38,27 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          # The Pages deploy uses the OIDC token + artifact, not the git token.
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7.6.0
         with:
           enable-cache: true
 
       - name: Configure Pages
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
 
       - name: Build site with Zensical
         run: uv run --group docs zensical build --clean
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9  # v5.0.0
         with:
           path: site
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128  # v5.0.0

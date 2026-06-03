@@ -15,7 +15,7 @@
 > **Read this first.** This plan was written earlier on 2026-06-02, *before* the v6 hardening commits landed later the same day (palette/CVD rework, the F1/F2 fingerprint-middle redesign, the overlay edge-stroke, and the F4–F7 fixes). The plan's **framework analysis (§1–§3, §5), figure list (§4.2), citation list (§5.2), and effort model (§6) all stand.** But several specifics it treats as *open/concurrent* or describes *from the then-current spec* have since changed. Apply this overlay on top of the rest of the document; where they conflict, this section wins.
 
 **Now resolved (no longer "concurrent"):**
-- **`reviews/adversarial-2026-06-02.md` exists and is committed** — the "hard dependency / do not block / if not ready" caveats (P3, §4.1.1, §5.1) are moot. ⚠️ But that review did **not** produce a fresh full per-channel budget; it *inherited* the v4-era numbers (~220–270 bits careful / ~25–40 habituated) plus a **v6-deltas** table. Table 3 still needs the full re-derivation — the review supplies the deltas, not the table.
+- **`reviews/adversarial-2026-06-02.md` exists and is committed** — the "hard dependency / do not block / if not ready" caveats (P3, §4.1.1, §5.1) are moot. ⚠ But that review did **not** produce a fresh full per-channel budget; it *inherited* the v4-era numbers (~220–270 bits careful / ~25–40 habituated) plus a **v6-deltas** table. Table 3 still needs the full re-derivation — the review supplies the deltas, not the table.
 - **All seven findings F1–F7 are now fixed/addressed** (review + commits). The three that change what the paper should say:
 
 **① Palette / CVD — supersedes §4.1.3, the §4.3 "Color Palette" row, Table 4, and open-question #3:**
