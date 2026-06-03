@@ -137,3 +137,6 @@ dmypy.json
 
 .idea
 .vscode
+
+# Claude Code agent worktrees (never track these)
+.claude/worktrees/
