@@ -2049,3 +2049,33 @@ Entviz = goal:
             paragraph + CVD honesty caveat updated to say so. Validated by
             per-CVD ΔL* sweep and by-eye (.cache/palette_gold_chroma.html);
             do NOT trust ΔE76. See [[v6fpmid1]].
+
+    Supply-Chain Hardening = decision:
+      id: s3cch41n
+      why: >
+        Defend the project's build/CI integrity against the dominant 2026
+        supply-chain attack classes, without adding runtime dependencies (so
+        [[z3rodeps]] still holds — the shipped library is untouched).
+
+        (1) Invisible-Unicode / Trojan-Source gate: scripts/check_unicode.py
+        rejects only the dangerous code-point categories (bidi controls,
+        directional marks, zero-width/invisible, variation selectors, tag
+        chars, Private Use Areas) while allowing legitimate non-ASCII the
+        project uses on purpose (Greek Δ in formulae, em-dashes, box-drawing,
+        CJK, emoji). A naive ASCII-only rule would have failed honest prose.
+        Wired as its own CI job (unicode-guard) and covered by
+        tests/test_check_unicode.py. The pre-flight scan caught two accidental
+        characters in authored prose — a stray U+200B in the paper's Weber's-Law
+        formula and a U+FE0F emoji presentation selector in a review doc — both
+        removed (they rendered identically without them), so the gate is clean
+        on the tree with no exclusion holes.
+
+        (2) GitHub Actions pinned to full commit SHAs (was mutable @vN tags),
+        with least-privilege top-level permissions and persist-credentials:false
+        on checkout, so a retargeted tag (tj-actions class) can't inject code.
+        Dependabot keeps the SHAs current and grouped.
+
+        (3) PATH/binary-hijack (Task 3) does NOT apply: the shipped library
+        spawns no external binaries. The only subprocess use is the dev-only
+        scripts/release.py (git/uv), run interactively by the maintainer on a
+        trusted machine — out of the runtime threat model.

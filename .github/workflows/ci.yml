@@ -7,6 +7,15 @@ on:
     branches: [ main, master ]
 
 jobs:
+  # Reject invisible / Trojan-Source Unicode (GlassWorm & bidi-reorder classes)
+  # before anything else runs. python3 ships on the runner, so no install step.
+  unicode-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Scan for invisible / Trojan-Source Unicode
+        run: python3 scripts/check_unicode.py
+
   test:
     runs-on: ubuntu-latest
     strategy:

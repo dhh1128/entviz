@@ -77,7 +77,7 @@ While cognitive psychology explains *how* we perceive patterns, psychophysics pr
 ### 2.2.1. Weber's Law and the Difference Threshold
 
 The JND, also known as the difference threshold, is defined as the minimum change in a stimulus that can be detected by an observer at least 50% of the time.28 In the 19th century, Ernst Weber discovered a fundamental relationship, now known as Weber's Law, which states that the JND is a constant proportion of the original stimulus intensity.28 This is expressed mathematically as:  
-IΔ/I​=k  
+IΔ/I=k  
 where I is the original stimulus intensity, ΔI is the JND, and k is the constant Weber fraction. This law holds true for many, though not all, sensory dimensions and implies that our ability to detect change is relative, not absolute. We are better at detecting a 1 kg difference when comparing 2 kg and 3 kg weights than when comparing 20 kg and 21 kg weights.
 
 ### 2.2.2. JND Thresholds for Visual Primitives
