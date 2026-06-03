@@ -57,8 +57,8 @@ class Renderer:
         override color's quant). When None, the bg is the token's entropy
         color as usual.
 
-        `inner_border` (a hex color) draws a 1-px stroke inset 1 px inside the
-        nucleus rect — used to frame the v6 fingerprint-middle cells so they
+        `inner_border` (a hex color) draws a 1-px stroke flush with the
+        nucleus edge — used to frame the v6 fingerprint-middle cells so they
         read as distinct from the entropy cells. When None, no border.
         """
         if bg_override is not None:
@@ -74,11 +74,13 @@ class Renderer:
                          width=str(n.size.width), height=str(n.size.height),
                          fill=bg_color)
         if inner_border is not None:
-            # 1-px stroke inset 1 px inside the nucleus edge (centered on the
-            # 0.5-px line so it paints a crisp 1-px frame just inside the rect).
+            # 1-px stroke flush with the nucleus boundary: centered on the
+            # half-pixel just inside each edge, so the stroke's outer edge sits
+            # exactly on the nucleus rect and paints its outermost pixel ring
+            # (no gap of background color between the frame and the edge).
             etree.SubElement(svg, 'rect',
-                             x=str(n.left + 1.5), y=str(n.top + 1.5),
-                             width=str(n.size.width - 3), height=str(n.size.height - 3),
+                             x=str(n.left + 0.5), y=str(n.top + 0.5),
+                             width=str(n.size.width - 1), height=str(n.size.height - 1),
                              fill='none', stroke=inner_border,
                              **{'stroke-width': '1'})
         if text_size_px is None:
