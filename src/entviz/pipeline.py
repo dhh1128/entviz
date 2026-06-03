@@ -711,25 +711,30 @@ def v3_ellipse_params_from_digest(digest: bytes) -> dict:
 # darkened overlay is high luminance contrast already. The v4 values
 # below were tuned against the hybrid-anchored small-grid overlays,
 # where the visible silhouette is smaller and needs more pop.
+# (fill_color, fill_opacity, edge_opacity). The fill is dialed back so it
+# obscures the underlying cells less; a 2px edge stroke at the higher
+# edge_opacity keeps the silhouette crisp.
 _V3_OVERLAY_BY_BG = {
-    '#ffffff': ('#000000', 0.30),  # white  → darken at 30%
-    '#e7be00': ('#000000', 0.30),  # gold   → darken at 30%
-    '#ff3f2f': ('#000000', 0.35),  # red    → darken at 35%
-    '#2f3fbf': ('#ffffff', 0.45),  # blue   → lighten at 45%
+    '#ffffff': ('#000000', 0.20, 0.30),  # white  → darken; fill 20 / edge 30
+    '#e7be00': ('#000000', 0.20, 0.30),  # gold   → darken; fill 20 / edge 30
+    '#ff3f2f': ('#000000', 0.25, 0.35),  # red    → darken; fill 25 / edge 35
+    '#2f3fbf': ('#ffffff', 0.35, 0.45),  # blue   → lighten; fill 35 / edge 45
 }
 
 
 def _ellipse_overlay_for_bg(bg_color: str):
-    """Return (fill_color, opacity) for the ellipse overlay on bg_color."""
+    """Return (fill_color, fill_opacity, edge_opacity) for the ellipse overlay
+    on bg_color. The fill is the subtler interior wash; the edge_opacity is
+    used for the 2px stroke that emphasizes the silhouette."""
     if bg_color in _V3_OVERLAY_BY_BG:
         return _V3_OVERLAY_BY_BG[bg_color]
     # Fallback for any unexpected bg (e.g., test inputs): use the v3-5
-    # luminosity rule with the old default 0.20 opacity.
+    # luminosity rule with the default fill 0.20 / edge 0.30.
     r = int(bg_color[1:3], 16) / 255.0
     g = int(bg_color[3:5], 16) / 255.0
     b = int(bg_color[5:7], 16) / 255.0
     _, l, _ = colorsys.rgb_to_hls(r, g, b)
-    return ('#000000' if l > 0.5 else '#ffffff', 0.20)
+    return ('#000000' if l > 0.5 else '#ffffff', 0.20, 0.30)
 
 
 # v4 hybrid anchor strategy threshold: grids with at least this many
@@ -797,7 +802,8 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
     rx = r_min + (p["rx_step"] / 15.0) * (r_max - r_min)
     ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)
     rotation_deg = (p["rotation_step"] / 15.0) * 180.0
-    fill, opacity = _ellipse_overlay_for_bg(bg_color)
+    fill, fill_opacity, edge_opacity = _ellipse_overlay_for_bg(bg_color)
+    stroke_w = cell_h / 20.0   # = 2px at the 12pt nominal; scales with entviz
     # v3 structure restored: <g clip-path><ellipse transform=rotate>.
     # User confirms this rendered flawlessly in v3.
     # v5: hoist the ellipse parameters onto the wrapping clip-path group
@@ -822,7 +828,12 @@ def _draw_ellipse_overlay(svg, defs, digest, bounding_rect, grid_rect,
         rx=str(rx), ry=str(ry),
         transform=f"rotate({rotation_deg} {anchor.x} {anchor.y})",
         fill=fill,
-        **{"fill-opacity": f"{opacity}"},
+        stroke=fill,
+        **{
+            "fill-opacity": f"{fill_opacity}",
+            "stroke-opacity": f"{edge_opacity}",
+            "stroke-width": f"{stroke_w}",
+        },
     )
 
 

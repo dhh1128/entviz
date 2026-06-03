@@ -283,16 +283,18 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
     * **rx (horizontal semi-axis)**: compute `rx_step = digest[61] mod 16`. Then `rx = r_min + (rx_step / 15) × (r_max − r_min)`, where `r_min = 0.22·d_far` and `r_max = 0.58·d_far`. `d_far` is the distance from the chosen anchor to the farthest of the grid rect's four outer corners. Both bounds scale with the grid (through `d_far`) so the overlay covers a *noticeable but partial* share of the grid on every grid size: the lower bound keeps the visible silhouette from shrinking to an imperceptible sliver (the failure mode on large grids, where a fixed-size minimum would be lost), and the upper bound keeps it from swamping the grid and destroying the covered-vs-uncovered contrast that is the overlay's entire purpose (the failure mode on small / near-square grids). The fractions `0.22`/`0.58` were chosen empirically so coverage stays in roughly the 8–70% range across every grid entviz produces (median ≈ 32%); see `reviews/ellipse-audit-2026-06-02.md`. Because `0.58·d_far > 0.22·d_far` for all `d_far`, the radius range is always valid (it never goes degenerate). This replaces v5's `[nucleus_height, d_far − cell_width]` bounds, which let small grids be swamped (>80% coverage) and large grids show invisible slivers.
     * **ry (vertical semi-axis)**: compute `ry_step = digest[62] mod 16`. Then `ry = r_min + (ry_step / 15) × (r_max − r_min)`, with the same `r_min` and `r_max` as rx. `rx` and `ry` are drawn independently, so the ellipse ranges from a near-circle to a strongly elongated shape.
     * **rotation**: compute `rotation_step = digest[63] mod 16`. Then `rotation = (rotation_step / 15) × 180°`. Rotates the ellipse around the anchor.
-    * **fill and opacity**: chosen per *entviz background color*, since the four background candidates each need different treatment to produce a perceptible silhouette:
+    * **fill, edge, and opacity**: chosen per *entviz background color*, since the four background candidates each need different treatment to produce a perceptible silhouette. The overlay is drawn as a single ellipse with **both** a low-opacity interior fill **and** a higher-opacity 2-px stroke (edge) in the same color. The subtler fill keeps the cells beneath the ellipse legible; the crisper edge keeps the silhouette readable. SVG `fill-opacity` and `stroke-opacity` are independent, so both apply to one element.
 
-        | bg color | hex | overlay fill | opacity |
-        |---|---|---|---|
-        | white | `#ffffff` | `#000000` (darken) | 30% |
-        | gold  | `#e7be00` | `#000000` (darken) | 30% |
-        | red   | `#ff3f2f` | `#000000` (darken)  | 35% |
-        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 45% |
+        | bg color | hex | fill/stroke color | fill opacity | edge opacity (2-px) |
+        |---|---|---|---|---|
+        | white | `#ffffff` | `#000000` (darken)  | 20% | 30% |
+        | gold  | `#e7be00` | `#000000` (darken)  | 20% | 30% |
+        | red   | `#ff3f2f` | `#000000` (darken)  | 25% | 35% |
+        | blue  | `#2f3fbf` | `#ffffff` (lighten) | 35% | 45% |
 
-        Saturated bgs need higher opacity to read against the surround boxes; white is least demanding because its darkened overlay is high luminance contrast against the bg already. Blue darkens to near-black, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill or opacity. The opacity values (white 30 / gold 30 / red 35 / blue 45) were tuned against the hybrid-anchored small-grid overlays, where the visible silhouette is smaller and needs more pop than v3's centered curves did; the v6 rebalance lifted white to read more clearly, eased red (which was too heavy), and gave blue's lightening a touch more presence.
+        The **stroke width** is `cell_height / 20` (= 2 px at the 12 pt / 96 dpi nominal size) and scales with the entviz. The stroke is centered on the ellipse path; because the overlay is clipped to the *grid rect*, the edge is visible only where the ellipse curve lies inside the grid (there is no stroke along the straight grid-cut where the ellipse is clipped), so it reads as a silhouette rim rather than a box around the grid.
+
+        Saturated bgs need higher opacity to read against the surround boxes; white is least demanding because its darkened overlay is high luminance contrast against the bg already. Blue darkens to near-black, so it's lightened instead. Red lightens into a chalky pink that loses its character, so it stays darkened. No entropy bytes are consumed for fill, edge, or opacity. The split (fill = edge − 10 percentage points) is a v6 refinement: earlier revisions used a single solid fill at the edge opacity, which obscured the underlying cells more than necessary; moving most of the contrast into a thin edge preserves the silhouette while letting the cells show through.
 
     16 discrete steps per parameter is intentional: it's near the just-noticeable-difference threshold for both pixel-level radius changes and degree-level rotations, so adjacent steps produce overlays that are visibly distinct from each other.
 
