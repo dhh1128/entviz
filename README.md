@@ -84,6 +84,36 @@ uv run entviz "your-entropy-string" --ar 1:1 --fs 12
 uv run python scripts/gallery.py
 ```
 
+### Regenerating the social preview card
+
+The GitHub "social preview" image (the Open Graph card that unfurls when the
+repo URL is shared on Slack, X, LinkedIn, etc.) is a reproducible asset. The
+card embeds an *entviz of this repo's own root commit SHA* — the tool applied
+to itself — which is the same entviz shown at the top of the docs.
+
+```bash
+uv run python scripts/social_card.py
+```
+
+This (re)writes three files into `docs/assets/`, alongside the other docs
+images:
+
+- `root-commit-entviz.svg` — the entviz of the root commit hash (also embedded
+  at the top of [docs/index.md](docs/index.md));
+- `social-card.svg` — the composed 1280×640 card (vector source of truth);
+- `social-card.png` — the PNG you upload (under 1 MB).
+
+The PNG is rendered with `cairosvg` (a dev dependency) using the DejaVu font
+fallback baked into the font stack, so it reproduces without bundling fonts.
+
+**Uploading it (one-time, manual):** GitHub → repo **Settings** → **General** →
+**Social preview** → **Edit** → upload `docs/assets/social-card.png`.
+
+**Reusing the template across repos:** the palette, layout, and typography are
+shared family constants; only the `KNOBS` block at the top of
+[scripts/social_card.py](scripts/social_card.py) (repo name, owner, tagline,
+language, and the `MARK`) changes per repo. See the module docstring for details.
+
 ### Cutting a release
 
 ```bash

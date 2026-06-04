@@ -14,8 +14,8 @@ difference in the input is obvious, and so that color-blind viewers and
 monochrome displays still get a reliable signal.
 
 <figure markdown="span">
-  ![An entviz rendering of a 256-bit hex value](assets/gallery/11-256-bit-hex.svg){ width="320" }
-  <figcaption>A 256-bit value rendered as an entviz.</figcaption>
+  ![An entviz rendering of this repository's root commit hash](assets/root-commit-entviz.svg){ width="320" }
+  <figcaption>This repository itself, rendered as an entviz of its own root commit hash.</figcaption>
 </figure>
 
 ## Explore
