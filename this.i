@@ -1983,6 +1983,58 @@ Entviz = goal:
             alphabet, 5-bit injectivity, exact second-digest value, and
             primary-digest independence. See [[v6fpmid1]].
 
+        Head/Tail Are Anchors, Not A Representative Sample = decision:
+          id: v6htscal
+          why: >
+            The maintainer questioned whether the >512-bit allocation
+            (H=8 head, M=4 fingerprint-middle, T=8 tail) under-serves the
+            MIDDLE of a truly massive input (e.g. a 40GB genome): showing
+            the first/last 192 bits literally while giving the hash only 4
+            cells "feels like it over-emphasizes the input and under-
+            emphasizes the hash."
+
+            Analysis (no behavior change warranted): the worry conflates
+            two separable things — BINDING vs text-channel REAL ESTATE —
+            which have opposite answers.
+
+            BINDING: the input's middle is the BEST-protected part, not the
+            worst. The primary fingerprint is SHA-512 over the WHOLE input
+            and drives the surround on all 20 cells, the color bar, the
+            ellipse, the blanks, the quartiles, and the bg color. The 4
+            middle text cells are a 96-bit injective readout of a SECOND,
+            domain-separated digest ([[v6fpmid2]]) that avalanches on any
+            input change even in a TEXT-ONLY / read-aloud comparison (the
+            one scenario gestalt can't help). So the bulk is bound into
+            every high-bandwidth channel; head/tail get exactly ONE channel
+            (literal text) to themselves. 4 cells is plenty for binding —
+            more middle cells would only raise the read-aloud preimage bound
+            above 96 bits, which is already far past any human-effort
+            threshold, and would NOT improve gestalt binding at all.
+
+            REAL ESTATE (the legitimate part of the worry): the 80/20
+            literal:hash split in the TEXT channel is tuned for inputs
+            barely over 512 bits, where head/tail recognition is plausible.
+            It scales poorly to truly massive inputs: recognition value of
+            384 literal bits -> ~0 (nobody eyeballs 192 bits of genome; file
+            ends are often headers/padding), and the represented fraction ->
+            ~0 (48 bytes of 40GB), yet the literal cells keep 80% of the text
+            real estate.
+
+            Decision: do NOT make the H/T/M split size-adaptive. A sliding
+            allocation trades away "trivial to implement correctly"
+            ([[z3rodeps]]) and the fixed 20-token / 4x6-grid invariant for no
+            security gain. Fix the optics in PROSE instead: state plainly in
+            the spec that head/tail are a VERIFICATION CONVENIENCE (spot-check
+            the ends vs a known-good copy), NOT a representative sample, and
+            that the larger the input the more the fingerprint-driven
+            channels carry essentially all the comparison signal. Added a
+            "Head/tail are anchors, not a representative sample" scale-caveat
+            paragraph to the large-input handling subsection, and a clause to
+            the `fingerprint of` reading-user guidance (point 2). A threshold
+            rebalance (e.g. H=6/T=6/M=8 above some large size) was considered
+            and deferred as cosmetic-only — record here in case a future
+            revision wants it. See [[v6fpmid1]], [[v6fpmid2]], [[v6blnkun]].
+
         Unify Large-Input Blank Placement = decision:
           id: v6blnkun
           why: >
