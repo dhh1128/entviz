@@ -1708,6 +1708,348 @@ Entviz = goal:
         type label, which is not a user-visible improvement
         for arbitrary decimal blobs.
 
+    Git Hash Schemes (SWHID / gitoid) = decision:
+      id: g1tha5h0
+      status: drafted
+      why: >
+        A git commit hash is a SHA-1 (40 hex) or, in sha256
+        repos, a SHA-256 (64 hex), always lowercase hex with
+        no affix, no checksum, no case information. It is
+        therefore ALREADY handled correctly by the HEX
+        alphabet today — entviz tokenizes and fingerprints it
+        identically whether or not it is "recognized" as git.
+
+        Decision (1): do NOT add a separate primitive for git
+        hashes. Not a separate ALPHABET — an alphabet exists
+        only to drive tokenization (bits/char -> token length),
+        and a git hash is hex (4 bits/char, 6-char tokens); a
+        "git" alphabet would be a byte-for-byte clone of HEX.
+        Not a content-sniffing TYPE either — a 40-char lower
+        hex string is indistinguishable from any other 160-bit
+        value (a different SHA-1, RIPEMD-160, an HMAC, a random
+        key), and a 64-char string from any other 256-bit
+        value. Asserting type=git from length alone would be a
+        confident guess that is wrong a large fraction of the
+        time, violating the spec's "content inspection is
+        unsound; each parser must DECLARE its alphabet"
+        principle (spec.md tokenization step). It would also
+        change zero pixels: fingerprint and every channel are
+        byte-identical to plain hex. See also [[c4s3norm]].
+
+        Decision (2): a bespoke `git:<hex>` prefix to make
+        detection deterministic was considered and REJECTED.
+        It is emitted by no tool and typed by no user, and it
+        collides with the existing `git://` transport URL
+        scheme; it would only ever fire for someone who already
+        knew it was a git hash, so the label carries no
+        information. Inventing a notation breaks the pattern
+        every other prefix in the parser follows: each one
+        (`0x`, `did:`, `bc1`, `ssh-...`, the multihash bytes)
+        is a REAL format some tool actually produces.
+
+        Decision (3): instead recognize the two REAL,
+        standardized prefix schemes that namespace a git hash:
+          * SWHID (Software Heritage IDentifier, ISO/IEC track):
+            `swh:1:<type>:<40-hex-sha1>`, <type> in
+            snp/rel/rev/dir/cnt. A git commit is `rev`.
+          * gitoid (OmniBOR): `gitoid:<obj>:<algo>:<hex>`, obj
+            in blob/tree/commit/tag, algo in sha1(40)/sha256(64).
+        These satisfy the soundness bar a bespoke prefix could
+        not: the prefix is an explicit, self-describing
+        assertion present in the input (detection is
+        deterministic, not a content guess), the prefix is real
+        structure tools emit, and the label is INFORMATIVE — it
+        distinguishes a commit (`rev`) from a file blob (`cnt`),
+        an object type bare hex can never convey.
+
+        Implementation choices that mirror the existing prefix
+        parsers (parse_did / parse_hex's `0x` branch):
+          (a) The scheme+type is the `prefix`; the hex is the
+              `core` declared HEX; both are lowercased. Because
+              compute_fingerprint hashes the CORE only, the
+              prefix is excluded from the fingerprint, so
+              `swh:1:rev:<h>`, `gitoid:commit:sha1:<h>`, and
+              bare `<h>` visualize the SAME entropy and differ
+              only in the label. This is the explicit guarantee
+              the proposal was after ("fundamentals unchanged").
+          (b) SWHID v1 is sha1-only (40 hex); a 64-hex body does
+              not match. gitoid validates hex length against the
+              declared algo (sha1->40, sha256->64) and rejects a
+              mismatch rather than re-tokenizing a malformed id.
+          (c) SWHID qualifiers (`;origin=...;lines=...`) are
+              addressing context, not entropy. They are split
+              into the `suffix` so they neither enter the core
+              nor change the fingerprint. (Semantically this is
+              a looser use of `suffix` than a checksum/derivation
+              — see the LEI/Bitcoin suffixes — but it keeps a
+              qualified SWHID recognized instead of falling to
+              the UTF-8 base64url garbage path.)
+          (d) Parser ordering is not sensitive: the `swh:` and
+              `gitoid:` prefixes contain colons and match no
+              earlier parser (DID requires a literal `did:`),
+              and both are defined before parse_hex in the
+              auto-registration walk.
+
+    Multicodec CID Labelling = decision:
+      id: mult1c0d
+      status: drafted
+      why: >
+        The multiformats family (multihash, multibase,
+        multicodec, CID, multiaddr) is mostly already handled:
+        parse_multihash / parse_hex_multihash recognize raw and
+        hex multihashes (MULTIHASH_HASH_FUNCS table), and
+        parse_ipfs_cid recognizes CIDv0 (Qm.. base58) and CIDv1
+        (b.. base32). The gap was the multicodec *content-type*
+        layer — the registry that names what a CID wraps.
+
+        Decision: decode a CIDv1's self-describing interior
+        (the leading version / content-codec / hash-fn varints)
+        to ENRICH THE LABEL only. A CIDv1's bytes are
+        `<version><content-codec><multihash>`; reading those
+        varints is deterministic (the bytes are physically
+        present and self-describing) and therefore sound — the
+        same justification that makes the existing multihash
+        hash-fn table sound, and the opposite of a content
+        guess. The label goes from a static "IPFS CID v1 256"
+        to e.g. "IPFS CID v1 dag-pb/sha2-256" (decoded via the
+        new MULTICODEC_CONTENT table + the existing multihash
+        table). CIDv0 is dag-pb/sha2-256 by definition, so its
+        label is set statically.
+
+        Label-ONLY, deliberately (see [[g1tha5h0]] for the same
+        stance applied to git hashes):
+          (a) The core stays the full base32 body and the
+              fingerprint is unchanged, so existing CID entvizes
+              do not shift. decode_multicodec_label is purely a
+              naming step.
+          (b) The version/codec/hash-fn bytes are structural
+              framing and one COULD split them into the prefix
+              (as parse_hex_multihash splits its 2-byte prefix).
+              We do NOT, because those bytes are buried inside a
+              base32 string whose 5-bit char boundaries do not
+              align to the byte-varint boundaries; splitting
+              cleanly would require base32-decoding the digest
+              and re-encoding it, changing the cell text. That
+              is a larger, breaking decision; deferred. The
+              multihash parsers can split because their input is
+              already raw bytes / hex (byte-aligned).
+          (c) decode_multicodec_label is defensive: any
+              malformed buffer, unknown codec, or unknown
+              hash-fn returns None and the caller falls back to
+              the plain "IPFS CID v1" label. binascii.Error from
+              a bad base32 body subclasses ValueError and is
+              caught.
+
+        REJECTED (same soundness bar as [[g1tha5h0]]): a generic
+        standalone multibase parser (f<hex>/z<base58>/m<base64>/
+        u<base64url>/b<base32>). Outside a structurally-gated
+        container like CID, the single-char multibase selector is
+        indistinguishable from ordinary data — `f9fce0..` is
+        equally base16-multibase or plain hex starting with f —
+        so matching it by inspection would hijack and mislabel
+        ordinary hex/base58/base64 inputs. Multibase is only sound
+        when the input is DECLARED multibase by its container,
+        which entviz already honors via the CID parsers. There is
+        no `multibase:` wrapper to gate a generic parser on.
+        multiaddr (/ip4/.. /tcp/..) is network addressing, not
+        entropy, and is out of scope.
+
+        Note on CESR AIDs/SAIDs (asked during this work): they
+        are ALREADY handled. A KERI AID is a CESR primitive — a
+        key (`D` Ed25519 transferable, `B` non-transferable) or a
+        self-addressing digest; a SAID is a CESR digest primitive
+        (`E` Blake3-256, `F`/`G`/`H`/`I` other 256-bit hashes,
+        `0D`.. for 512-bit). parse_cesr recognizes all of these
+        by derivation code + length. The label reports the
+        cryptographic primitive ("CESR Blake3-256"), not the role
+        word "AID"/"SAID", because AID-vs-SAID is a CONTEXTUAL
+        role (the same Blake3-256 digest is a SAID when it
+        self-addresses a document; a `D` key is an AID when it is
+        an identifier prefix) and is not recoverable from the
+        primitive alone — labelling it would be the same
+        content-role guess that [[g1tha5h0]] rejects.
+
+    Additional Alphabets / Address Formats = decision:
+      id: xtra4lph
+      status: drafted
+      why: >
+        A batch of seven candidate formats was evaluated against
+        the soundness bar from [[g1tha5h0]] (deterministic
+        detection, no content-sniffing). Two were ADDED; five
+        were DEFERRED as ambiguous or needing a larger design
+        decision. The user explicitly asked to defer the hard
+        ones rather than force them. (base62 was briefly added to
+        the disproof ladder, then reverted — see below.)
+
+        ADDED:
+          (1) Stellar muxed accounts (strkey `M…`). Distinct
+              prefix `M` and length 69 (vs a `G` account's 56),
+              same RFC-4648 base32 alphabet. Deterministic;
+              parse_stellar_address gained a second branch
+              labelled "XLM muxed".
+          (2) Generic checksum-validated bech32 (Cosmos-SDK
+              chains: cosmos1/osmo1/juno1/…). The KEY point is
+              that detection is made sound by VALIDATING the
+              BIP-173/BIP-350 checksum (polymod), not by matching
+              an arbitrary hard-coded HRP list — a random
+              <letters>1<chars> string passes with ~2⁻³⁰
+              probability. The HRP names the chain in the label
+              ("bech32 cosmos") straight from the input, so no
+              chain registry is hard-coded. Runs AFTER the
+              specific bech32 parsers (bc1/ltc1/addr1/CashAddr),
+              which still win for their formats. `<hrp>1` is the
+              prefix, the 6-char checksum is the suffix (as for
+              LEI / Bitcoin-legacy), the rest is the BECH32 core.
+        DEFERRED (each fails the soundness bar; revisit only with
+        an explicit declaration mechanism):
+          * Solana — a bare base58-encoded 32-byte ed25519
+            pubkey with NO prefix and NO checksum. Indistinguishable
+            from any other 32-byte base58 blob; labelling it
+            "Solana" would be exactly the content-sniffing guess
+            [[g1tha5h0]] rejects. (Contrast Bitcoin/Ripple, which
+            carry base58check version+checksum and ARE detectable.)
+          * JWK — a structured multi-field JSON document, not a
+            single token. Visualizing it needs design decisions
+            entviz does not currently make: WHICH field is the
+            entropy (x/y for EC/OKP, n for RSA, k for oct, and
+            keypairs add d), plus JSON canonicalization so key
+            order / formatting don't change the fingerprint. Real
+            work, deferred — not a parser one-liner.
+          * NanoID — 21 chars from the URL-safe alphabet
+            [A-Za-z0-9_-], i.e. identical to a 21-char base64url
+            string. No prefix, no checksum, configurable length;
+            no deterministic marker. Already handled as base64url.
+          * z-base-32 — a human-oriented base32 variant
+            (alphabet ybndrfg8ejkmcpqxot1uwisza345h769). Two
+            problems: (a) no marker — its char set is a subset of
+            base58 and base64url, so a disproof entry would have to
+            sit BEFORE base58 ("most restrictive first") and would
+            then STEAL ordinary base58 inputs; and (b) it uses a
+            DIFFERENT char→value mapping than base32/bech32, so a
+            mis-detection produces wrong quants (silent corruption),
+            not just a wrong label. Strictly worse than leaving
+            such inputs as base58/base64url. Deferred.
+          * base62 (0-9A-Za-z) — ADDED to the disproof ladder,
+            then REVERTED after review. The rationale for adding
+            was "most-restrictive-that-fits": base62 is a strict
+            subset of base64 (differs only by +/), so it seemed a
+            tighter description. The flaw: tightness is not
+            correctness. A random base64 string omits both + and /
+            with probability (62/64)^N — ~25% at 44 chars
+            (256-bit), ~50% at 22 chars (128-bit) — so a base62
+            disproof entry would STEAL a quarter-to-half of all
+            genuine base64 inputs and relabel them "base62." And
+            base62 is rare in the wild while base64 is ubiquitous,
+            so for a punctuation-free alphanumeric blob "base64
+            that omitted +/" is far likelier than "true base62":
+            the label would be wrong more often than right. This is
+            the SAME content-sniffing unsoundness that disqualified
+            Solana/NanoID — the disproof ladder is sound only where
+            fitting alphabet X makes BEING X the likely explanation
+            (true for hex/base32/bech32/base58, which are
+            distinctive or restrictive enough that an accidental
+            fit is unlikely; false for base62). The visualization
+            is unaffected (base62 and base64 tokenize identically),
+            so it was "safe" only in the narrow sense of never
+            corrupting the picture — but a label that is usually
+            wrong is not worth adding. Reverted; left to base64.
+
+    User Note Caption = decision:
+      id: usrn0te1
+      status: drafted
+      why: >
+        Hex (and a few other broadly-used encodings) carry no
+        semantics, and a user often knows something about an
+        input that entviz cannot detect ("this is a git commit",
+        "prod DB key"). The user wanted a way to caption an
+        entviz WITHOUT changing the trust placed in the input.
+        This adds an out-of-band, aggressively-sanitized,
+        visually-quiet caption — the `--note` flag.
+
+        Rejected first: an IN-BAND prefix syntax (`X?<input>` or
+        `(git)<input>` -> label "git? hex(40)" / "(git)hex(40)").
+        Two fatal problems:
+          * Separator ambiguity / input hijacking. The
+            arbitrary-text fallback path accepts EVERY byte, so
+            no character (`?`, `(`, `)`) is safe to reserve as a
+            delimiter. Real inputs contain them (a passphrase
+            `what?up`, a URL query `path?q=1`, `(555)1234567`),
+            and reserving them silently fingerprints DIFFERENT
+            bytes than the user pasted — a correctness bug and a
+            threat-model secondary-win ("render differs by
+            encoding form"). Same family as the bech32 `1`
+            separator caveat, but worse: the fallback has no
+            alphabet to bound what is data vs. delimiter.
+          * Overloading the trusted channel. The top type-label
+            is a relied-upon output (threat model: "entviz trusts
+            the user to read both label strips"); putting
+            arbitrary free text there, guarded only by `?`/`()`,
+            is a social-engineering surface. The parenthetical
+            form is WORSE because entviz's real labels already use
+            parens (`hex(40)`, `b64(200)`), so user text would be
+            typographically indistinguishable from derived text.
+
+        Why out-of-band defuses the threat (the reframe that makes
+        a quiet treatment acceptable): a `--note` is set by
+        WHOEVER RUNS entviz, never by the input. In the
+        security-relevant flow (Alice receives a value from Bob
+        and renders it HERSELF) Bob cannot inject a note — he
+        controls the bytes, Alice controls the flag. The only way
+        an attacker sets the note is by handing over a
+        pre-rendered SVG, but an attacker who controls rendering
+        can already draw anything (tier T2); `--note` grants no
+        new capability. So a note can only "mislead" the person
+        who typed it — annotating one's own artifact, not an
+        attack. It also cannot forge a false MATCH: the gestalt
+        channels are untouched and a mismatched caption only makes
+        two things look MORE different (the safe direction). The
+        residual risk is mild false-REASSURANCE, bounded hard by
+        sanitization.
+
+        Locked design:
+          (a) Out-of-band only. A `--note` CLI flag / `render(...,
+              note=)` arg. NEVER part of the input string; NEVER
+              enters the core or the fingerprint; OUTSIDE the
+              comparison surface — two renders of the same value
+              differing only in `--note` are "the same" for
+              comparison. (A clean comparison just omits the
+              flag.)
+          (b) Aggressive sanitization. ASCII alphanumeric only
+              (`[A-Za-z0-9]`), a single token (the charset forbids
+              spaces), MAX 8 chars. Case is PRESERVED (it is a
+              human caption, not entropy, so no normalization).
+              Validation is STRICT: an invalid note is an ERROR,
+              never silently truncated/mangled (silent mangling of
+              a trust-adjacent field is worse than a clear error).
+              8 over 10: tighter fit and modestly narrows the
+              space of reassuring words.
+          (c) Render location: the BOTTOM (suffix) strip — never
+              next to the top type-label, keeping untrusted text
+              off the channel users rely on. The note is appended
+              after any real suffix, separated by a space, wrapped
+              in parens: `...<suffix> (<note>)`, or just
+              `(<note>)` when there is no suffix. The bottom strip
+              now appears when there is a suffix OR a note (it was
+              suffix-only before). The suffix strip is already a
+              lower-trust, source-controlled context band (it
+              carries SSH comments / SWHID qualifiers), so it is a
+              natural home for an ancillary caption.
+          (d) Visual treatment: the note text is GRAY (#808080) —
+              quieter than the #666666 suffix/label text — with NO
+              italics and NO new font size (same monospace family
+              and label size). The gray is the same value as the
+              bounding-rect border, reading as "chrome, not data."
+              The user chose gray over a `note:` lead-in or italics.
+          (e) Structural marker: the note `<text>` element carries
+              a `data-user-note="<note>"` attribute, so downstream
+              tooling distinguishes the caption from
+              algorithm-derived suffix content regardless of
+              styling. The gray fill + this attribute together
+              carry the (verified vs. asserted) distinction; the
+              residual ambiguity with a real suffix that itself
+              ends in parens is accepted as minor given the
+              out-of-band reframe.
+
     Spec-Implementation Audit Triage 2026-06-02 = goal:
       id: aud0602t
       status: done

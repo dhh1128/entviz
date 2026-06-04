@@ -53,6 +53,37 @@ style bleed) merely by existing on the same page.
 
 ---
 
+## User note (out-of-band caption)
+
+The optional `--note` caption (see `spec.md` "User note" and
+`this.i:usrn0te1`) is an annotation supplied by **whoever runs the
+renderer**, not by the input string. It is deliberately *out-of-band* so it
+adds no attacker capability:
+
+* It **never enters the entropy core or the fingerprint**, so it cannot
+  affect any comparison channel; it is outside the comparison surface. A
+  *mismatched* note only makes two entvizes look more different (the safe
+  direction), so it cannot be used to forge a false match (the primary win
+  condition).
+* In the security-relevant flow — a defender renders a value received from
+  an untrusted party — the attacker controls the bytes but not the flag, so
+  cannot inject a note. An attacker who instead hands over a *pre-rendered*
+  SVG already has full control of the rendering surface (**T2**) and could
+  draw anything; the note grants nothing new.
+* The residual risk is mild human *false-reassurance* from an
+  attacker-chosen caption in a rendering the attacker controlled. It is
+  bounded by aggressive sanitization (ASCII alphanumeric, single token,
+  ≤8 chars, strict-reject-on-violation — no control/bidi/homoglyph
+  characters, no whitespace to fake authoritative phrases), by rendering the
+  note in quiet gray (`#808080`) in the *bottom* strip (never on the trusted
+  top type-label), and by a `data-user-note` attribute that keeps it
+  structurally distinct from algorithm-derived suffix content. An in-band
+  caption syntax was rejected because, on the arbitrary-text fallback path,
+  no delimiter is safe to reserve and it would overload the trusted label
+  channel (see `this.i:usrn0te1`).
+
+---
+
 ## Attacker tiers
 
 These are the assumed adversary capability classes. A finding should always
