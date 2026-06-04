@@ -1,0 +1,69 @@
+"""
+Multicodec-driven labelling for IPFS CIDs.
+
+A CIDv1 is self-describing: after the multibase selector its bytes are
+`<version-varint><content-codec-varint><multihash>`, and the multihash is
+`<hash-fn-varint><length-varint><digest>`. Those leading varints are real
+bytes physically present in the input, so decoding them to name the
+content codec and hash function is deterministic and sound (unlike a
+content-sniffing guess). It is also LABEL-ONLY: the core stays the full
+base32 body and the fingerprint is unchanged — only the type label gets
+richer. See `this.i:mult1c0d`.
+
+CIDv0 (`Qm…`) is dag-pb + sha2-256 by definition.
+"""
+from entviz.entropy import (
+    parse, parse_ipfs_cid, decode_multicodec_label, MULTICODEC_CONTENT, HEX,
+)
+from entviz.fingerprint import compute_fingerprint
+
+
+# bafybei… → version 1, dag-pb (0x70), sha2-256 (0x12)
+CID_DAGPB = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
+# bafkrei… → version 1, raw (0x55), sha2-256 (0x12)
+CID_RAW = "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy"
+CID_V0 = "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG"
+
+
+def test_multicodec_table_has_common_codecs():
+    assert MULTICODEC_CONTENT[0x55] == "raw"
+    assert MULTICODEC_CONTENT[0x70] == "dag-pb"
+    assert MULTICODEC_CONTENT[0x71] == "dag-cbor"
+
+
+def test_cidv1_dagpb_label_decoded():
+    p = parse_ipfs_cid(CID_DAGPB)
+    assert p is not None
+    assert p.type == "IPFS CID v1 dag-pb/sha2-256"
+
+
+def test_cidv1_raw_label_decoded():
+    p = parse_ipfs_cid(CID_RAW)
+    assert p.type == "IPFS CID v1 raw/sha2-256"
+
+
+def test_cidv0_label_is_dagpb_sha256():
+    p = parse_ipfs_cid(CID_V0)
+    assert p.type == "IPFS CID v0 dag-pb/sha2-256"
+
+
+def test_enrichment_is_label_only_core_and_fingerprint_unchanged():
+    # The decoded label must NOT change what entropy is visualized: the
+    # core is still the full base32 body, so the fingerprint is identical
+    # to what the un-enriched parser produced.
+    p = parse_ipfs_cid(CID_DAGPB)
+    assert p.core == CID_DAGPB[1:].upper()        # 'b' stripped, base32 upper
+    assert compute_fingerprint(p.core) == compute_fingerprint(CID_DAGPB[1:].upper())
+
+
+def test_undecodable_cidv1_falls_back_to_generic_label():
+    # A structurally valid 'b…' base32 string whose interior is not a
+    # sensible version/codec/hash must still parse, just with the plain
+    # label rather than crashing or mislabelling.
+    label = decode_multicodec_label(b"\xff\xff\xff")
+    assert label is None
+
+
+def test_dispatches_through_parse():
+    assert parse(CID_DAGPB).type == "IPFS CID v1 dag-pb/sha2-256"
+    assert parse(CID_V0).type.startswith("IPFS CID v0")

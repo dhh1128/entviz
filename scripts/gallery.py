@@ -71,6 +71,10 @@ SAMPLES = [
         ("Bitcoin Cash CashAddr",       "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"),
         ("Cardano Shelley",
          "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"),
+        ("Cosmos Hub (checksum-validated, HRP in label)",
+         "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e"),
+        ("Osmosis (same generic bech32 parser)",
+         "osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t"),
     ]),
     ("SSH public keys", [
         ("ssh-ed25519 (with comment)",
@@ -90,7 +94,45 @@ SAMPLES = [
     ]),
     ("Base32 addresses (RFC 4648)", [
         ("Stellar account",     "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM"),
+        ("Stellar muxed account (M…)",
+         "MA7QYNF7SOWQ3GLR2BGMZEHXAVIRZA4KVWLTJJFC7MGXUA74P7UJVAAAAAAAAAAAAAJLK"),
         ("IPFS CID v1",         "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
+    ]),
+    # Git object hashes wrapped in their standardized prefix schemes. The
+    # scheme is split off as a non-entropy prefix (excluded from the
+    # fingerprint), so each renders the same entropy as the bare hash —
+    # only the label differs. See this.i:g1tha5h0.
+    ("Git object hashes (SWHID / gitoid)", [
+        ("SWHID commit (rev)",    "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"),
+        ("SWHID content (cnt)",   "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"),
+        ("SWHID qualified (origin/lines → suffix)",
+         "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"
+         ";origin=https://github.com/torvalds/linux;lines=1-10"),
+        ("gitoid blob sha1 (empty blob)",
+         "gitoid:blob:sha1:e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"),
+        ("gitoid commit sha1",
+         "gitoid:commit:sha1:309cf2674ee7a0749978cf8265ab91a60aea0f7d"),
+        ("gitoid blob sha256 (empty blob)",
+         "gitoid:blob:sha256:473a0f4c3be8a93681a267e3b1e9a7dcda1185436fe141f7749120a303721813"),
+    ]),
+    # Content addressing. CIDv1's self-describing interior is decoded to
+    # name its content codec + hash function (label-only — the visualized
+    # entropy is unchanged). See this.i:mult1c0d.
+    ("Content addressing (IPFS CID / multicodec)", [
+        ("CID v0 (dag-pb/sha2-256)",  "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG"),
+        ("CID v1 dag-pb/sha2-256",    "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
+        ("CID v1 raw/sha2-256",       "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy"),
+    ]),
+    # KERI / CESR primitives. An AID is a CESR key (D transferable, B
+    # non-transferable); a SAID is a CESR self-addressing digest (E =
+    # Blake3-256). The label reports the cryptographic primitive, not the
+    # contextual AID/SAID role. See this.i:mult1c0d.
+    ("KERI / CESR primitives (AIDs, SAIDs, keys, signatures)", [
+        ("AID — transferable (D, Ed25519)",     "DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
+        ("AID — non-transferable (B, Ed25519)", "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
+        ("SAID — Blake3-256 digest (E)",        "EBfdlu8R27Fbx_ehrqwImnK_8Cm79sqbAQ4caaZG_LFv"),
+        ("Ed25519 signature (0B)",
+         "0BLwV6fEpOzY9iHsR2bAlKvU5eDoNyX8hGrQ1a_kJuT4dCnMxW7gFqP0Z-jItS3cBmLwV6fEpOzY9iHsR2bAlKvU"),
     ]),
     ("Snowflake IDs (Twitter/Discord/Mastodon)", [
         ("Discord docs example",         "80351110224678912"),

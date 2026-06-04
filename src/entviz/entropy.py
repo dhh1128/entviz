@@ -1,5 +1,6 @@
 import collections
 import re
+import base64
 import hashlib
 import time
 
@@ -107,6 +108,19 @@ Parsed = collections.namedtuple('Parsed', ['type', 'alphabet', 'prefix', 'core',
 UUID_REGEX = re.compile(r'^\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$', re.I)
 DID_REGEX = re.compile(r'^(did:[a-z0-9]+:)((?:[a-zA-Z0-9_.-]|%[a-fA-F0-9]{2})+)((/[^?]*)?([?].*)?)$')
 STELLAR_REGEX = re.compile(r'^(G|g)([' + BASE32_ALPHABET_EITHER_CASE + ']{55})$')
+# Stellar muxed account (strkey 'M…'): version byte 0x60 (med25519) + 32-byte
+# ed25519 key + 8-byte memo id + CRC16, base32-encoded to 69 chars total
+# (1 prefix + 68 body). Distinct prefix and length from a 'G' account, same
+# base32 alphabet. See `this.i:xtra4lph`.
+STELLAR_MUXED_REGEX = re.compile(r'^(M|m)([' + BASE32_ALPHABET_EITHER_CASE + ']{68})$')
+# Generic bech32 address: <hrp>1<data>, used by Cosmos-SDK chains (cosmos1,
+# osmo1, juno1, …) and many others. Detection is made SOUND by validating
+# the BIP-173 / BIP-350 checksum (see _bech32_checksum_const); the HRP names
+# the chain in the label. Specific bech32 formats (bc1/tb1, ltc1, addr1…)
+# have their own parsers that run first. HRP is lowercase letters in
+# practice; data part (incl. 6-char checksum) is the bech32 charset.
+BECH32_GENERIC_REGEX = re.compile(
+    r'^([a-z]{1,83})1([' + BECH32_ALPHABET + ']{8,})$', re.I)
 IPFS_CIDV0_REGEX = re.compile(r'^(Qm)([' + BASE58_ALPHABET + ']{44})$')
 IPFS_CIDV1_REGEX = re.compile(r'^(b)([' + BASE32_ALPHABET_EITHER_CASE + ']{58,112})$')
 EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
@@ -192,6 +206,21 @@ LEI_REGEX = re.compile(r'^[0-9A-Z]{20}$', re.I)
 # to disambiguate from arbitrary long decimals — parse_snowflake adds a
 # plausible-timestamp range check on the top 42 bits.
 SNOWFLAKE_REGEX = re.compile(r'^[0-9]{17,20}$')
+
+# SWHID (Software Heritage IDentifier) core form: swh:1:<type>:<40-hex>.
+# <type> is one of snp/rel/rev/dir/cnt; a git commit is `rev` (revision).
+# v1 hashes are git-style SHA-1 (40 hex, lowercase canonical). An optional
+# trailing `;<qualifiers>` (origin/lines/etc.) is addressing context, not
+# entropy, so it is split off into the suffix. Case-insensitive on input;
+# scheme/type/hex are normalized to lowercase. See `this.i:g1tha5h0`.
+SWHID_REGEX = re.compile(
+    r'^(swh:1:(?:snp|rel|rev|dir|cnt):)([0-9a-f]{40})(?:;(.+))?$', re.I)
+# gitoid (OmniBOR) form: gitoid:<object-type>:<hash-algo>:<hex>. The hex
+# length must match the algorithm (sha1 -> 40, sha256 -> 64); a mismatch
+# is rejected rather than silently re-tokenized. Case-insensitive on input.
+GITOID_REGEX = re.compile(
+    r'^(gitoid:(blob|tree|commit|tag):(sha1|sha256):)([0-9a-f]+)$', re.I)
+_GITOID_ALGO_LEN = {"sha1": 40, "sha256": 64}
 # Discord epoch: 2015-01-01T00:00:00.000Z = 1420070400000 ms since UNIX
 # epoch. Twitter's snowflake epoch is earlier (2010-11-04T01:42:54.657Z)
 # but we use Discord's epoch as the lower bound because (a) it is the
@@ -264,6 +293,69 @@ MULTIHASH_HASH_FUNCS = {
     0xb202: "murmur3-128",
     0xb203: "murmur3-32"
 }
+
+# Multicodec content-type codes (the subset that actually appears as a
+# CID's content codec). The multicodec table is a registry, not a wire
+# format; decoding these codes is label-only — it names what a CID wraps
+# without changing the visualized entropy. See `this.i:mult1c0d`.
+MULTICODEC_CONTENT = {
+    0x00: "identity",
+    0x51: "cbor",
+    0x55: "raw",
+    0x60: "rlp",
+    0x70: "dag-pb",
+    0x71: "dag-cbor",
+    0x72: "libp2p-key",
+    0x78: "git-raw",
+    0x90: "eth-block",
+    0x97: "eth-tx",
+    0x0129: "dag-json",
+    0x0202: "car",
+}
+
+
+def _read_uvarint(data, pos):
+    """Read an unsigned LEB128 varint from `data` at `pos`.
+
+    Returns (value, next_pos), or (None, pos) if the buffer ends mid-varint.
+    """
+    result = 0
+    shift = 0
+    while pos < len(data):
+        b = data[pos]
+        pos += 1
+        result |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            return result, pos
+        shift += 7
+    return None, pos
+
+
+def _b32_nopad_decode(s: str) -> bytes:
+    """RFC 4648 base32 decode of a lowercase, unpadded multibase body."""
+    s = s.upper()
+    return base64.b32decode(s + "=" * ((-len(s)) % 8))
+
+
+def decode_multicodec_label(cid_bytes: bytes):
+    """Decode the leading varints of a binary CIDv1 into a `<codec>/<hash>`
+    label (e.g. "dag-pb/sha2-256"), or None if the bytes do not describe a
+    recognized version-1 codec/hash pair.
+
+    This reads only the self-describing prefix bytes; it does not validate
+    the digest. Defensive by construction — any malformed/unknown buffer
+    yields None and the caller falls back to the plain CID label.
+    """
+    version, pos = _read_uvarint(cid_bytes, 0)
+    if version != 1:
+        return None
+    codec, pos = _read_uvarint(cid_bytes, pos)
+    hash_fn, pos = _read_uvarint(cid_bytes, pos)
+    codec_name = MULTICODEC_CONTENT.get(codec)
+    hash_name = MULTIHASH_HASH_FUNCS.get(hash_fn)
+    if codec_name is None or hash_name is None:
+        return None
+    return f"{codec_name}/{hash_name}"
 
 def _parse_multihash(text):
     """
@@ -608,6 +700,10 @@ def parse_stellar_address(text) -> Parsed:
     if m:
         # Stellar uses base32 (RFC 4648).
         return Parsed("XLM", BASE32, m.group(1).upper(), m.group(2).upper(), None)
+    m = STELLAR_MUXED_REGEX.match(text)
+    if m:
+        # Muxed account (M…): same base32 alphabet, longer body (key + memo id).
+        return Parsed("XLM muxed", BASE32, m.group(1).upper(), m.group(2).upper(), None)
     
 def parse_uuid(text) -> Parsed:
     """
@@ -735,6 +831,112 @@ def parse_did(text) -> Parsed:
         # the common case (e.g., did:key). Generic fallback.
         return Parsed("DID", BASE64URL, m.group(1), m.group(2), m.group(3))
     
+def parse_swhid(text) -> Parsed:
+    """
+    See if we can parse text as a Software Heritage IDentifier (SWHID v1).
+
+    Core form: `swh:1:<type>:<40-hex-sha1>`, where <type> is one of
+    snp/rel/rev/dir/cnt. A git *commit* is the `rev` (revision) object
+    type. The 40-char hex is a git-style SHA-1; SWHID v1 is sha1-only, so
+    a 64-hex (sha256) body does NOT match here.
+
+    The `swh:1:<type>:` scheme+type is non-entropy framing (prefix); the
+    hex is the core (declared HEX so the tokenizer reads 4 bits/char); an
+    optional `;<qualifiers>` tail (origin=, lines=, …) is addressing
+    context, captured as suffix so it neither enters the core nor changes
+    the fingerprint. The scheme, type, and hex are normalized to lower
+    case. See `this.i:g1tha5h0`.
+    """
+    if not text:
+        return None
+    m = SWHID_REGEX.match(text)
+    if not m:
+        return None
+    return Parsed(
+        f"SWHID {m.group(1).split(':')[2].lower()}",
+        HEX,
+        m.group(1).lower(),
+        m.group(2).lower(),
+        m.group(3) if m.group(3) else None,
+    )
+
+def parse_gitoid(text) -> Parsed:
+    """
+    See if we can parse text as a gitoid (OmniBOR git object identifier).
+
+    Form: `gitoid:<object-type>:<hash-algo>:<hex>`, where <object-type>
+    is one of blob/tree/commit/tag and <hash-algo> is sha1 (40 hex) or
+    sha256 (64 hex). The hex length must match the declared algorithm; a
+    mismatch is rejected (returns None) rather than re-tokenized, since a
+    wrong-length body means the identifier is malformed.
+
+    The `gitoid:<obj>:<algo>:` scheme is non-entropy framing (prefix); the
+    hex is the core, declared HEX. Everything is normalized to lower case.
+    See `this.i:g1tha5h0`.
+    """
+    if not text:
+        return None
+    m = GITOID_REGEX.match(text)
+    if not m:
+        return None
+    obj, algo, body = m.group(2).lower(), m.group(3).lower(), m.group(4).lower()
+    if len(body) != _GITOID_ALGO_LEN[algo]:
+        return None
+    return Parsed(f"gitoid {obj} {algo}", HEX, m.group(1).lower(), body, None)
+
+def _bech32_polymod(values):
+    """BIP-173 bech32 checksum polymod over a list of 5-bit values."""
+    gen = (0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3)
+    chk = 1
+    for v in values:
+        top = chk >> 25
+        chk = ((chk & 0x1ffffff) << 5) ^ v
+        for i in range(5):
+            chk ^= gen[i] if ((top >> i) & 1) else 0
+    return chk
+
+
+def _bech32_hrp_expand(hrp):
+    return [ord(c) >> 5 for c in hrp] + [0] + [ord(c) & 31 for c in hrp]
+
+
+def _bech32_checksum_const(hrp, data):
+    """Return the polymod constant for hrp+data: 1 for bech32, 0x2bc830a3 for
+    bech32m, or anything else when the checksum is invalid. `data` is the
+    bech32 char string (including the 6 trailing checksum chars)."""
+    values = [BECH32_ALPHABET.index(c) for c in data]
+    return _bech32_polymod(_bech32_hrp_expand(hrp) + values)
+
+
+def parse_bech32_address(text) -> Parsed:
+    """
+    See if we can parse text as a generic, checksum-valid bech32 address —
+    the encoding used by Cosmos-SDK chains (cosmos1…, osmo1…, juno1…, …) and
+    many others.
+
+    Detection is made SOUND by validating the BIP-173 (bech32) or BIP-350
+    (bech32m) checksum rather than merely matching a prefix; a random
+    <letters>1<chars> string passes the polymod with probability ~2⁻³⁰. The
+    HRP becomes part of the type label (e.g. "bech32 cosmos"), so the chain
+    is named from the input itself rather than a hard-coded list.
+
+    The `<hrp>1` is split off as the non-entropy prefix; the 6-char checksum
+    is the suffix (as for LEI / Bitcoin-legacy); the remaining bech32 data is
+    the core, declared BECH32. Specific bech32 formats (Bitcoin segwit,
+    Litecoin, Cardano, Bitcoin Cash) have dedicated parsers that run first.
+    See `this.i:xtra4lph`.
+    """
+    if not text:
+        return None
+    m = BECH32_GENERIC_REGEX.match(text)
+    if not m:
+        return None
+    hrp = m.group(1).lower()
+    data = m.group(2).lower()
+    if _bech32_checksum_const(hrp, data) not in (1, 0x2bc830a3):
+        return None
+    return Parsed(f"bech32 {hrp}", BECH32, hrp + "1", data[:-6], data[-6:])
+
 def parse_ipfs_cid(text) -> Parsed:
     """
     See if we can parse text as an IPFS CID.
@@ -742,11 +944,25 @@ def parse_ipfs_cid(text) -> Parsed:
     """
     m = IPFS_CIDV0_REGEX.match(text)
     if m:
-        return Parsed("IPFS CID v0", BASE58, m.group(1), m.group(2), None)
+        # A v0 CID is, by definition, dag-pb content under a sha2-256
+        # multihash; the label states that explicitly.
+        return Parsed("IPFS CID v0 dag-pb/sha2-256", BASE58, m.group(1), m.group(2), None)
     m = IPFS_CIDV1_REGEX.match(text)
     if m:
-        # IPFS CID v1 uses base32 (RFC 4648).
-        return Parsed("IPFS CID v1 256", BASE32, m.group(1), m.group(2).upper(), None)
+        # IPFS CID v1 uses base32 (RFC 4648). Decode the self-describing
+        # interior (version/codec/hash varints) to enrich the label; this
+        # is label-only — the core stays the full base32 body so the
+        # fingerprint is unchanged. Fall back to the plain label if the
+        # interior does not decode. See `this.i:mult1c0d`.
+        label = "IPFS CID v1"
+        try:
+            # binascii.Error (bad base32) subclasses ValueError.
+            described = decode_multicodec_label(_b32_nopad_decode(m.group(2)))
+            if described:
+                label = f"IPFS CID v1 {described}"
+        except ValueError:
+            pass
+        return Parsed(label, BASE32, m.group(1), m.group(2).upper(), None)
     
 # Register all the functions that do parsing (with two exceptions below:
 # parse_hex is appended at the end, and parse_eos_address is moved to run
