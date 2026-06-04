@@ -16,6 +16,10 @@ def main():
     parser.add_argument('--fs', '--fontsize', metavar='POINT', default=12, type=int)
     parser.add_argument('-o', '--output', metavar='FILE', default=None,
                         help='Write SVG to FILE (default: stdout)')
+    parser.add_argument('--note', metavar='TEXT', default=None,
+                        help='Optional unverified caption (<=8 ASCII alphanumeric '
+                             'chars), rendered as a quiet gray note in the bottom '
+                             'strip. Does not affect the fingerprint or comparison.')
     args = parser.parse_args()
 
     ar_width, ar_height = 1, 1
@@ -31,7 +35,11 @@ def main():
         parser.error('Invalid font size.')
 
     target_ar = ar_width / ar_height
-    svg = render(args.entropy, target_ar=target_ar, font_size_pt=font_size_pt)
+    try:
+        svg = render(args.entropy, target_ar=target_ar, font_size_pt=font_size_pt,
+                     note=args.note)
+    except ValueError as e:
+        parser.error(str(e))
 
     if args.output:
         with open(args.output, 'w', encoding='utf-8') as f:

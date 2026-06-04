@@ -160,6 +160,15 @@ SAMPLES = [
         ("256-bit hex @ 2:1",  "deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef", 2.0),
         ("256-bit hex @ 1:2",  "deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef", 0.5),
     ]),
+    # The --note caption: an out-of-band, unverified, gray label on a bare
+    # git hash that entviz can only detect as hex. It never touches the
+    # fingerprint and is outside the comparison surface. See this.i:usrn0te1.
+    ("User notes (--note caption on bare git hashes)", [
+        ("git commit, SHA-1 — rendered with --note git",
+         "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "git"}),
+        ("git commit, SHA-256 — rendered with --note git",
+         "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae", {"note": "git"}),
+    ]),
 ]
 
 

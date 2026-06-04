@@ -10,6 +10,7 @@ border). The cells-only rectangle is now grid_rect.
 """
 import colorsys
 import math
+import re
 
 from lxml import etree
 
@@ -29,10 +30,43 @@ from .shapes import canvas, rect as draw_rect
 _DPI = 96
 
 
-def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) -> str:
+NOTE_MAX_LEN = 8
+_NOTE_RE = re.compile(r'^[A-Za-z0-9]+$')
+
+
+def sanitize_note(note):
+    """Validate an optional out-of-band user note (see `this.i:usrn0te1`).
+
+    Returns the note unchanged (case preserved — it is a caption, not
+    entropy) when it is ASCII-alphanumeric and at most NOTE_MAX_LEN chars.
+    `None` or an empty string mean "no note" and return None. Any other
+    value raises ValueError: a trust-adjacent field is rejected outright
+    rather than silently truncated or mangled.
+    """
+    if note is None or note == "":
+        return None
+    if not isinstance(note, str):
+        raise ValueError("note must be a string")
+    if len(note) > NOTE_MAX_LEN:
+        raise ValueError(
+            f"note must be at most {NOTE_MAX_LEN} characters (got {len(note)})")
+    if not _NOTE_RE.match(note):
+        raise ValueError(
+            "note must be ASCII alphanumeric [A-Za-z0-9] with no spaces or punctuation")
+    return note
+
+
+def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
+           note: str = None) -> str:
     """
     Render entropy as an SVG entviz and return the SVG as a UTF-8 string.
+
+    `note` is an optional out-of-band caption (max 8 ASCII-alphanumeric
+    chars). It NEVER enters the entropy or the fingerprint and is outside
+    the comparison surface; it renders as a quiet gray caption in the bottom
+    strip. An invalid note raises ValueError. See `this.i:usrn0te1`.
     """
+    note = sanitize_note(note)
     # --- Normalize and tokenize the entropy ---
     raw_input = entropy_text.strip()
     parsed = parse(raw_input)
@@ -153,8 +187,9 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
     # from a nucleus edge. (When there's no suffix, the GM below the grid is
     # just the bottom margin and is unchanged.)
     bounding_w = 1 + bar_width + 1 + gm + grid_w + gm + 1
-    has_suffix_label = bool(suffix)
-    bottom_region = (nucleus_height + gm) if has_suffix_label else gm
+    # The bottom strip appears when there is a suffix OR a user note.
+    has_bottom_label = bool(suffix) or bool(note)
+    bottom_region = (nucleus_height + gm) if has_bottom_label else gm
     bounding_h = 1 + gm + nucleus_height + grid_h + bottom_region + 1
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
 
@@ -489,6 +524,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
         type_name=type_name, prefix=prefix, suffix=suffix,
         text_size_px=label_text_px,
         truncated_bytes=truncated_bytes,
+        note=note,
     )
 
     # Gray border lines (#808080) on all four sides of the bounding rect,
@@ -511,7 +547,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12) ->
 
 def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
                        type_name, prefix, suffix, text_size_px,
-                       truncated_bytes=None):
+                       truncated_bytes=None, note=None):
     """
     Render the top "<Type>: <prefix>..." label strip (always) and, when
     suffix is present, the bottom "...<suffix>" strip. Strips are
@@ -570,10 +606,13 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
             **{"dominant-baseline": "central"},
         )
         el.text = rest_text
-    # Bottom strip — only when suffix exists.
-    if suffix:
+    # Bottom strip — when a suffix exists and/or a user note is supplied.
+    # Layout (right-aligned to grid_rect.right): "...<suffix> (<note>)". The
+    # suffix (algorithm-derived) is #666; the note (out-of-band, unverified)
+    # is quiet gray #808080 and carries data-user-note so it is structurally
+    # distinct from derived content. See `this.i:usrn0te1`.
+    if suffix or note:
         bottom_g = etree.SubElement(svg, 'g', **{"data-channel": "label-bottom"})
-        bottom_text = f"...{suffix}"
         # Bottom band abuts the grid; text centers nucleus_height/2 below it.
         bottom_cy = grid_rect.bottom + nucleus_height / 2
         el = etree.SubElement(
@@ -582,7 +621,18 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
             fill='#666666', style=style,
             **{"text-anchor": "end", "dominant-baseline": "central"},
         )
-        el.text = bottom_text
+        if suffix and note:
+            suffix_tspan = etree.SubElement(el, 'tspan')   # inherits #666
+            suffix_tspan.text = f"...{suffix} "
+            note_tspan = etree.SubElement(
+                el, 'tspan', fill='#808080', **{"data-user-note": note})
+            note_tspan.text = f"({note})"
+        elif suffix:
+            el.text = f"...{suffix}"
+        else:  # note only
+            note_tspan = etree.SubElement(
+                el, 'tspan', fill='#808080', **{"data-user-note": note})
+            note_tspan.text = f"({note})"
 
 
 def _draw_border_line(svg, x1, y1, x2, y2):
