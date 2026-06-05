@@ -1,6 +1,6 @@
 import pytest
 from lxml import etree
-from entviz.pipeline import render
+from entviz.pipeline import render, MAX_INPUT_CHARS
 
 # A 256-bit hex string (32 bytes = 11 base64 tokens)
 HEX_256 = "deadbeef" * 8
@@ -87,6 +87,39 @@ def test_different_entropy_produces_different_output():
     a = render("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     b = render("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
     assert a != b
+
+
+def test_render_rejects_empty_input():
+    # Empty input produces no tokens; render() must reject it rather than
+    # emit a degenerate SVG (pipeline.py "No tokens produced" guard).
+    with pytest.raises(ValueError):
+        render("")
+
+
+def test_render_rejects_whitespace_only_input():
+    # Whitespace-only collapses to empty after .strip(); same rejection.
+    with pytest.raises(ValueError):
+        render("   \t\n ")
+
+
+def test_render_rejects_input_over_cap():
+    # Anti-DoS (this.i:1nputcap): input past MAX_INPUT_CHARS is not an
+    # identifier; render() rejects it rather than spend O(n) hashing/allocation.
+    with pytest.raises(ValueError):
+        render("d" * (MAX_INPUT_CHARS + 1))
+
+
+def test_render_accepts_input_at_cap():
+    # The cap is inclusive: exactly MAX_INPUT_CHARS still renders.
+    result = render("d" * MAX_INPUT_CHARS)
+    assert result.startswith('<svg')
+
+
+def test_render_cap_counts_pre_strip_length():
+    # The cap guards the raw input before .strip(), so leading/trailing
+    # whitespace can't be used to smuggle an oversized payload past it.
+    with pytest.raises(ValueError):
+        render("d" * (MAX_INPUT_CHARS + 1) + "   ")
 
 
 def test_background_rect_uses_style_color():

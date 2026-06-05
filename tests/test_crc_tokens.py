@@ -46,7 +46,7 @@ def test_quartile_tokens_non_multiple_of_4():
     assert quartiles[0].text == "A"
     assert quartiles[1].text == "C"
     assert quartiles[2].text == "E"
-    # The 4th index would be 6, which is > 4.
-    # My current implementation doesn't return None if out of bounds? 
-    # Let me check idx < count.
-    pass
+    # The 4th quartile index is 3 * q_size = 6, which is >= count (5), so the
+    # padding-at-bottom rule yields no token: get_quartile_tokens returns None
+    # for that slot (the pipeline then draws no quartile mark there).
+    assert quartiles[3] is None

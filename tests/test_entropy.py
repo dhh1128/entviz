@@ -1,4 +1,5 @@
 from entviz.entropy import *
+from entviz.entropy import parse_funcs  # not re-exported by `import *`
 import hashlib
 import random
 
@@ -204,4 +205,30 @@ def test_UUID_normalization():
         answer = parse(input)
         assert answer.core == "087f9afc5e794c1498eb3217e477242c"
         assert answer.type == "UUID"
+
+
+# --- parser dispatch order (MNT-F4) -------------------------------------
+
+def test_dispatch_order_load_bearing_constraints():
+    # parse() returns the first matching parser, so order is semantics. These
+    # are the constraints that classification correctness depends on; the
+    # dispatch list is now explicit (was a globals() scan) and must keep them.
+    order = [f.__name__ for f in parse_funcs]
+
+    def before(a, b):
+        return order.index(a) < order.index(b)
+
+    # Structured pure-hex formats must get first refusal before generic hex.
+    assert before("parse_ethereum_address", "parse_hex")
+    assert before("parse_hex_multihash", "parse_hex")
+    # EOS short-form (alphabet is a superset of lowercase hex) must lose the
+    # race to genuine hex (reviews/adversarial-2026-05-27.md F1).
+    assert before("parse_hex", "parse_eos_address")
+    # snowflake must precede the generic hex parser (digits are valid hex).
+    assert before("parse_snowflake", "parse_hex")
+
+
+def test_dispatch_list_has_no_duplicates():
+    names = [f.__name__ for f in parse_funcs]
+    assert len(names) == len(set(names))
 

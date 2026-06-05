@@ -42,7 +42,10 @@ def test_losslessness_le_512_bits_text_roundtrip():
     # all token texts should equal the normalized core string.
     core = "deadbeef" * 16
     parsed = parse(core)
-    tokens, is_truncated = tokenize_entropy(parsed.core, parsed.type)
+    # Pass parsed.alphabet (the Alphabet object), exactly as pipeline.render
+    # does — not parsed.type, whose string value would route through the
+    # legacy compatibility shim and leave the real dispatch path untested.
+    tokens, is_truncated = tokenize_entropy(parsed.core, parsed.alphabet)
     assert not is_truncated
     concatenated = "".join(t.text for t in tokens)
     assert concatenated == parsed.core
@@ -56,7 +59,8 @@ def test_large_input_text_shows_first_and_last_192():
     # longer applies — we check head and tail separately.
     core = "deadbeef" * 18
     parsed = parse(core)
-    tokens, is_truncated = tokenize_entropy(parsed.core, parsed.type)
+    # Production (pipeline.render) passes the Alphabet object, so do the same.
+    tokens, is_truncated = tokenize_entropy(parsed.core, parsed.alphabet)
     assert is_truncated
     assert len(tokens) == 20
     head_text = "".join(t.text for t in tokens[:8])

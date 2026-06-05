@@ -2617,3 +2617,38 @@ Entviz = goal:
         spawns no external binaries. The only subprocess use is the dev-only
         scripts/release.py (git/uv), run interactively by the maintainer on a
         trusted machine — out of the runtime threat model.
+
+    Bounded Input / Anti-DoS = decision:
+      id: 1nputcap
+      why: >
+        Close the threat-model "super-linear resource consumption" secondary
+        win (docs/threat-model.md). Two independent costs scaled with raw input
+        size, both unnecessary:
+
+        (1) Wasted full tokenize. tokenize_entropy() materialized EVERY token
+        of the whole core (a 10 MB hex input → ~1.7M Token objects, ~14.5s;
+        50 MB → ~48s) only to read len(all_tokens) for a branch decision and
+        then discard all but the head/tail on the large-input path. But
+        tokenize() emits exactly ceil(len(core)/token_len) tokens, so the
+        count — and the byte length ([[_core_byte_length]]) — are both O(1)
+        from len(core). Fix: derive the >512-bit / >22-token branch
+        arithmetically and only call the full tokenize() on the short path
+        (which is ≤22 tokens by definition); the large path tokenizes just the
+        head and tail windows it actually renders. Output is byte-identical —
+        test_large_input.py is the regression guard, and an explicit
+        equivalence test pins it.
+
+        (2) Unbounded input. Even with (1) fixed, render() still hashes and
+        allocates O(n) over attacker-controlled bulk (the full-core SHA-512
+        that binds the fingerprint, the .strip()/.encode() copies, the
+        txt->b64url fallback's base64 of the whole input). entviz visualizes
+        IDENTIFIERS; the largest plausible one (a long cert chain or JWT) is a
+        few KB. MAX_INPUT_CHARS = 65536 (64 KiB) is ~16× headroom over that yet
+        bounds the residual work to microseconds. Past the cap the input is not
+        an identifier, so render() raises ValueError outright rather than spend
+        unbounded CPU/memory — same "reject, don't silently mangle" stance as
+        [[usrn0te1]]'s note validation. The cap is checked at the render()
+        boundary before parse()/tokenize so no O(n) work precedes it.
+
+        Relation to [[s3cch41n]]: that node hardens the BUILD/CI surface; this
+        hardens the RUNTIME render() surface. Both serve the same threat model.

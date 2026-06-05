@@ -21,10 +21,10 @@ on:
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
+# Default to read-only; the deploy job opts up to pages/id-token write below.
+# Per-job permissions keep the test gate from holding the Pages deploy token.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deploy at a time; let an in-progress deploy finish rather than cancel it.
 concurrency:
@@ -32,8 +32,34 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  # Gate the deploy on a green suite so a docs-touching push to main can't
+  # publish from a commit where the code tests are red. One interpreter is
+  # enough here (the full matrix runs in ci.yml); --locked also proves uv.lock
+  # is current.
+  test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Run tests
+        run: uv run --locked --python 3.12 pytest
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

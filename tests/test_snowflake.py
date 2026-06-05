@@ -7,17 +7,30 @@ See `this.i:sn0wfl4k` for the three decisions exercised here:
   (2) Plausible-timestamp range check (Discord epoch ± window).
   (3) Parser order: parse_snowflake precedes parse_hex.
 """
-import time
-
 import pytest
 
+from entviz import entropy
 from entviz.entropy import (
     DECIMAL,
     DISCORD_EPOCH_MS,
+    _SNOWFLAKE_FUTURE_WINDOW_MS,
     parse,
     parse_hex,
     parse_snowflake,
 )
+
+# A fixed reference clock (2026-01-01T00:00:00Z, in unix ms). The future-window
+# tests pin entropy._now_ms() to this so they exercise the window boundary
+# deterministically instead of drifting with the real wall clock (TST-F3): both
+# the constructed snowflake and the parser's "now" share this one reference.
+FIXED_NOW_MS = 1767225600000
+
+
+@pytest.fixture
+def fixed_clock(monkeypatch):
+    """Pin parse_snowflake's notion of 'now' to FIXED_NOW_MS."""
+    monkeypatch.setattr(entropy, "_now_ms", lambda: FIXED_NOW_MS)
+    return FIXED_NOW_MS
 
 
 def _snowflake_from_ms(ts_ms: int, worker: int = 1, process: int = 0, seq: int = 0) -> str:
@@ -78,47 +91,50 @@ def test_snowflake_uses_decimal_alphabet():
 
 # --- Rejection: out-of-range timestamps ---------------------------------
 
-def test_reject_decimal_with_pre_2015_implied_timestamp():
-    # Construct a 17-digit pure-decimal string whose top-42-bit timestamp
-    # would land before 2015. We do this by picking a small integer that
-    # nevertheless has 17+ digits — e.g. all 9s of length 17, which yields
-    # an enormous timestamp far in the future, NOT before 2015. So instead
-    # we directly construct a value whose (top 42 bits) is 0 — that's
-    # exactly at the Discord epoch — and pad lower bits to push to 17
-    # digits. But top-42-bits-zero with high lower-22-bits maxes at
-    # 2^22 - 1 = 4194303, which is only 7 digits. So this construction is
-    # mathematically impossible: any 17+-digit decimal has top-42-bits >= 1,
-    # placing its decoded timestamp at >= Discord epoch + 1 ms.
-    # The real rejection case is the FUTURE-side window; covered below.
-    pass
+def test_pre_2015_timestamp_unreachable_for_valid_length():
+    # The parser rejects a decoded timestamp before the Discord epoch, but
+    # that branch is unreachable for any length-valid snowflake: the smallest
+    # 17-digit decimal (10**16) already has top-42-bits >= 1, so its decoded
+    # timestamp is strictly after the epoch. This pins the invariant the
+    # `ts_ms < DISCORD_EPOCH_MS` guard relies on (and is robust to the wall
+    # clock — an early-2015 timestamp is inside the window for any real now).
+    smallest_17_digit = 10 ** 16
+    assert len(str(smallest_17_digit)) == 17
+    ts_ms = (smallest_17_digit >> 22) + DISCORD_EPOCH_MS
+    assert ts_ms > DISCORD_EPOCH_MS
+    # And it parses as a real (early-2015) snowflake.
+    parsed = parse_snowflake(str(smallest_17_digit))
+    assert parsed is not None
+    assert parsed.type == "snowflake"
 
 
-def test_reject_decimal_with_far_future_timestamp():
-    # 100 years in the future from now -> way beyond the 5-year window.
-    now_ms = int(time.time() * 1000)
-    far_future_ms = now_ms + (100 * 365 * 86400 * 1000)
+def test_reject_decimal_with_far_future_timestamp(fixed_clock):
+    # 100 years past the pinned now -> way beyond the 5-year window.
+    far_future_ms = fixed_clock + (100 * 365 * 86400 * 1000)
     snowflake = _snowflake_from_ms(far_future_ms)
     # Sanity: should still be a 17-20 digit string.
     assert 17 <= len(snowflake) <= 20
     assert parse_snowflake(snowflake) is None
 
 
-def test_reject_decimal_at_5_year_window_boundary_plus_one():
-    # ~5 years + 1 day in the future -> just outside the accept window.
-    now_ms = int(time.time() * 1000)
-    just_outside_ms = now_ms + (5 * 365 + 1) * 86400 * 1000 + 86400000
+def test_reject_decimal_at_5_year_window_boundary_plus_one(fixed_clock):
+    # 1 ms past the accept window's far edge -> rejected. Pinning the clock
+    # makes this an exact boundary assertion, not an approximate one.
+    just_outside_ms = fixed_clock + _SNOWFLAKE_FUTURE_WINDOW_MS + 1
     snowflake = _snowflake_from_ms(just_outside_ms)
-    if 17 <= len(snowflake) <= 20:
-        assert parse_snowflake(snowflake) is None
+    assert 17 <= len(snowflake) <= 20
+    assert parse_snowflake(snowflake) is None
 
 
-def test_accept_decimal_within_future_window():
-    # 1 year in the future -> within the 5-year accept window.
-    now_ms = int(time.time() * 1000)
-    future_ms = now_ms + (365 * 86400 * 1000)
-    snowflake = _snowflake_from_ms(future_ms)
-    if 17 <= len(snowflake) <= 20:
-        assert parse_snowflake(snowflake) is not None
+def test_accept_decimal_just_inside_future_window(fixed_clock):
+    # Exactly at the window's far edge (now + 5y) -> still accepted: the guard
+    # rejects only ts_ms strictly greater than now + window.
+    at_edge_ms = fixed_clock + _SNOWFLAKE_FUTURE_WINDOW_MS
+    snowflake = _snowflake_from_ms(at_edge_ms)
+    assert 17 <= len(snowflake) <= 20
+    parsed = parse_snowflake(snowflake)
+    assert parsed is not None
+    assert parsed.type == "snowflake"
 
 
 # --- Rejection: wrong length --------------------------------------------
@@ -158,12 +174,11 @@ def test_parse_dispatch_prefers_snowflake_over_hex():
     assert parsed.type == "snowflake"
 
 
-def test_parse_falls_through_to_hex_for_non_snowflake_decimal():
+def test_parse_falls_through_to_hex_for_non_snowflake_decimal(fixed_clock):
     # An 18-digit decimal whose implied timestamp is far in the future
     # should NOT be classified as a snowflake. It should fall through to
     # hex (pure digits are valid hex; even length, so parse_hex accepts).
-    now_ms = int(time.time() * 1000)
-    far_future_ms = now_ms + (100 * 365 * 86400 * 1000)
+    far_future_ms = fixed_clock + (100 * 365 * 86400 * 1000)
     candidate = _snowflake_from_ms(far_future_ms)
     if len(candidate) % 2 != 0:
         candidate = candidate[:-1]  # parse_hex requires even length

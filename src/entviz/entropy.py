@@ -234,6 +234,17 @@ DISCORD_EPOCH_MS = 1420070400000
 # to keep false-positive rate on random 18-digit decimals around 3.6%.
 _SNOWFLAKE_FUTURE_WINDOW_MS = 5 * 365 * 86400 * 1000
 
+
+def _now_ms() -> int:
+    """Current wall-clock time in unix milliseconds.
+
+    Isolated as a one-line seam (rather than inlining `time.time()` at the
+    call site) so the snowflake future-window tests can pin a deterministic
+    reference clock and stop depending on the real wall clock — see
+    tests/test_snowflake.py and the testability review (TST-F3).
+    """
+    return int(time.time() * 1000)
+
 # Crockford input-alias translation table: I/L -> 1, O -> 0 (in either
 # case). Applied during parse_ulid after the regex match, before
 # upper-casing the rest of the string to canonical form.
@@ -780,7 +791,7 @@ def parse_snowflake(text) -> Parsed:
     if n.bit_length() > 64:
         return None
     ts_ms = (n >> 22) + DISCORD_EPOCH_MS
-    now_ms = int(time.time() * 1000)
+    now_ms = _now_ms()
     if ts_ms < DISCORD_EPOCH_MS or ts_ms > now_ms + _SNOWFLAKE_FUTURE_WINDOW_MS:
         return None
     return Parsed("snowflake", DECIMAL, None, text, None)
@@ -990,25 +1001,6 @@ def parse_ipfs_cid(text) -> Parsed:
             pass
         return Parsed(label, BASE32, m.group(1), m.group(2).upper(), None)
     
-# Register all the functions that do parsing (with two exceptions below:
-# parse_hex is appended at the end, and parse_eos_address is moved to run
-# AFTER parse_hex so that lowercase pure-hex inputs are not silently
-# misclassified as EOS addresses — the EOS alphabet [a-z1-5.] is a
-# superset of the lowercase hex digits for many short strings, so the
-# narrow/checksumed format must lose the race against the strict hex
-# parser. See review F1 in reviews/adversarial-2026-05-27.md.
-def register_parse_funcs():
-    g = globals()
-    parse_funcs = []
-    for name, value in g.items():
-        if name.startswith("parse_") and callable(value):
-            if name == "parse_eos_address":
-                continue  # re-appended after parse_hex below
-            parse_funcs.append(value)
-    return parse_funcs
-parse_funcs = register_parse_funcs()
-del register_parse_funcs
-
 def parse_hex(text) -> Parsed:
     """
     See if we can parse text as a hex string.
@@ -1028,16 +1020,42 @@ def parse_hex(text) -> Parsed:
             # the checksum).
             return Parsed("hex", HEX, prefix, text.lower(), None)
 
-# We put parse_hex near the end so it won't be attempted until after
-# we try many other parsers -- especially the Ethereum one, which
-# starts with "0x" and consists of pure hex, and the hex_multihash
-# one, which is also pure hex.
-parse_funcs.append(parse_hex)
-# parse_eos_address runs AFTER parse_hex (see register_parse_funcs note
-# above and review F1): genuine hex inputs that happen to lie inside the
-# EOS character class must classify as hex, not as a speculative EOS
-# short-form match.
-parse_funcs.append(parse_eos_address)
+# Parser dispatch order. parse() tries each in turn and returns the first
+# match, so ORDER IS SEMANTICS: a narrow/checksummed format must precede any
+# broader one that would also accept the same input. This list was previously
+# materialized by a globals() scan in definition order (MNT-F4), which hid the
+# ordering contract and made it silently fragile to reordering the defs — it is
+# now explicit, and tests/test_entropy.py pins the load-bearing constraints.
+#
+# Two constraints are load-bearing (see reviews/adversarial-2026-05-27.md):
+#   * parse_hex sits near the END so structured pure-hex formats (Ethereum's
+#     0x…, hex multihashes) get first refusal before the generic hex parser.
+#   * parse_eos_address runs AFTER parse_hex (review F1): the EOS alphabet
+#     [a-z1-5.] is a superset of lowercase hex for many short strings, so
+#     genuine hex must win the race against a speculative EOS short-form match.
+parse_funcs = [
+    parse_hex_multihash,
+    parse_cesr,
+    parse_ssh_key,
+    parse_bitcoin_address,
+    parse_ripple_address,
+    parse_ethereum_address,
+    parse_litecoin_address,
+    parse_bitcoin_cash_address,
+    parse_cardano_address,
+    parse_stellar_address,
+    parse_uuid,
+    parse_ulid,
+    parse_snowflake,
+    parse_lei,
+    parse_did,
+    parse_swhid,
+    parse_gitoid,
+    parse_bech32_address,
+    parse_ipfs_cid,
+    parse_hex,
+    parse_eos_address,
+]
 
 def parse(entropy: str) -> Parsed:
     """
@@ -1112,7 +1130,8 @@ import math
 
 Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
 
-BASE64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+# (BASE64_ALPHABET is defined once near the top of the module alongside the
+# other alphabet constants; it is in scope here without re-declaration.)
 
 def tokenize(text: str, alphabet, token_len: int = None) -> list[Token]:
     """
@@ -1305,17 +1324,26 @@ def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
     """
     alphabet = _alphabet_from_legacy(alphabet)
     bits_per_char = alphabet.bits_per_char
-    all_tokens = tokenize(core, alphabet)
+    token_len = 24 // bits_per_char
     n_bytes = _core_byte_length(core, alphabet)
+    # Anti-DoS (this.i:1nputcap): tokenize() emits exactly
+    # ceil(len(core)/token_len) tokens, so the >22-token guard is decidable
+    # from len(core) without materializing every token. The old code ran the
+    # full tokenize() here only to read len(all_tokens) and then discard all
+    # but head/tail on the large path — ~1.7M throwaway Token objects for a
+    # 10 MB input. We now compute the count arithmetically and only tokenize
+    # the whole core on the short path (≤22 tokens by definition).
+    token_count = -(-len(core) // token_len)  # ceil division
     # v5 trigger: byte length > 64 (>512 bits) per spec line 117. We
     # also fold in the legacy >22-token guard so the bech32 corner case
     # (92 chars × 5 bits = 460 bits = 57.5 bytes, still 23 tokens)
     # stays bounded; for that sub-512-bit edge case the middle-slice
     # offset deriver falls back to evenly-spaced offsets.
-    if len(all_tokens) <= _MAX_TOKENS and n_bytes <= 64:
-        return all_tokens, False
-    # v5: 8 head tokens + 4 middle slices + 8 tail tokens.
-    token_len = 24 // bits_per_char
+    if token_count <= _MAX_TOKENS and n_bytes <= 64:
+        return tokenize(core, alphabet), False
+    # v5: 8 head tokens + 4 middle slices + 8 tail tokens. On this large path
+    # we tokenize only the head and tail windows actually rendered, never the
+    # full core.
     head_chars = _HEAD_TOKENS * token_len
     tail_chars = _TAIL_TOKENS * token_len
     head_tokens = tokenize(core[:head_chars], alphabet)

@@ -1,12 +1,15 @@
 """
 Full entviz rendering pipeline: entropy string → SVG string.
-Follows the algorithm in docs/index.md (v2; the original v1 spec is
-preserved at docs/v1/index.md for historical reference).
 
-Terminology: v1 used "bounding rect" for the rectangle containing the
-grid of cells. v2 reuses that name for the outer canvas (which also
-holds the color bar, shape count summary, and white margin + black
-border). The cells-only rectangle is now grid_rect.
+Implements the v6 algorithm specified in docs/spec.md (the authoritative
+spec); this.i records the "why" behind each decision referenced in the
+inline comments below.
+
+Terminology: "bounding rect" is the outer canvas — it holds the cell grid
+plus the color bar, the label strips, the optional note caption, and the
+white margin + black border. The cells-only rectangle is grid_rect. (v1
+used "bounding rect" for the cells-only rectangle; that name moved to the
+outer canvas and the inner rectangle became grid_rect.)
 """
 import colorsys
 import math
@@ -33,6 +36,13 @@ _DPI = 96
 NOTE_MAX_LEN = 8
 _NOTE_RE = re.compile(r'^[A-Za-z0-9]+$')
 
+# Anti-DoS input cap (this.i:1nputcap). entviz visualizes identifiers; the
+# largest plausible one (a long cert chain or JWT) is a few KB, so 64 KiB is
+# ~16× headroom while bounding render()'s O(n) work (full-core SHA-512,
+# .strip()/.encode() copies, the txt->b64url fallback) to microseconds. Past
+# the cap the input is not an identifier and render() rejects it outright.
+MAX_INPUT_CHARS = 65536
+
 
 def sanitize_note(note):
     """Validate an optional out-of-band user note (see `this.i:usrn0te1`).
@@ -56,6 +66,33 @@ def sanitize_note(note):
     return note
 
 
+def _cell_nucleus_origin(ci, grid, grid_rect, cell_width, cell_height,
+                         box_width, box_height):
+    """Top-left corner (canvas coords) of cell index `ci`'s nucleus rect.
+
+    The nucleus is inset from the cell box by one surround-box on each side.
+    Module-level (not nested in render) so it is greppable and reusable — see
+    MNT-F3.
+    """
+    col = ci % grid.cols
+    row = ci // grid.cols
+    return (
+        grid_rect.left + col * cell_width + box_width,
+        grid_rect.top + row * cell_height + box_height,
+    )
+
+
+def _blank_map_sub_center(cell_idx, nx, ny, grid, sub_w, sub_h):
+    """Center of the blank-map's miniature sub-cell for grid cell `cell_idx`.
+
+    The first blank cell renders a scale model of the whole grid inside its
+    nucleus (origin nx, ny); this maps a real grid cell index to the center of
+    its mirrored sub-cell so the min/max-ftok dots land in the right spot.
+    """
+    return (nx + (cell_idx % grid.cols + 0.5) * sub_w,
+            ny + (cell_idx // grid.cols + 0.5) * sub_h)
+
+
 def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
            note: str = None) -> str:
     """
@@ -67,6 +104,14 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     strip. An invalid note raises ValueError. See `this.i:usrn0te1`.
     """
     note = sanitize_note(note)
+    # Anti-DoS: reject oversized input before any O(n) work (parse, hashing,
+    # the .strip()/.encode() copies). Measured on the raw input, pre-strip, so
+    # whitespace padding can't smuggle a larger payload past the cap.
+    # See this.i:1nputcap.
+    if len(entropy_text) > MAX_INPUT_CHARS:
+        raise ValueError(
+            f"input must be at most {MAX_INPUT_CHARS} characters "
+            f"(got {len(entropy_text)})")
     # --- Normalize and tokenize the entropy ---
     raw_input = entropy_text.strip()
     parsed = parse(raw_input)
@@ -391,14 +436,6 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # minftok cell's. This replaces v5's white-disc + clock hands and its
     # mix-blend-mode dependence, closing adversarial finding F-A6 here.
 
-    def _cell_nucleus_origin(ci):
-        col = ci % grid.cols
-        row = ci // grid.cols
-        return (
-            grid_rect.left + col * cell_width + box_width,
-            grid_rect.top + row * cell_height + box_height,
-        )
-
     # Identify minftok / maxftok cells. used_ftoks[i] corresponds to
     # tokens[i] by index. Build (ftok, cell_index) pairs, then min/max
     # by (quant, ±cell_index) for the tie-break.
@@ -424,7 +461,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
 
     for ci in blank_indices:
         cg = cell_groups[ci]
-        nx, ny = _cell_nucleus_origin(ci)
+        nx, ny = _cell_nucleus_origin(
+            ci, grid, grid_rect, cell_width, cell_height, box_width, box_height)
         is_map = ci == map_cell_idx
         etree.SubElement(
             cg, 'rect',
@@ -448,12 +486,10 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         # 1 px at the 12 pt / 96 dpi nominal size and scales with the entviz.
         dot_r = nucleus_height / 8 + font_size_px / 16
 
-        def _sub_center(cell_idx):
-            return (nx + (cell_idx % grid.cols + 0.5) * sub_w,
-                    ny + (cell_idx // grid.cols + 0.5) * sub_h)
-
-        max_cx, max_cy = _sub_center(max_ftok_cell_idx)
-        min_cx, min_cy = _sub_center(min_ftok_cell_idx)
+        max_cx, max_cy = _blank_map_sub_center(
+            max_ftok_cell_idx, nx, ny, grid, sub_w, sub_h)
+        min_cx, min_cy = _blank_map_sub_center(
+            min_ftok_cell_idx, nx, ny, grid, sub_w, sub_h)
         if max_ftok_cell_idx == min_ftok_cell_idx:
             # Degenerate (single used ftok): blue ring + concentric red dot
             # so both remain visible.
@@ -726,19 +762,6 @@ def enumerate_external_corners(cols, rows, cell_w, cell_h, origin: Point) -> lis
     for c in range(cols + 1):
         points.append(Point(origin.x + c * cell_w, origin.y + rows * cell_h))
     return points
-
-
-def ellipse_params_from_digest(digest: bytes) -> dict:
-    """
-    v2 mapping (kept for backwards-compatible test imports). v3 uses
-    v3_ellipse_params_from_digest below.
-    """
-    return {
-        "anchor_index": digest[60],
-        "axis_ratio": 1.0 + (digest[61] / 255.0) * 1.5,
-        "rotation_deg": (digest[62] / 255.0) * 180.0,
-        "opacity": 0.10 + (digest[63] / 255.0) * 0.20,
-    }
 
 
 def v3_ellipse_params_from_digest(digest: bytes) -> dict:

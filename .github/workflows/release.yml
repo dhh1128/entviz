@@ -14,12 +14,46 @@ on:
   push:
     tags: ["v*"]
 
+# Default to read-only; the release job opts up to contents: write below.
+# Per-job permissions (not top-level write) keep the test gate from holding a
+# write token it never needs.
 permissions:
-  contents: write  # create the GitHub Release and upload assets
+  contents: read
 
 jobs:
-  release:
+  # Re-run the full suite on the exact tagged commit before anything is built or
+  # published. A tag can be pushed at a commit that never passed CI (force-push,
+  # local tag, a green main that regressed before tagging), so this gate is the
+  # belt-and-suspenders that stops a broken commit from shipping a release.
+  # --locked also asserts uv.lock is current at the tagged commit, which is the
+  # real protection behind the "release built from a divergent lockfile" concern
+  # (uv build itself has no --frozen/--locked flag, and a wheel's dependency
+  # specifiers come from pyproject.toml, not the lockfile).
+  test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10  # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+        with:
+          enable-cache: true
+
+      - name: Run tests
+        run: uv run --locked --python ${{ matrix.python-version }} pytest
+
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # create the GitHub Release and upload assets
     steps:
       - name: Checkout
         # Pinned to a full commit SHA (a mutable @vN tag can be silently
