@@ -2,6 +2,7 @@ import collections
 import re
 import base64
 import hashlib
+import math
 import time
 
 from .keccak import keccak256
@@ -104,6 +105,10 @@ DECIMAL   = Alphabet("decimal",   DECIMAL_ALPHABET,    4)
 
 
 Parsed = collections.namedtuple('Parsed', ['type', 'alphabet', 'prefix', 'core', 'suffix'])
+# A tokenized chunk of entropy: its source text, its position, and the 24-bit
+# quant derived from it. Defined here beside Parsed (its sibling output type)
+# rather than mid-module next to tokenize() where it used to sit.
+Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
 
 UUID_REGEX = re.compile(r'^\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$', re.I)
 DID_REGEX = re.compile(r'^(did:[a-z0-9]+:)((?:[a-zA-Z0-9_.-]|%[a-fA-F0-9]{2})+)((/[^?]*)?([?].*)?)$')
@@ -1126,12 +1131,6 @@ def detect_alphabet_by_disproof(text: str):
             return alphabet
     return None
 
-import math
-
-Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
-
-# (BASE64_ALPHABET is defined once near the top of the module alongside the
-# other alphabet constants; it is in scope here without re-declaration.)
 
 def tokenize(text: str, alphabet, token_len: int = None) -> list[Token]:
     """
