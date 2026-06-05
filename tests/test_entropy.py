@@ -173,7 +173,8 @@ def test_hex_multihash_normalization():
         ]:
         answer = parse(input)
         assert answer.core == hexified_multihash.lower()[4:]
-        assert answer.type == "hex multihash sha2-256"
+        # sha2-256 is the default hash, so it is elided from the label.
+        assert answer.type == "hex multihash"
 
 def test_etherereum_normalization():
     """v5 (lenient B1): the parsed core is the full 40-char lowercase body

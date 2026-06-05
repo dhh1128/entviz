@@ -81,7 +81,7 @@ def test_ipfs_cid_v1_parses_as_base32():
     cid = "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"
     p = parse(cid)
     assert p is not None
-    assert p.type.startswith("IPFS CID v1")
+    assert p.type.startswith("CIDv1")
     assert p.alphabet is BASE32
 
 

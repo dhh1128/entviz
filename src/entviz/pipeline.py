@@ -573,9 +573,15 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     style = f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;"
     # Top strip — always.
     top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
-    rest_text = f"{type_name}:"
-    if prefix:
-        rest_text += f" {prefix}..."
+    if type_name:
+        rest_text = f"{type_name}:"
+        if prefix:
+            rest_text += f" {prefix}..."
+    else:
+        # A self-describing prefix (e.g. swh:1:rev:, gitoid:blob:sha256:) is
+        # the identifier on its own — show it alone, with no echoing type
+        # segment in front of it. See `this.i:lbldedup`.
+        rest_text = f"{prefix}..." if prefix else ""
     # v6: the top label band abuts the grid, so its text centers a
     # nucleus_height/2 above the grid — the same gap nucleus text has from the
     # nucleus's bottom edge. (The GM sits above the band, on the border side.)

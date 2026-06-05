@@ -337,10 +337,10 @@ def _b32_nopad_decode(s: str) -> bytes:
     return base64.b32decode(s + "=" * ((-len(s)) % 8))
 
 
-def decode_multicodec_label(cid_bytes: bytes):
-    """Decode the leading varints of a binary CIDv1 into a `<codec>/<hash>`
-    label (e.g. "dag-pb/sha2-256"), or None if the bytes do not describe a
-    recognized version-1 codec/hash pair.
+def decode_multicodec(cid_bytes: bytes):
+    """Decode the leading varints of a binary CIDv1 into a
+    (content_codec_name, hash_name) pair, or None if the bytes do not
+    describe a recognized version-1 codec/hash.
 
     This reads only the self-describing prefix bytes; it does not validate
     the digest. Defensive by construction — any malformed/unknown buffer
@@ -355,7 +355,7 @@ def decode_multicodec_label(cid_bytes: bytes):
     hash_name = MULTIHASH_HASH_FUNCS.get(hash_fn)
     if codec_name is None or hash_name is None:
         return None
-    return f"{codec_name}/{hash_name}"
+    return codec_name, hash_name
 
 def _parse_multihash(text):
     """
@@ -367,7 +367,10 @@ def _parse_multihash(text):
         if hash_func:
             hash_length = int(text[1])
             if len(text) == hash_length + 2:
-                return Parsed(f"multihash {hash_func}", BASE64, text[0:2], text[2:], None)
+                # sha2-256 is the near-universal default, so it is elided;
+                # any other hash function is shown (see this.i:lbldedup).
+                label = "multihash" if hash_func == "sha2-256" else f"multihash {hash_func}"
+                return Parsed(label, BASE64, text[0:2], text[2:], None)
 
 def parse_hex_multihash(text) -> Parsed:
     """
@@ -490,7 +493,9 @@ def parse_ssh_key(text) -> Parsed:
     for short_name, match_str, prefix_length in SSH_KEY_TYPES:
         if payload.startswith(match_str) and len(payload) >= prefix_length:
             return Parsed(
-                f"SSH {short_name} pubkey",
+                # entviz only ever parses SSH *public* keys, so "pubkey" is
+                # a constant default and is elided (see this.i:lbldedup).
+                f"SSH {short_name}",
                 BASE64,
                 payload[:prefix_length],
                 payload[prefix_length:],
@@ -853,7 +858,10 @@ def parse_swhid(text) -> Parsed:
     if not m:
         return None
     return Parsed(
-        f"SWHID {m.group(1).split(':')[2].lower()}",
+        # No type: the swh:1:<type>: prefix is self-describing, so a "SWHID"
+        # type would just echo it. The label shows the prefix alone.
+        # See this.i:lbldedup.
+        "",
         HEX,
         m.group(1).lower(),
         m.group(2).lower(),
@@ -882,7 +890,10 @@ def parse_gitoid(text) -> Parsed:
     obj, algo, body = m.group(2).lower(), m.group(3).lower(), m.group(4).lower()
     if len(body) != _GITOID_ALGO_LEN[algo]:
         return None
-    return Parsed(f"gitoid {obj} {algo}", HEX, m.group(1).lower(), body, None)
+    # No type: the gitoid:<obj>:<algo>: prefix is self-describing, so a type
+    # would just echo it. The label shows the prefix alone. See
+    # this.i:lbldedup.
+    return Parsed("", HEX, m.group(1).lower(), body, None)
 
 def _bech32_polymod(values):
     """BIP-173 bech32 checksum polymod over a list of 5-bit values."""
@@ -935,7 +946,9 @@ def parse_bech32_address(text) -> Parsed:
     data = m.group(2).lower()
     if _bech32_checksum_const(hrp, data) not in (1, 0x2bc830a3):
         return None
-    return Parsed(f"bech32 {hrp}", BECH32, hrp + "1", data[:-6], data[-6:])
+    # Type is just "bech32"; the chain is named by the displayed prefix
+    # (cosmos1/osmo1/…), not repeated in the type. See this.i:lbldedup.
+    return Parsed("bech32", BECH32, hrp + "1", data[:-6], data[-6:])
 
 def parse_ipfs_cid(text) -> Parsed:
     """
@@ -945,21 +958,27 @@ def parse_ipfs_cid(text) -> Parsed:
     m = IPFS_CIDV0_REGEX.match(text)
     if m:
         # A v0 CID is, by definition, dag-pb content under a sha2-256
-        # multihash; the label states that explicitly.
-        return Parsed("IPFS CID v0 dag-pb/sha2-256", BASE58, m.group(1), m.group(2), None)
+        # multihash, so both are the assumable default and are elided.
+        return Parsed("CIDv0", BASE58, m.group(1), m.group(2), None)
     m = IPFS_CIDV1_REGEX.match(text)
     if m:
         # IPFS CID v1 uses base32 (RFC 4648). Decode the self-describing
-        # interior (version/codec/hash varints) to enrich the label; this
-        # is label-only — the core stays the full base32 body so the
-        # fingerprint is unchanged. Fall back to the plain label if the
+        # interior (version/codec/hash varints) to label the content codec.
+        # Per the "silent default, loud departure" rule (this.i:lbldedup),
+        # the content codec ALWAYS shows (it varies: dag-pb / raw / dag-cbor)
+        # but the hash is shown ONLY when it is not the near-universal
+        # sha2-256 default. Label-only: the core stays the full base32 body
+        # so the fingerprint is unchanged; falls back to a plain label if the
         # interior does not decode. See `this.i:mult1c0d`.
-        label = "IPFS CID v1"
+        label = "CIDv1"
         try:
             # binascii.Error (bad base32) subclasses ValueError.
-            described = decode_multicodec_label(_b32_nopad_decode(m.group(2)))
+            described = decode_multicodec(_b32_nopad_decode(m.group(2)))
             if described:
-                label = f"IPFS CID v1 {described}"
+                codec_name, hash_name = described
+                label = f"CIDv1 {codec_name}"
+                if hash_name != "sha2-256":
+                    label += f"/{hash_name}"
         except ValueError:
             pass
         return Parsed(label, BASE32, m.group(1), m.group(2).upper(), None)

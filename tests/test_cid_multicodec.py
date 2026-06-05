@@ -12,8 +12,11 @@ richer. See `this.i:mult1c0d`.
 
 CIDv0 (`Qm…`) is dag-pb + sha2-256 by definition.
 """
+import base64
+
 from entviz.entropy import (
-    parse, parse_ipfs_cid, decode_multicodec_label, MULTICODEC_CONTENT, HEX,
+    parse, parse_ipfs_cid, decode_multicodec, _b32_nopad_decode,
+    MULTICODEC_CONTENT, HEX,
 )
 from entviz.fingerprint import compute_fingerprint
 
@@ -31,20 +34,24 @@ def test_multicodec_table_has_common_codecs():
     assert MULTICODEC_CONTENT[0x71] == "dag-cbor"
 
 
-def test_cidv1_dagpb_label_decoded():
-    p = parse_ipfs_cid(CID_DAGPB)
-    assert p is not None
-    assert p.type == "IPFS CID v1 dag-pb/sha2-256"
+def test_cidv1_codec_shown_hash_elided_when_default():
+    # The codec always shows; the near-universal sha2-256 hash is elided
+    # (silent default, loud departure). See this.i:lbldedup.
+    assert parse_ipfs_cid(CID_DAGPB).type == "CIDv1 dag-pb"
+    assert parse_ipfs_cid(CID_RAW).type == "CIDv1 raw"
 
 
-def test_cidv1_raw_label_decoded():
-    p = parse_ipfs_cid(CID_RAW)
-    assert p.type == "IPFS CID v1 raw/sha2-256"
+def test_cidv1_non_default_hash_is_shown():
+    # A CIDv1 whose hash is NOT sha2-256 surfaces the hash as a departure.
+    # Build one directly: version 1, dag-pb (0x70), sha3-256 (0x15), len 32.
+    body = bytes([0x01, 0x70, 0x15, 0x20]) + bytes(range(32))
+    cid = "b" + base64.b32encode(body).decode().lower().rstrip("=")
+    assert parse_ipfs_cid(cid).type == "CIDv1 dag-pb/sha3-256"
 
 
-def test_cidv0_label_is_dagpb_sha256():
-    p = parse_ipfs_cid(CID_V0)
-    assert p.type == "IPFS CID v0 dag-pb/sha2-256"
+def test_cidv0_label_is_bare():
+    # v0 is dag-pb/sha2-256 by definition — both are the default, so elided.
+    assert parse_ipfs_cid(CID_V0).type == "CIDv0"
 
 
 def test_enrichment_is_label_only_core_and_fingerprint_unchanged():
@@ -60,10 +67,14 @@ def test_undecodable_cidv1_falls_back_to_generic_label():
     # A structurally valid 'b…' base32 string whose interior is not a
     # sensible version/codec/hash must still parse, just with the plain
     # label rather than crashing or mislabelling.
-    label = decode_multicodec_label(b"\xff\xff\xff")
-    assert label is None
+    assert decode_multicodec(b"\xff\xff\xff") is None
+
+
+def test_decode_multicodec_returns_codec_hash_pair():
+    described = decode_multicodec(_b32_nopad_decode(CID_DAGPB[1:]))
+    assert described == ("dag-pb", "sha2-256")
 
 
 def test_dispatches_through_parse():
-    assert parse(CID_DAGPB).type == "IPFS CID v1 dag-pb/sha2-256"
-    assert parse(CID_V0).type.startswith("IPFS CID v0")
+    assert parse(CID_DAGPB).type == "CIDv1 dag-pb"
+    assert parse(CID_V0).type == "CIDv0"

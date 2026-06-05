@@ -34,7 +34,7 @@ SHA256 = "fee53a18d32820613c0527aa79be5cb30173c823a9b448fa4817767cc84c6f03"  # 6
 def test_swhid_revision_is_a_commit():
     p = parse_swhid("swh:1:rev:" + SHA1)
     assert p is not None
-    assert p.type == "SWHID rev"
+    assert p.type == ""               # no type: the self-describing prefix is the label
     assert p.alphabet is HEX
     assert p.prefix == "swh:1:rev:"
     assert p.core == SHA1
@@ -45,7 +45,8 @@ def test_swhid_content_directory_release_snapshot_types():
     for ty in ("cnt", "dir", "rel", "snp"):
         p = parse_swhid(f"swh:1:{ty}:" + SHA1)
         assert p is not None, ty
-        assert p.type == f"SWHID {ty}"
+        assert p.type == ""                    # no echoing type
+        assert p.prefix == f"swh:1:{ty}:"      # object type carried by the prefix
         assert p.core == SHA1
 
 
@@ -76,7 +77,7 @@ def test_swhid_rejects_unknown_type_and_bad_length():
 
 def test_swhid_dispatches_through_parse():
     p = parse("swh:1:rev:" + SHA1)
-    assert p.type == "SWHID rev"
+    assert p.type == ""
     assert p.core == SHA1
 
 
@@ -86,7 +87,7 @@ def test_swhid_dispatches_through_parse():
 def test_gitoid_blob_sha1():
     p = parse_gitoid("gitoid:blob:sha1:" + SHA1)
     assert p is not None
-    assert p.type == "gitoid blob sha1"
+    assert p.type == ""               # no type: the self-describing prefix is the label
     assert p.alphabet is HEX
     assert p.prefix == "gitoid:blob:sha1:"
     assert p.core == SHA1
@@ -96,7 +97,8 @@ def test_gitoid_blob_sha1():
 def test_gitoid_commit_sha256():
     p = parse_gitoid("gitoid:commit:sha256:" + SHA256)
     assert p is not None
-    assert p.type == "gitoid commit sha256"
+    assert p.type == ""
+    assert p.prefix == "gitoid:commit:sha256:"
     assert p.core == SHA256
 
 
@@ -104,7 +106,8 @@ def test_gitoid_all_object_types():
     for obj in ("blob", "tree", "commit", "tag"):
         p = parse_gitoid(f"gitoid:{obj}:sha1:" + SHA1)
         assert p is not None, obj
-        assert p.type == f"gitoid {obj} sha1"
+        assert p.type == ""                      # no echoing type
+        assert p.prefix == f"gitoid:{obj}:sha1:"  # obj carried by the prefix
 
 
 def test_gitoid_hex_normalized_lowercase():
@@ -123,11 +126,23 @@ def test_gitoid_rejects_algo_length_mismatch():
 
 def test_gitoid_dispatches_through_parse():
     p = parse("gitoid:blob:sha256:" + SHA256)
-    assert p.type == "gitoid blob sha256"
+    assert p.type == ""
     assert p.core == SHA256
 
 
 # ---- fundamentals unchanged -------------------------------------------
+
+
+def test_no_type_label_renders_self_describing_prefix_alone():
+    # The top label must show the prefix on its own, with no echoing type
+    # ("SWHID"/"git object") in front of it. See this.i:lbldedup.
+    from entviz.pipeline import render
+    svg = render("swh:1:rev:" + SHA1)
+    assert "swh:1:rev:..." in svg
+    assert "SWHID" not in svg
+    svg2 = render("gitoid:blob:sha256:" + SHA256)
+    assert "gitoid:blob:sha256:..." in svg2
+    assert "git object" not in svg2
 
 
 def test_prefix_excluded_from_fingerprint_matches_bare_hex():

@@ -1811,10 +1811,13 @@ Entviz = goal:
         same justification that makes the existing multihash
         hash-fn table sound, and the opposite of a content
         guess. The label goes from a static "IPFS CID v1 256"
-        to e.g. "IPFS CID v1 dag-pb/sha2-256" (decoded via the
-        new MULTICODEC_CONTENT table + the existing multihash
-        table). CIDv0 is dag-pb/sha2-256 by definition, so its
-        label is set statically.
+        to a decoded codec label (decoded via the new
+        MULTICODEC_CONTENT table + the existing multihash table).
+        The exact label form was later refined for brevity — see
+        [[lbldedup]] (codec always shown, hash elided unless it
+        departs from sha2-256; "IPFS " and the inter-token space
+        dropped), giving e.g. "CIDv1 dag-pb". CIDv0 is
+        dag-pb/sha2-256 by definition, so it is just "CIDv0".
 
         Label-ONLY, deliberately (see [[g1tha5h0]] for the same
         stance applied to git hashes):
@@ -1893,8 +1896,9 @@ Entviz = goal:
               BIP-173/BIP-350 checksum (polymod), not by matching
               an arbitrary hard-coded HRP list — a random
               <letters>1<chars> string passes with ~2⁻³⁰
-              probability. The HRP names the chain in the label
-              ("bech32 cosmos") straight from the input, so no
+              probability. The HRP names the chain straight from
+              the input (shown in the displayed prefix, e.g.
+              "bech32: cosmos1..." — see [[lbldedup]]), so no
               chain registry is hard-coded. Runs AFTER the
               specific bech32 parsers (bc1/ltc1/addr1/CashAddr),
               which still win for their formats. `<hrp>1` is the
@@ -2049,6 +2053,85 @@ Entviz = goal:
               residual ambiguity with a real suffix that itself
               ends in parens is accepted as minor given the
               out-of-band reframe.
+
+    Label De-duplication and Default Elision = decision:
+      id: lbldedup
+      status: drafted
+      why: >
+        The top label is "<Type>: <prefix>...". Two distinct
+        kinds of waste were found and removed; both are
+        label-only (no detection / fingerprint / geometry
+        change), and shorter labels also help the top strip fit
+        on narrow grids.
+
+        (A) Redundancy with the prefix. For most types the prefix
+        is OPAQUE (0x, AAAA, E, 1220, Qm) and the Type decodes it
+        — complementary, not redundant. But where the stripped
+        prefix is itself human-readable and self-describing, a
+        Type that re-spells it is pure duplication. Two tiers of
+        fix, by how much the Type would echo the prefix:
+
+          Tier 1 — prefix IS the identifier -> NO type at all.
+          When the prefix begins with the scheme's own name, even
+          a slimmed Type still echoes it, so the Type is dropped
+          entirely (parser returns type="") and the label renders
+          the self-describing prefix ALONE:
+            * gitoid -> "gitoid:blob:sha256:..." (a slimmed "git
+              object" was tried first and rejected — still an echo
+              of "gitoid").
+            * SWHID  -> "swh:1:rev:..." ("SWHID" tried first and
+              rejected for the same reason).
+          The obj/algo/version stay fully visible in the prefix.
+          Rendering: _draw_label_strips, given an empty type_name,
+          emits "<prefix>..." with no "<Type>: " segment. This is
+          a reusable rule for any future self-describing-prefix
+          scheme.
+
+          Tier 2 — Type adds info the prefix lacks -> keep a slim,
+          non-redundant Type:
+            * Cosmos: "bech32 cosmos" -> "bech32" (the encoding
+              family is NOT in the prefix; the chain IS, via
+              cosmos1).
+            * SSH: "SSH ed25519 pubkey" -> "SSH ed25519" (the
+              prefix is OPAQUE base64, so "SSH ed25519" is not an
+              echo; only the constant "pubkey" — the degenerate
+              certain-default case of (B) — is dropped).
+        DID ("DID: did:key:...") was left: the echo is a single
+        friendly-acronym, and the method (key) is only in the
+        prefix, so the prefix adds information.
+
+        (B) "Silent default, loud departure." A token that is an
+        overwhelmingly-assumable default is omitted; only a
+        departure from it is shown. Applied where one token is
+        near-constant AND the others stay distinct:
+          * CID content codec ALWAYS shows (it varies: dag-pb /
+            raw / dag-cbor) but the hash shows ONLY when it is
+            not sha2-256: "CIDv1 dag-pb", but "CIDv1 dag-pb/
+            sha3-256" on departure. CIDv0 is dag-pb/sha2-256 by
+            definition, so both elide -> "CIDv0". Also dropped
+            "IPFS " and the CID/version space per user preference
+            (CIDv0 / CIDv1). The gallery SECTION title keeps
+            "IPFS CID" for discoverability; only the entviz
+            labels shortened.
+          * multihash hash: sha2-256 elided -> "hex multihash";
+            shown on departure -> "hex multihash sha3-384".
+        decode_multicodec (renamed from decode_multicodec_label)
+        now returns a (codec, hash) pair so the caller can apply
+        the elision.
+
+        Where (B) must NOT be applied: "decode-the-opaque-code"
+        types with no single dominant default — above all CESR.
+        Ed25519 keys, secp256k1, Blake3-256 digests, etc. all
+        coexist; eliding a "default" would collapse genuinely
+        different primitives to a bare "CESR" — the same trap as
+        labelling a CID by its (constant) hash instead of its
+        (varying) codec, where a dag-pb and a raw CID would read
+        identically. The variety IS the information there, so the
+        full decode stays. Same protects the blockchain tickers
+        and the disproof alphabets. Cardano era (Shelley default
+        vs Byron) is a borderline (B) candidate left UN-elided:
+        the era is genuinely useful and addr1-vs-Ae2/DdzFF
+        already signals it.
 
     Spec-Implementation Audit Triage 2026-06-02 = goal:
       id: aud0602t

@@ -37,9 +37,9 @@ OSMO = "osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t"
 JUNO = "juno1zs23v9ccrydpk8qarc0jqgfzyvjz2f38fjf3ru"
 
 
-def test_cosmos_address_parses_with_hrp_label():
+def test_cosmos_address_parses_with_hrp_in_prefix():
     p = parse(COSMOS)
-    assert p.type == "bech32 cosmos"
+    assert p.type == "bech32"          # chain name lives in the prefix, not the type
     assert p.alphabet is BECH32
     assert p.prefix == "cosmos1"
     assert p.suffix == COSMOS.split("1", 1)[1][-6:]   # 6-char checksum
@@ -47,8 +47,12 @@ def test_cosmos_address_parses_with_hrp_label():
 
 
 def test_hrp_names_the_chain_generically():
-    assert parse(OSMO).type == "bech32 osmo"
-    assert parse(JUNO).type == "bech32 juno"
+    # The chain is named by the (displayed) prefix, generically, without a
+    # hard-coded chain list; the type stays the bare alphabet.
+    for addr, hrp in ((OSMO, "osmo1"), (JUNO, "juno1")):
+        p = parse(addr)
+        assert p.type == "bech32"
+        assert p.prefix == hrp
 
 
 def test_invalid_checksum_is_rejected():
