@@ -65,6 +65,7 @@ docs = [
 render = [
     "cairosvg",
     "numpy",
+    "segno",  # QR encoder for the paper's comparison figure (scripts/paper_figures.py)
 ]
 
 [tool.pytest.ini_options]

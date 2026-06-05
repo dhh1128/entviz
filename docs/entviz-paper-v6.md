@@ -43,6 +43,10 @@ The remaining channels are driven not by the input directly but by its **fingerp
 
 The fingerprint is the mechanism that makes difference amplification work even for inputs that have no avalanche of their own. A raw hex string, a UUID, or a base64 blob can differ by one character and otherwise look identical; SHA-512 turns that one-character change into roughly 256 flipped fingerprint bits, which the fingerprint-driven channels render as gross visual change [8]. The text channel preserves fidelity: read it aloud and you have transmitted every bit. What it cannot do is amplify difference, because two inputs differing in one place produce nearly identical text. Amplification is the job of the fingerprint channels. The two roles are complementary, and keeping them distinct is the architectural decision on which the rest of the design rests.
 
+> ![Two entvizes for values that differ by a single character; most channels visibly change at once](assets/paper/fig-hero.svg)
+>
+> **Figure 1. The same value, one character apart.** A single changed character flips roughly 256 fingerprint bits, so the surround, color bar, ellipse, and landmark channels all change at once while the readable text barely moves. The difference is meant to be obvious before a single character is read.
+
 The second organizing idea is the **visual CRC**: a small number of deterministic landmarks (the blank cells, the blank-cell map, and the quartile marks) that a user can check in a glance. They convert an exhaustive comparison ("is every cell identical?") into a cheap rejection test ("are the blank cells in the same place?"). A mismatch ends the comparison at once; only a match obliges the user to look further.
 
 This is a deliberate departure from the stochastic, artistic generation of first-generation systems such as SSH randomart. Where randomart produces an image and hopes it is legible, entviz starts from the constraints of the visual system and builds an image to fit them.
@@ -134,6 +138,10 @@ Entviz sits squarely in this second class, and its entropy/fingerprint split is 
 
 We compare three systems against the framework above: SSH randomart, an early human-centric attempt; QR codes, a purely machine-centric baseline; and entviz.
 
+> ![SSH randomart, a QR code, and an entviz side by side as three answers to displaying a high-entropy value](assets/paper/fig-comparison.svg)
+>
+> **Figure 2. Three answers to "show this value."** A machine baseline (QR), a naive human-centric attempt (randomart), and a designed one (entviz), at comparable size. The sections below read each against the perceptual framework of §2.
+
 ## 4.1. SSH Randomart: A Random Walk in a Constrained Space
 
 OpenSSH's randomart is the most widely deployed hash visualization. The "drunken bishop" algorithm walks a chess bishop diagonally across a 17×9 grid, each successive 2-bit chunk of the fingerprint choosing one of four diagonal moves; each cell is drawn according to how often the walk visited it [27]. The result is more structured than noise (typically a central cluster with radiating arms), but its patterns are emergent rather than designed, and built from a single primitive: the visited cell. User studies show people search such images for incidental Gestalt cues ("the placement of the dots, or a big B or S") rather than reading a designed structure [3].
@@ -152,7 +160,9 @@ This section describes v6 as specified [8] and justifies each design choice agai
 
 Entviz normalizes the input (stripping non-entropy prefixes such as Ethereum's `0x`, canonicalizing case, decoding to bytes), computes the SHA-512 **fingerprint** of the normalized bytes, splits the input into 24-bit **tokens**, and lays the tokens out in a grid. Each token drives one cell. The text and nucleus-color channels read from the input, so for inputs of 512 bits or fewer the visualization is **lossless**: the text alone, read aloud with case, transmits every bit. Every other channel reads from the fingerprint. This is the entropy/fingerprint split of §1.3, and it is what lets entviz amplify difference for inputs that have no avalanche of their own.
 
-> **Figure 4a. Anatomy of a v6 cell.** Nucleus (text on its background color), the 24-box surround in the per-cell edge color, and an optional quartile triangle, labeled. *Render:* `PYTHONPATH=src python -m entviz "550e8400-e29b-41d4-a716-446655440000" > fig-cell.svg`, then crop one cell. (No standalone asset yet; the prior `assets/edge-channel.png` shows the superseded v1 shapes and should not be reused.)
+> ![Anatomy of a v6 cell, with nucleus, surround, edge color, and quartile mark labeled](assets/paper/fig-4a-cell-anatomy.svg)
+>
+> **Figure 4a. Anatomy of a v6 cell.** Nucleus (text on its background color), the 24-box surround in the per-cell edge color, and an optional quartile triangle, labeled.
 
 ### 4.3.2. Text channel — Proximity and chunking
 
@@ -166,7 +176,9 @@ The Gestalt argument is rebuilt, and is in fact cleaner. The edge color is chose
 
 *Surround box and ordinary vision.* At the 12-point/96-dpi reference, a box is 6×10 px (`box_width = 0.375·font_size_px`, `box_height = 0.625·font_size_px`), about 1.6 mm × 2.6 mm. At a 50 cm viewing distance it subtends roughly 11 × 18 arc-minutes. A 20/40 observer resolves features near 2 arc-minutes, so a filled box sits an order of magnitude above the acuity floor; detecting it is a contrast judgment, not an acuity one. The channel is legible for ordinary vision.
 
-> **Figure 4b. The surround avalanche.** One input beside a one-character-different input, showing the surround pattern changing across most cells while the text barely moves. *Use the v6 gallery:* `docs/assets/gallery/05-UUID-A.svg` versus `07-UUID-A-with-mid-char-flipped.svg`. This is the direct illustration of §3.2's visual avalanche.
+> ![Two entvizes differing by one middle character; the surround texture changes across most cells](assets/paper/fig-4b-surround-avalanche.svg)
+>
+> **Figure 4b. The surround avalanche.** One input beside a one-character-different input: the surround pattern changes across most cells while the readable text barely moves. This is the direct illustration of §3.2's visual avalanche.
 
 ### 4.3.4. Nucleus and edge color — chromaticity, the Oklab text rule, and an honest CVD account
 
@@ -193,7 +205,9 @@ We state the limit rather than hide it. Lightness spacing is robust but not CVD-
 
 Because color alone cannot be trusted under severe CVD, **no entviz channel depends on color alone.** The color bar carries letters (§4.3.5); quartile rank is carried by orientation, not color (§4.3.7); blank landmarks are carried by position; and the surround is a luminance task. The spec's CVD claim is correspondingly scoped: every cell is *detectable* against its background by all viewers (a lightness judgment), but two palette colors are not always *discriminable* from each other under severe CVD, so the algorithm never makes a comparison rest on that discrimination. This is a deliberate downgrade from the original paper's stronger, unsupported claim that all palette colors are discriminable for all users.
 
-> **Figure 4c. The palette under CVD.** The five colors under normal vision, the three dichromacies, and achromatopsia, with the closest pair flagged per row. *Assets exist:* `docs/assets/palette-swatch.svg` and `docs/assets/palette-cvd.svg`, regenerable via `scripts/palette_figures.py`.
+> ![The five palette colors spaced by lightness, and the same palette simulated under three dichromacies and achromatopsia](assets/paper/fig-4c-palette.svg)
+>
+> **Figure 4c. The palette under CVD.** The five colors spaced by CIELAB lightness, then simulated under normal vision, the three dichromacies, and achromatopsia, with the closest pair flagged per row.
 
 ### 4.3.5. Color bar — a salient gestalt summary with a verbal label
 
@@ -201,7 +215,9 @@ Along the left edge, entviz draws a **color bar**: a four-band histogram of the 
 
 Each band carries a lowercase letter naming its color (`w`, `g`, `r`, `b`, `k`) at the cell-text size, its own color chosen by the Oklab rule. The letters are the v6 fix for the CVD and monochrome cases: the color bar is the channel most relied on under habituated comparison, and a letter gives every viewer a verbal discriminator independent of hue ("the top band is `g`"). The bar was widened to twice its v5 width so the letters render legibly.
 
-> **Figure 4d. The v6 color bar.** The skewed bands with `w/g/r/b/k` letters, beside a CVD-simulated copy showing the letters survive. *Render:* crop the left bar from any gallery SVG, e.g. `docs/assets/gallery/11-256-bit-hex.svg`.
+> ![The color bar's skewed bands with letters, beside a protanopia-simulated copy in which the letters remain legible](assets/paper/fig-4d-color-bar.svg)
+>
+> **Figure 4d. The v6 color bar.** The skewed bands with their `w/g/r/b/k` letters, beside a protanopia-simulated copy showing the letters survive.
 
 ### 4.3.6. Ellipse overlay — emergent shape within bounds
 
@@ -209,7 +225,9 @@ For inputs of at least 256 bits, entviz overlays a translucent **ellipse**, anch
 
 The design choice worth recording is the **coverage clamp**. The semi-axes are bounded to `[0.22·d_far, 0.58·d_far]`, where `d_far` is the distance from the anchor to the farthest grid corner. An internal audit drove the real implementation across every grid the algorithm produces and found that the prior bounds let the overlay degenerate at both extremes: on 3–11% of inputs it darkened under 8% of the grid (an invisible sliver) and on up to 10% of large near-square grids it darkened over 80% (swamping the grid and erasing the covered-vs-uncovered contrast that is the overlay's entire value). The clamp scales both bounds with the grid, holding coverage in roughly the 8–70% band with a median near 32%, noticeable but partial on every grid. The same audit confirmed the overlay's discriminative value under the right model: two overlays are distinguishable if their coverage, location, *or* aspect differs (a disjunction), and under that model two random overlays collide only about 0.5–2.2% of the time. v6 also splits the rendering into a low-opacity interior fill plus a higher-opacity 2-px edge stroke, so the silhouette stays crisp while the cells beneath remain legible.
 
-> **Figure 4e. The clamped ellipse.** Two or three grids — a small external-anchor quarter-ellipse and a larger interior-anchor blob — showing noticeable-but-partial coverage. *Render:* `docs/assets/gallery/11-256-bit-hex.svg` (interior) and `docs/assets/gallery/12-512-bit-hex.svg`.
+> ![Two grids with the translucent ellipse overlay, its silhouette traced, showing noticeable but partial coverage](assets/paper/fig-4e-ellipse.svg)
+>
+> **Figure 4e. The clamped ellipse.** Two grids with the overlay's silhouette traced (dashed), showing noticeable-but-partial coverage on each.
 
 ### 4.3.7. Visual CRCs — blank-cell map and quartile marks
 
@@ -217,7 +235,9 @@ When the grid has more cells than tokens, the empties are not dumped at the end;
 
 Four cells also carry a **quartile mark**: a small right triangle in one nucleus corner, the corner (top-left, top-right, bottom-right, bottom-left) encoding which quartile the cell's fingerprint token falls in. Rank is carried by *orientation* alone (there is no per-quartile color), and the triangle is filled in the cell's text color, so it adds a checkable landmark without depending on color or any compositing mode. By Figure–Ground, both marks break the grid's regularity and draw the eye, converting comparison into the cheap rejection test of §1.3.
 
-> **Figure 4f. Blank-cell map and quartile marks.** A grid annotated to show the map's red/blue landmark dots and the four corner-triangle orientations. *Render:* any gallery SVG with spare cells, e.g. `docs/assets/gallery/09-64-bit-hex.svg`.
+> ![A grid annotated to show the blank-cell map's red and blue landmark dots and a corner-triangle quartile mark](assets/paper/fig-4f-crc.svg)
+>
+> **Figure 4f. Blank-cell map and quartile marks.** A grid annotated to show the map's red/blue landmark dots and a corner-triangle quartile orientation.
 
 ### 4.3.8. Large inputs — head, fingerprint-middle, tail, and a 96-bit barrier
 
@@ -232,7 +252,9 @@ With both refinements, an attacker who has matched a target's head and tail must
 
 A second v6 change unified blank placement for large inputs with the short-input rule, so a long input's blanks now vary with its fingerprint instead of sitting at fixed separator positions — restoring the CRC-like blank signal that every large entviz previously lacked. The accepted cost is that a blank may now fall inside the head or tail run; reading order is preserved, so this is an ergonomic cost, not an ambiguity.
 
-> **Figure 4g. Large-input layout.** A >512-bit input showing head, four framed neutral fingerprint-middle cells, and tail, under the bold red `fingerprint of …` label. *Render:* `PYTHONPATH=src python -m entviz "$(python -c 'print("a"*200)')" > fig-large.svg`.
+> ![A large input showing the head, four framed fingerprint-middle cells, and tail, under the red fingerprint-of label](assets/paper/fig-4g-large-input.svg)
+>
+> **Figure 4g. Large-input layout.** A >512-bit input showing the head, four framed fingerprint-middle cells, and tail, under the bold red `fingerprint of …` label.
 
 ### 4.3.9. Multi-channel redundancy and the perceptual-entropy budget
 
