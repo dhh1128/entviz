@@ -71,3 +71,67 @@ def test_find_disallowed_reports_line_and_column():
 def test_find_disallowed_passes_legitimate_text():
     text = "résumé → naïve Δx ─ 中文 😀 — em-dash"
     assert check_unicode.find_disallowed(text) == []
+
+
+# The tests above exercise the two pure functions (category, find_disallowed).
+# The ones below close the gap around the directory walk and exit-code contract
+# — iter_files() and main() — so the gate's plumbing (which dirs/suffixes/sizes
+# it skips, and that a planted payload actually fails CI) is also locked in.
+
+RLO = chr(0x202E)  # RIGHT-TO-LEFT OVERRIDE — a representative Trojan-Source char
+
+
+def test_main_flags_planted_file_and_reports_location(tmp_path, capsys):
+    # A bad char planted in a scanned tree must fail the gate (exit 1) and the
+    # offending path + code point must be reported on stdout for the reviewer.
+    (tmp_path / "ok.py").write_text("x = 1  # fine\n", encoding="utf-8")
+    (tmp_path / "evil.py").write_text("tok = 'a" + RLO + "b'\n", encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    captured = capsys.readouterr()
+    assert "evil.py" in captured.out
+    assert "U+202E" in captured.out
+    assert "(bidi-control)" in captured.out
+    # The stderr summary names the attack class so a CI failure is self-explaining.
+    assert "Trojan" in captured.err or "GlassWorm" in captured.err
+
+
+def test_main_returns_zero_for_clean_tree(tmp_path):
+    (tmp_path / "clean.py").write_text("y = 2\n", encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 0
+
+
+def test_iter_files_yields_text_and_skips_binary(tmp_path):
+    # Non-UTF-8 bytes exercise the UnicodeDecodeError branch — such files are
+    # data/binary, not reviewable source, so the gate must skip them silently.
+    (tmp_path / "ok.py").write_text("v = 3\n", encoding="utf-8")
+    (tmp_path / "blob.bin").write_bytes(b"\xff\xfe\x00\x01not-utf8")
+    names = {p.name for p in check_unicode.iter_files([tmp_path])}
+    assert "ok.py" in names
+    assert "blob.bin" not in names
+
+
+def test_iter_files_skips_oversized(tmp_path, monkeypatch):
+    # Files larger than MAX_BYTES are presumed data and skipped without being
+    # read; shrink the cap so a tiny file trips the same size branch.
+    monkeypatch.setattr(check_unicode, "MAX_BYTES", 8)
+    (tmp_path / "small.py").write_text("a = 1\n", encoding="utf-8")
+    (tmp_path / "big.py").write_text("a = 1  # " + "x" * 64 + "\n", encoding="utf-8")
+    names = {p.name for p in check_unicode.iter_files([tmp_path])}
+    assert "small.py" in names
+    assert "big.py" not in names
+
+
+def test_iter_files_skips_excluded_dirs_and_suffixes(tmp_path):
+    # Vendored/generated trees (SKIP_DIRS) and minified/map artifacts
+    # (SKIP_SUFFIXES) are not first-party source and must be excluded — even
+    # when they contain a flagged char — so the gate stays signal, not noise.
+    skip_dir = next(iter(check_unicode.SKIP_DIRS))
+    vendored = tmp_path / skip_dir
+    vendored.mkdir()
+    (vendored / "lib.py").write_text("z = '" + RLO + "'\n", encoding="utf-8")
+    (tmp_path / "bundle.min.js").write_text("q = '" + RLO + "'\n", encoding="utf-8")
+    (tmp_path / "real.py").write_text("ok = 1\n", encoding="utf-8")
+    names = {p.name for p in check_unicode.iter_files([tmp_path])}
+    assert names == {"real.py"}
+    # And because the only flagged chars live in skipped locations, the gate passes.
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 0

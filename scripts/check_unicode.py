@@ -66,7 +66,10 @@ def iter_files(roots):
                 continue
             if any(part in SKIP_DIRS for part in p.parts):
                 continue
-            if p.suffix in SKIP_SUFFIXES:
+            # Match against the whole filename, not Path.suffix: the latter
+            # returns only the final extension (".js" for "x.min.js"), so a
+            # multi-part suffix like ".min.js" would never match.
+            if any(p.name.endswith(s) for s in SKIP_SUFFIXES):
                 continue
             try:
                 if p.stat().st_size > MAX_BYTES:
