@@ -151,18 +151,24 @@ def test_f4_bch_shaped_inputs_differing_in_suffix_render_differently():
 
 def test_fa11_svg_injection_is_escaped():
     """A hostile <script>...</script> payload that reaches the SVG via a
-    rendered label region (here, an SSH-key comment captured as the
-    Parsed.suffix and drawn into the bottom label strip) must be
-    HTML-escaped, not emitted verbatim.
+    rendered label region (here, a DID URL path surfaced as Parsed.suffix
+    and drawn into the bottom label strip) must be HTML-escaped, not
+    emitted verbatim.
 
     Note: a bare '<script>...' string fed through render() goes through
     the UTF-8→base64url fallback and never appears verbatim in the SVG
     at all — so the meaningful injection-regression case is one where
     the hostile text DOES land in a text element (label strip, suffix,
-    or cell text). The SSH-key form below is the easiest such case
-    because the parser passes the comment straight through as `suffix`.
+    or cell text). A DID URL is used because its path/query is surfaced
+    as a rendered suffix.
+
+    (The former SSH-comment vector is now closed entirely: an SSH comment
+    is a FREE annotation and is dropped, not rendered — see
+    test_v4_ssh_keys.test_ssh_comment_does_not_affect_rendering and
+    this.i:sufxbind. lxml escaping remains the defense for any user text
+    that still reaches a text element, e.g. the DID URL below.)
     """
-    payload = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGZ <script>alert(1)</script>"
+    payload = "did:web:example.com/<script>alert(1)</script>"
     out = render(payload)
     assert "&lt;script" in out, (
         "expected escaped &lt;script in output (lxml should escape '<')"

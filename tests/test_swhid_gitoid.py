@@ -57,15 +57,28 @@ def test_swhid_hex_normalized_lowercase():
     assert p.core == SHA1             # hex lowercased
 
 
-def test_swhid_qualifiers_captured_as_suffix_not_entropy():
-    # A qualified SWHID carries addressing context after the core id.
-    # The qualifiers are not entropy, so they must not enter the core
-    # (and therefore must not change the fingerprint).
+def test_swhid_qualifiers_recognized_but_dropped():
+    # A qualified SWHID still parses (recognized via its core), but the
+    # qualifier tail is a FREE annotation: it varies independently of the
+    # value, so it is dropped — not entered into the core, not surfaced as a
+    # suffix. See this.i:sufxbind.
     p = parse_swhid("swh:1:cnt:" + SHA1 + ";origin=https://example.org;lines=1-18")
     assert p is not None
     assert p.core == SHA1
-    assert p.suffix == "origin=https://example.org;lines=1-18"
+    assert p.suffix is None
     assert compute_fingerprint(p.core) == compute_fingerprint(SHA1)
+
+
+def test_swhid_qualifier_does_not_affect_rendering():
+    # Two SWHIDs differing only in a free qualifier are the same value, so
+    # the visual entviz must be identical (only the informational
+    # data-input-bytes metadata reflects the literal input length).
+    import re
+    from entviz.pipeline import render
+    norm = lambda s: re.sub(r' data-input-bytes="\d+"', "", s)
+    a = render("swh:1:cnt:" + SHA1 + ";origin=https://a.example")
+    b = render("swh:1:cnt:" + SHA1 + ";lines=1-200;origin=https://much-longer.example/x")
+    assert norm(a) == norm(b)
 
 
 def test_swhid_rejects_unknown_type_and_bad_length():

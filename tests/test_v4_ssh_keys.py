@@ -174,15 +174,30 @@ def test_ecdsa_p256_prefix_captures_full_key_length_field():
 
 def test_ssh_key_with_type_and_comment_via_parse():
     """The full openssh-format line: `<type> <base64> <comment>`. parse()
-    handles the leading type and trailing comment; the trailing comment
-    becomes `suffix`. The leading type is consumed (not in prefix/core/suffix)."""
+    consumes the leading type and the trailing comment. The comment is a
+    FREE annotation (not a checksum/derivation, freely variable while the
+    key is fixed), so it is dropped — suffix is None. See this.i:sufxbind.
+    The leading type is consumed (not in prefix/core/suffix)."""
     line = f"ssh-ed25519 {ED25519_PAYLOAD} user@example.com"
     p = parse(line)
     assert p is not None
     assert "ed25519" in p.type.lower()
-    assert p.suffix == "user@example.com"
+    assert p.suffix is None
     # Core + prefix still equal the base64 payload.
     assert p.prefix + p.core == ED25519_PAYLOAD
+
+
+def test_ssh_comment_does_not_affect_rendering():
+    """The same key with different comments is the same value → the VISUAL
+    entviz is identical (the free comment is dropped, not rendered). Only the
+    informational `data-input-bytes` metadata reflects the literal input
+    length, so it is normalized out of the comparison. See this.i:sufxbind."""
+    import re
+    from entviz.pipeline import render
+    norm = lambda s: re.sub(r' data-input-bytes="\d+"', "", s)
+    a = render(f"ssh-ed25519 {ED25519_PAYLOAD} alice@host")
+    b = render(f"ssh-ed25519 {ED25519_PAYLOAD} bob@elsewhere")
+    assert norm(a) == norm(b)
 
 
 def test_ssh_key_with_type_no_comment_via_parse():

@@ -1777,13 +1777,14 @@ Entviz = goal:
               declared algo (sha1->40, sha256->64) and rejects a
               mismatch rather than re-tokenizing a malformed id.
           (c) SWHID qualifiers (`;origin=...;lines=...`) are
-              addressing context, not entropy. They are split
-              into the `suffix` so they neither enter the core
-              nor change the fingerprint. (Semantically this is
-              a looser use of `suffix` than a checksum/derivation
-              — see the LEI/Bitcoin suffixes — but it keeps a
-              qualified SWHID recognized instead of falling to
-              the UTF-8 base64url garbage path.)
+              addressing context, not entropy. They are matched
+              so a qualified SWHID is still recognized (instead
+              of falling to the UTF-8 base64url garbage path),
+              but they are a FREE annotation and are DROPPED, not
+              surfaced — see [[sufxbind]]. (The first draft put
+              them in `suffix`; that was a looser use of `suffix`
+              than its checksum/derivation definition, corrected
+              by the suffix-binding rule.)
           (d) Parser ordering is not sensitive: the `swh:` and
               `gitoid:` prefixes contain colons and match no
               earlier parser (DID requires a literal `did:`),
@@ -2132,6 +2133,66 @@ Entviz = goal:
         vs Byron) is a borderline (B) candidate left UN-elided:
         the era is genuinely useful and addr1-vs-Ae2/DdzFF
         already signals it.
+
+    Suffix Binding Rule (bound vs free) = decision:
+      id: sufxbind
+      status: drafted
+      why: >
+        The bottom-strip `suffix` is reserved for material that is
+        BOUND to the entropy. The test is: can the suffix vary
+        while the entropy stays fixed?
+          * BOUND (no — locked to the value): a checksum or
+            derivation. A different value of it does not parse
+            (it would be an invalid checksum), so it is always
+            consistent with the entropy, it is short, and it is a
+            verifying property of the value. Examples: LEI MOD
+            97-10 check digits, Bitcoin/Litecoin/Cardano
+            base58check checksums. These are SHOWN.
+          * FREE (yes — varies independently): an annotation
+            attached to the value but not derived from it. The
+            same value carries any such annotation, and it is
+            often unbounded. Examples: an SSH public-key comment
+            (`alice@host`), SWHID qualifiers
+            (`;origin=...;lines=...`). These are DROPPED — matched
+            so the input is still recognized via its core, but not
+            entered into the core and not surfaced as a suffix.
+
+        This is not a new invention: spec.md step 1 already
+        defines suffix as "checksums or derivations of the true
+        entropy," so a free annotation never qualified — surfacing
+        the SWHID qualifier / SSH comment was an over-broad use of
+        the field. Three reasons to DROP free annotations rather
+        than truncate them:
+          (1) Not part of the value. entviz visualizes the
+              entropy; rendering an annotation implies it is part
+              of what is being compared, which it is not — two
+              identical values with different annotations would
+              look "different" in the strip.
+          (2) Unbounded -> layout breakage (the SWHID qualifier
+              scrolling off the viewport is what surfaced this).
+          (3) It is the in-band attacker-text problem that
+              [[usrn0te1]] deliberately kept out-of-band: a free
+              suffix is exactly un-fingerprinted, attacker-mutable,
+              in-band text drawn into the picture. Dropping it also
+              CLOSES an SVG-injection vector at the source (the
+              hostile text never reaches the renderer) on top of
+              the existing lxml escaping.
+
+        Verified: a free suffix never touches the fingerprint
+        (core only is hashed), so dropping it changes nothing in
+        the comparison surface; two inputs differing only in a
+        free annotation render identical visuals (the only delta
+        is the informational `data-input-bytes` attribute, which
+        reflects the literal raw-input length).
+
+        Scope applied now: SWHID qualifiers and the SSH comment.
+        Bound checksums (LEI/Bitcoin/etc.) are unaffected.
+        DEFERRED candidate: the DID URL path/query is also a free
+        annotation by this test (the same DID identifier carries
+        many URLs) and is currently still surfaced as a suffix;
+        dropping it is a reasonable extension but was left out of
+        scope, and it is the live vector the SVG-injection
+        regression now exercises. See also [[lbldedup]].
 
     Spec-Implementation Audit Triage 2026-06-02 = goal:
       id: aud0602t

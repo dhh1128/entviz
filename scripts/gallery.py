@@ -77,9 +77,9 @@ SAMPLES = [
          "osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t"),
     ]),
     ("SSH public keys", [
-        ("ssh-ed25519 (with comment)",
+        ("ssh-ed25519 (comment in input, dropped from entviz)",
          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY+0nKlS5pTkkXY user@example.com"),
-        ("ssh-rsa 3072-bit (with comment)",
+        ("ssh-rsa 3072-bit (comment in input, dropped from entviz)",
          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSD+oM4kLidAptE5pjRA8OBIWNysc9reQJjK"
          "egek2jATA3bSvKdq/wdQtpbihEx5OlKMo//V/8QpAIjCSsBaMb6G/e/D5kC9wCjnYJ"
          "J68+34L+H5Fx1Ofuiz3BidgssINw/qbV0u1vrCop+ggs6lkl+pIwa+9kPriD9xdowC"
@@ -105,7 +105,7 @@ SAMPLES = [
     ("Git object hashes (SWHID / gitoid)", [
         ("SWHID commit (rev)",    "swh:1:rev:309cf2674ee7a0749978cf8265ab91a60aea0f7d"),
         ("SWHID content (cnt)",   "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"),
-        ("SWHID qualified (origin/lines → suffix)",
+        ("SWHID qualified (origin/lines dropped — free annotation)",
          "swh:1:cnt:94a9ed024d3859793618152ea559a168bbcbb5e2"
          ";origin=https://github.com/torvalds/linux;lines=1-10"),
         ("gitoid blob sha1 (empty blob)",

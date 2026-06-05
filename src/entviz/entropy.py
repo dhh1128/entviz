@@ -477,7 +477,10 @@ def parse_ssh_key(text) -> Parsed:
     ecdsa-nistpXXX it includes the redundant curve-name field — both of
     these carry no per-key entropy.
 
-    The trailing comment (if any) is returned as `suffix`.
+    The trailing comment (if any) is matched so the line still parses, but
+    it is a FREE annotation — not a checksum or derivation of the key, and
+    freely variable while the key bytes are fixed — so it is DROPPED, not
+    surfaced as a suffix. See `this.i:sufxbind`.
 
     Falls back to a generic `AAAA`-prefix match (legacy behavior) when no
     known type-string is recognized.
@@ -489,7 +492,7 @@ def parse_ssh_key(text) -> Parsed:
             return Parsed("SSH key", BASE64, m.group(1), m.group(2), None)
         return None
     payload = m.group(1)
-    suffix = m.group(2)
+    # group(2) is the trailing comment — a free annotation, dropped (see above).
     for short_name, match_str, prefix_length in SSH_KEY_TYPES:
         if payload.startswith(match_str) and len(payload) >= prefix_length:
             return Parsed(
@@ -499,11 +502,11 @@ def parse_ssh_key(text) -> Parsed:
                 BASE64,
                 payload[:prefix_length],
                 payload[prefix_length:],
-                suffix,
+                None,
             )
     legacy = SSH_KEY_REGEX.match(payload)
     if legacy:
-        return Parsed("SSH key", BASE64, legacy.group(1), legacy.group(2), suffix)
+        return Parsed("SSH key", BASE64, legacy.group(1), legacy.group(2), None)
     return None
 
 def parse_bitcoin_address(text) -> Parsed:
@@ -846,10 +849,13 @@ def parse_swhid(text) -> Parsed:
     a 64-hex (sha256) body does NOT match here.
 
     The `swh:1:<type>:` scheme+type is non-entropy framing (prefix); the
-    hex is the core (declared HEX so the tokenizer reads 4 bits/char); an
-    optional `;<qualifiers>` tail (origin=, lines=, …) is addressing
-    context, captured as suffix so it neither enters the core nor changes
-    the fingerprint. The scheme, type, and hex are normalized to lower
+    hex is the core (declared HEX so the tokenizer reads 4 bits/char). An
+    optional `;<qualifiers>` tail (origin=, lines=, …) is matched so the
+    input is still recognized, but it is a FREE annotation — addressing
+    context that varies independently of the value (the same blob under any
+    origin) and is unbounded — so it is DROPPED, not surfaced as a suffix
+    (suffix is reserved for entropy-bound checksums/derivations). See
+    `this.i:sufxbind`. The scheme, type, and hex are normalized to lower
     case. See `this.i:g1tha5h0`.
     """
     if not text:
@@ -860,12 +866,13 @@ def parse_swhid(text) -> Parsed:
     return Parsed(
         # No type: the swh:1:<type>: prefix is self-describing, so a "SWHID"
         # type would just echo it. The label shows the prefix alone.
-        # See this.i:lbldedup.
+        # See this.i:lbldedup. The qualifier tail (group 3) is a free
+        # annotation and is dropped (suffix=None) per this.i:sufxbind.
         "",
         HEX,
         m.group(1).lower(),
         m.group(2).lower(),
-        m.group(3) if m.group(3) else None,
+        None,
     )
 
 def parse_gitoid(text) -> Parsed:
