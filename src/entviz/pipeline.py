@@ -39,8 +39,10 @@ _NOTE_RE = re.compile(r'^[A-Za-z0-9]+$')
 # Anti-DoS input cap (this.i:1nputcap). entviz visualizes identifiers; the
 # largest plausible one (a long cert chain or JWT) is a few KB, so 64 KiB is
 # ~16× headroom while bounding render()'s O(n) work (full-core SHA-512,
-# .strip()/.encode() copies, the txt->b64url fallback) to microseconds. Past
-# the cap the input is not an identifier and render() rejects it outright.
+# .strip()/.encode() copies, the txt->b64url fallback) to a few milliseconds
+# even worst-case (a 64 KiB input of 4-byte codepoints expands ~4× through the
+# txt->b64url fallback before the SHA-512; measured ~14 ms). Past the cap the
+# input is not an identifier and render() rejects it outright.
 MAX_INPUT_CHARS = 65536
 
 

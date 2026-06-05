@@ -85,7 +85,7 @@ Fill in every section you can; omit a section's body only when it genuinely does
 ## 6. Navigation
 
 - [README.md](README.md) - Developer onboarding.
-- [docs/spec.md](docs/spec.md) - Algorithm specification (current: v5).
+- [docs/spec.md](docs/spec.md) - Algorithm specification (current: v6).
 - [this.i](this.i) - The "Why" behind the project.
 - [CLAUDE.md](CLAUDE.md) - Summary for Claude.
 - [GEMINI.md](GEMINI.md) - Summary for Gemini.

@@ -2644,11 +2644,36 @@ Entviz = goal:
         txt->b64url fallback's base64 of the whole input). entviz visualizes
         IDENTIFIERS; the largest plausible one (a long cert chain or JWT) is a
         few KB. MAX_INPUT_CHARS = 65536 (64 KiB) is ~16× headroom over that yet
-        bounds the residual work to microseconds. Past the cap the input is not
-        an identifier, so render() raises ValueError outright rather than spend
+        bounds the residual work to a few milliseconds even worst-case (a 64 KiB
+        input of 4-byte codepoints expands ~4× through the txt->b64url fallback
+        before the full-core SHA-512; measured ~14 ms). Past the cap the input is
+        not an identifier, so render() raises ValueError outright rather than spend
         unbounded CPU/memory — same "reject, don't silently mangle" stance as
         [[usrn0te1]]'s note validation. The cap is checked at the render()
         boundary before parse()/tokenize so no O(n) work precedes it.
 
         Relation to [[s3cch41n]]: that node hardens the BUILD/CI surface; this
         hardens the RUNTIME render() surface. Both serve the same threat model.
+
+    Algorithm Bug-Hunt Review = decision:
+      id: alg0rvw1
+      why: >
+        Record (2026-06-05): the algorithm changes from the adversarial-review
+        batch (commit a3a0a3a — the [[1nputcap]] tokenize optimization + input
+        cap, the parser-dispatch globals()->explicit-list refactor, and the
+        render() nested-helper extraction) were put through a dedicated
+        bug-hunting code review at high effort, scoped to the diff
+        `git diff 0b873e5..a3a0a3a -- src/entviz/entropy.py src/entviz/pipeline.py`.
+        Method: a multi-angle pass (line-by-line, removed-behavior-auditor,
+        cross-file tracer) plus two independent reviewers.
+
+        Result: CLEAN — no correctness bugs. The verdict is evidence-backed,
+        not asserted: the O(1) token-count substitution
+        (token_count = -(-len(core)//token_len)) was brute-forced equal to the
+        old len(tokenize(core)) across every alphabet × lengths 0–199 plus the
+        bech32 92-char/23-token corner case (0 mismatches); the lifted helpers
+        pass every formerly-captured variable; the explicit parse_funcs list is
+        complete and order-preserving (now pinned by a test); and the
+        output-preserving claims are corroborated by the byte-identical gallery
+        regeneration. The only follow-up was correcting this batch's
+        residual-cost wording in [[1nputcap]] ("microseconds" -> a few ms).
