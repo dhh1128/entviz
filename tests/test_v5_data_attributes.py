@@ -50,8 +50,8 @@ def test_svg_carries_version_attribute():
     from entviz import SPEC_VERSION
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     # data-entviz-version is the spec/algorithm version, sourced from the
-    # single SPEC_VERSION constant (currently "v6").
-    assert svg.get("data-entviz-version") == "v6"
+    # single SPEC_VERSION constant (currently "v7").
+    assert svg.get("data-entviz-version") == "v7"
     assert svg.get("data-entviz-version") == SPEC_VERSION
 
 

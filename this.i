@@ -1873,6 +1873,100 @@ Entviz = goal:
         primitive alone — labelling it would be the same
         content-role guess that [[g1tha5h0]] rejects.
 
+        SUPERSEDED in part by [[s3mpr3fx]]: the claim above that the
+        CESR code is label-only (like the CID codec in clause (a))
+        was WRONG. Unlike a CID's interior codec — which names what
+        the digest wraps but does not change the digest's bytes — the
+        CESR derivation code is identity-bearing: the same body under
+        a different code is a different object. So the code now binds
+        the fingerprint (hashed as `prefix + core`), and the
+        "fingerprint unchanged" symmetry with CIDs no longer holds
+        for CESR. The gallery taxonomy was also corrected there (`D`
+        is a verification key, not "the transferable AID"; the usual
+        transferable AID is the self-addressing `E`).
+
+    Semantic Prefixes Bind the Fingerprint = decision:
+      id: s3mpr3fx
+      status: drafted
+      why: >
+        Reported as two CESR bugs (2026-06-06). Root cause is one
+        gap: the parser splits a derivation code off as a `prefix`
+        and the pipeline fingerprints `core` ALONE
+        (compute_fingerprint(core)), so the code reached NEITHER
+        channel — not the head/tail text cells and not the
+        SHA-512-driven gestalt. It survived only as label text.
+
+        Why that is wrong for CESR (and not for hex's `0x`): a
+        CESR derivation code is IDENTITY-BEARING, not a signal.
+        `B`, `C`, `D`, `E` may each precede the same 43 base64url
+        chars to mean a non-transferable key / encryption key /
+        transferable key / Blake3-256 digest — four different
+        objects, and `B` vs `D` is the security-critical
+        non-transferable/transferable split. With the code outside
+        the fingerprint, those four rendered IDENTICALLY except for
+        a label a user may not read — exactly the confusion entviz
+        exists to prevent. `0x` is the opposite: it is constant for
+        the format; no other prefix could precede the same 20 bytes
+        to mean a different address, so it carries no identity bits.
+
+        THE SWAP TEST (the crisp rule, now in docs/spec.md). Hold
+        the body fixed; is there another legal prefix that could sit
+        there and make the string denote a DIFFERENT value?
+          * No  → SIGNAL prefix (0x, gitoid:, swh:1:, SSH AAAA…):
+                  label only; fingerprint over core. The default.
+          * Yes → SEMANTIC prefix (every CESR code): label AND
+                  fingerprint. This is the prefix-side analogue of
+                  the bound-vs-free suffix rule in [[sufxbind]] —
+                  both ask "does this slice carry identity bits?"
+
+        MECHANISM. Parsed grew a `prefix_semantic` flag (default
+        False, so all signal-prefix parsers are untouched);
+        parse_cesr sets it True. render() folds a semantic prefix
+        into the fingerprint input: it hashes `prefix + core`
+        instead of `core` (all three compute_fingerprint call sites
+        — used_ftoks, clip-id salt, ellipse digest — read the same
+        `fingerprint_core`). The head/tail TEXT cells still tokenize
+        `core` (the body) alone: the code is already in the label,
+        and folding it propagates to every gestalt channel AND the
+        4 read-aloud fingerprint-middle cells, which is sufficient.
+
+        NO DELIMITER. The first proposal hashed `code + "\x1f" +
+        core` out of generic anti-concatenation habit (boundary-
+        shift collisions when joining two variable-length fields).
+        The user pushed back; correctly. A CESR code is fixed-length
+        and self-framing, so `prefix + core` is exactly the original
+        primitive string and the (code, core) split is recoverable
+        and injective — a sentinel adds nothing. Revisit only for a
+        future VARIABLE-length semantic prefix, and even then prefer
+        a length prefix over a sentinel.
+
+        TABLE-CORRECTNESS FIXES (same report). (a) Blinding factor
+        is lowercase `a` (44 chars); the code had it as capital `Z`,
+        which is actually Tag11 (12 chars) — so real `a…` blinding
+        factors failed to parse and bogus 44-char `Z…` strings would
+        have been accepted. (b) Added the FN-DSA (FIPS 206)
+        post-quantum codes `b`/`c`/`d`/`e` and `1AAQ`/`1AAR`, and
+        relabeled `1AAB`/`1AAJ` to "pub/enc key" per the spec table.
+        (c) Gallery taxonomy: `B` is correctly a non-transferable
+        AID, but `D` is a bare verification key (the spec names it
+        "Ed25519 public verification key", no "prefix"/AID
+        qualifier), and the USUAL transferable AID is the
+        self-addressing `E` (Blake3-256 of the inception event) —
+        previously mis-filed only as "SAID". The B/D gallery pair
+        now shares one body deliberately, to demonstrate that the
+        code binds the fingerprint. Authoritative source:
+        ../kswg-cesr-specification/spec/spec-body.md master code
+        table. Supersedes the label-only CESR note in [[mult1c0d]].
+
+        FOLLOW-UP (not done here). The swap test reaches other
+        types whose "prefix" is currently label-only but is
+        identity-bearing: SWHID/gitoid object-type+algorithm
+        (`cnt`→`rev` over the same hash = different object), the
+        multihash/CID content codec, and the LEI LOU issuer code
+        (same 12-char body under a different LOU = different
+        registration). These are the same fix and should be
+        audited next.
+
     Additional Alphabets / Address Formats = decision:
       id: xtra4lph
       status: drafted

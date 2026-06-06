@@ -123,14 +123,22 @@ SAMPLES = [
         ("CID v1 dag-pb/sha2-256",    "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi"),
         ("CID v1 raw/sha2-256",       "bafkreigh2akiscaildcqabsyg3dfr6chu3fgpregiymsck7e7aqa4s52zy"),
     ]),
-    # KERI / CESR primitives. An AID is a CESR key (D transferable, B
-    # non-transferable); a SAID is a CESR self-addressing digest (E =
-    # Blake3-256). The label reports the cryptographic primitive, not the
-    # contextual AID/SAID role. See this.i:mult1c0d.
+    # KERI / CESR primitives. The two common AID forms are the
+    # self-addressing transferable AID (`E`, Blake3-256 of the inception
+    # event — the usual KERI identifier) and the basic non-transferable AID
+    # (`B`, the Ed25519 key itself). A bare `D` is a transferable public
+    # verification key, NOT normally an identifier — the spec table names it
+    # "Ed25519 public verification key" with no "prefix"/AID qualifier — so
+    # it is shown as a key, not "the transferable AID". The B/D pair shares
+    # one body on purpose: it shows that the derivation code is
+    # identity-bearing — same body, different code → different entviz now
+    # that the code binds the fingerprint (this.i:s3mpr3fx). The label
+    # reports the cryptographic primitive, not the contextual AID/SAID role.
+    # See this.i:mult1c0d.
     ("KERI / CESR primitives (AIDs, SAIDs, keys, signatures)", [
-        ("AID — transferable (D, Ed25519)",     "DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
-        ("AID — non-transferable (B, Ed25519)", "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
-        ("SAID — Blake3-256 digest (E)",        "EBfdlu8R27Fbx_ehrqwImnK_8Cm79sqbAQ4caaZG_LFv"),
+        ("AID — self-addressing (E, Blake3-256)", "EBfdlu8R27Fbx_ehrqwImnK_8Cm79sqbAQ4caaZG_LFv"),
+        ("AID — non-transferable (B, Ed25519)",   "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
+        ("Verification key (D, Ed25519)",         "DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
         ("Ed25519 signature (0B)",
          "0BLwV6fEpOzY9iHsR2bAlKvU5eDoNyX8hGrQ1a_kJuT4dCnMxW7gFqP0Z-jItS3cBmLwV6fEpOzY9iHsR2bAlKvU"),
     ]),

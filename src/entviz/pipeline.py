@@ -128,12 +128,14 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         alphabet = BASE64URL  # fallback always produces urlsafe base64
         prefix = None
         suffix = None
+        prefix_semantic = False
     else:
         core = parsed.core
         type_name = parsed.type
         alphabet = parsed.alphabet
         prefix = parsed.prefix
         suffix = parsed.suffix
+        prefix_semantic = parsed.prefix_semantic
         # Length-bearing labels for the variable-length plain-alphabet
         # types (hex / b64 / b64url). Rename base64* → b64* for
         # consistency with the txt->b64url fallback shortening.
@@ -167,7 +169,21 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # --- Compute the fingerprint and derive used ftoks ---
     # The fingerprint avalanche means single-bit input changes propagate
     # to every ftok-derived channel.
-    used_ftoks = tokenize_fingerprint(compute_fingerprint(core))[:token_count]
+    #
+    # A SEMANTIC prefix (an identity-bearing derivation/type code — every
+    # CESR primitive; see the swap test in docs/spec.md and this.i:s3mpr3fx)
+    # is folded into the fingerprint input so that two values differing ONLY
+    # in their code (`B<body>` vs `D<body>` vs `E<body>`) avalanche apart
+    # across every fingerprint-driven channel, including the 4 read-aloud
+    # middle cells. The head/tail text cells still show `core` (the body)
+    # alone — the code stays in the label, not the cell text. A SIGNAL prefix
+    # (0x, swh:1:, …) is NOT folded: the fingerprint stays over the core, so
+    # existing entvizes are unchanged. For a fixed-length self-framing CESR
+    # code, prefix + core is exactly the original primitive string, so no
+    # delimiter is needed (the split is unambiguous and injective).
+    fingerprint_core = (prefix + core) if (prefix and prefix_semantic) else core
+    used_ftoks = tokenize_fingerprint(
+        compute_fingerprint(fingerprint_core))[:token_count]
 
     # --- Choose grid ---
     if is_truncated:
@@ -287,7 +303,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # clipping every other entviz to the first one's rectangle. 64-bit
     # salt gives ~4 billion entvizes before birthday-bound collision;
     # the pre-fix 32-bit salt birthday-bounded at ~65k (review F-A3).
-    digest_hex = compute_fingerprint(core).hex()
+    digest_hex = compute_fingerprint(fingerprint_core).hex()
     clip_id = f"grid-clip-{digest_hex[:16]}-{grid.cols}x{grid.rows}"
     cp = etree.SubElement(defs, 'clipPath', id=clip_id)
     etree.SubElement(
@@ -361,7 +377,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # clipped to the grid rect. Wrapped in its own data-channel group
     # carrying the ellipse parameters as data-* so an overlay can find
     # the silhouette without re-deriving it from the digest.
-    digest = compute_fingerprint(core)
+    digest = compute_fingerprint(fingerprint_core)
     _draw_ellipse_overlay(
         grid_g, defs, digest, bounding_rect, grid_rect,
         cell_w=cell_width, cell_h=cell_height,

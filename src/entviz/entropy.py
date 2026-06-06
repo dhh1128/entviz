@@ -104,7 +104,15 @@ DECIMAL   = Alphabet("decimal",   DECIMAL_ALPHABET,    4)
 # BASE64URL is declared after BASE64URL_ALPHABET below.
 
 
-Parsed = collections.namedtuple('Parsed', ['type', 'alphabet', 'prefix', 'core', 'suffix'])
+# `prefix_semantic` marks a prefix as identity-bearing (it must bind the
+# fingerprint) rather than a mere signal. See the "swap test" in docs/spec.md
+# and `this.i:s3mpr3fx`. Defaults to False so every existing 5-arg
+# Parsed(...) construction keeps the old signal-prefix behavior.
+Parsed = collections.namedtuple(
+    'Parsed',
+    ['type', 'alphabet', 'prefix', 'core', 'suffix', 'prefix_semantic'],
+    defaults=(False,),
+)
 # A tokenized chunk of entropy: its source text, its position, and the 24-bit
 # quant derived from it. Defined here beside Parsed (its sibling output type)
 # rather than mid-module next to tokenize() where it used to sit.
@@ -421,7 +429,17 @@ CESR_1_BYTE_CODES = [
     ("O", "X25519 priv deckey", 44),
     ("P", "X25519 124 cipher 44 seed", 124),
     ("Q", "secp256r1 seed", 44),
-    ("Z", "blinding factor", 44),
+    # Blinding factor is lowercase `a` (44 chars). The capital `Z` is Tag11
+    # (12 chars), NOT a blinding factor — earlier code mislabeled it, which
+    # both failed to parse real `a...` blinding factors and would have
+    # accepted bogus 44-char `Z...` strings. See `this.i:s3mpr3fx`.
+    ("a", "blinding factor", 44),
+    # FN-DSA (FIPS 206) post-quantum signature scheme. Seeds sit at the
+    # 44-char sweet spot; public keys and signatures are large.
+    ("c", "FN-DSA-512 seed", 44),
+    ("d", "FN-DSA-1024 seed", 44),
+    ("e", "FN-DSA-1024 sig", 1708),
+    ("b", "FN-DSA-1024 pubkey", 2392),
 ]
 CESR_1_BYTE_LENGTHS = set([x[2] for x in CESR_1_BYTE_CODES])
 
@@ -439,13 +457,15 @@ CESR_2_BYTE_LENGTHS = set([x[2] for x in CESR_2_BYTE_CODES])
 
 CESR_4_BYTE_CODES = [
     ("1AAA", "secp256k1 nt pubkey", 48),
-    ("1AAB", "secp256k1 pubkey", 48),
+    ("1AAB", "secp256k1 pub/enc key", 48),
     ("1AAC", "Ed448 nt pubkey", 80),
     ("1AAD", "Ed448 pubkey", 80),
     ("1AAE", "Ed448 sig", 156),
     ("1AAH", "X25519 100 cipher 24 salt", 100),
     ("1AAI", "secp256r1 nt pubkey", 48),
-    ("1AAJ", "secp256r1 pubkey", 48),
+    ("1AAJ", "secp256r1 pub/enc key", 48),
+    ("1AAR", "FN-DSA-512 sig", 892),
+    ("1AAQ", "FN-DSA-512 pubkey", 1200),
 ]
 CESR_4_BYTE_LENGTHS = set([x[2] for x in CESR_4_BYTE_CODES])
 
@@ -472,7 +492,12 @@ def parse_cesr(text) -> Parsed:
             for item in items:
                 if text.startswith(item[0]) and len_text == item[2]:
                     if BASE64URL_NO_PAD_REGEX.match(text):
-                        return Parsed(f"CESR {item[1]}", BASE64URL, item[0], text[len(item[0]):], None)
+                        # The derivation code is identity-bearing (swap test):
+                        # the same body under a different code is a different
+                        # object, so the code MUST bind the fingerprint.
+                        return Parsed(f"CESR {item[1]}", BASE64URL, item[0],
+                                      text[len(item[0]):], None,
+                                      prefix_semantic=True)
 
 def parse_ssh_key(text) -> Parsed:
     """

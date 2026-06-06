@@ -140,3 +140,5 @@ dmypy.json
 
 # Claude Code agent worktrees (never track these)
 .claude/worktrees/
+/.tick
+.tick.lock
