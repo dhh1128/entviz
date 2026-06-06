@@ -178,6 +178,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "segno" },
 ]
 docs = [
     { name = "zensical" },
@@ -193,7 +194,10 @@ render = [
 requires-dist = [{ name = "lxml", specifier = ">=5" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8" }]
+dev = [
+    { name = "pytest", specifier = ">=8" },
+    { name = "segno" },
+]
 docs = [{ name = "zensical" }]
 render = [
     { name = "cairosvg" },

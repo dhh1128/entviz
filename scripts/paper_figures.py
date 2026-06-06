@@ -31,12 +31,16 @@ REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file
 sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 sys.path.insert(0, os.path.join(REPO_ROOT, "scripts"))
 
-import cairosvg  # noqa: E402
 import segno  # noqa: E402
 
+from entviz import SPEC_VERSION  # noqa: E402
 from entviz.pipeline import render  # noqa: E402
 from entviz.renderer import MONOSPACE_FONT_FAMILY  # noqa: E402
 import palette_figures as pf  # noqa: E402  (reuse the CVD colour maths)
+
+# cairosvg is imported lazily inside main() so the SVG-building functions (and
+# the drift test that calls them) need only entviz + lxml + segno, not a system
+# libcairo. cairosvg is in the opt-in `render` group, not the default test env.
 
 OUT = os.path.join(REPO_ROOT, "docs", "assets", "paper")
 GALLERY = os.path.join(REPO_ROOT, "docs", "assets", "gallery")
@@ -132,8 +136,12 @@ def caption(W, y, s, size=T_SMALL, fill=INK2):
 
 
 def svg_open(w, h):
+    # data-spec-version stamps the algorithm/spec revision the figure was built
+    # against; the drift test asserts it equals the current SPEC_VERSION, so a
+    # version bump forces regeneration even if the pixels happen not to change.
     return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.2f}" '
-            f'height="{h:.2f}" viewBox="0 0 {w:.2f} {h:.2f}" font-family="{SANS}">'
+            f'height="{h:.2f}" viewBox="0 0 {w:.2f} {h:.2f}" font-family="{SANS}" '
+            f'data-spec-version="{SPEC_VERSION}" data-generator="scripts/paper_figures.py">'
             + rect(0, 0, w, h, fill=PAGE))
 
 
@@ -681,6 +689,7 @@ FIGURES = [
 
 
 def main():
+    import cairosvg  # lazy: only the PNG step needs it (see import note up top)
     os.makedirs(OUT, exist_ok=True)
     for fn in FIGURES:
         name, svg = fn()

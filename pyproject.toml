@@ -51,6 +51,7 @@ packages = ["src/entviz"]
 [dependency-groups]
 dev = [
     "pytest>=8",
+    "segno",  # used by the paper-figure drift test (tests/test_paper_figures.py)
 ]
 # Documentation site generator (Zensical, MkDocs-compatible). Opt-in group —
 # not installed by a plain `uv sync`. Build/preview the site with
