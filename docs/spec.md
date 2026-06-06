@@ -4,7 +4,7 @@
 
 Entviz is a simple way to visualize values with high entropy &mdash; cryptographic keys and signatures, UUIDs, blockchain payment addresses, post-quantum keys, genomes, and so forth &mdash; so a human can compare them visually. The goal is to allow an untrained adult with reasonably good vision to easily decide whether two chunks of entropy are the same or different.
 
-![example entviz](assets/example.png)
+![example entviz](assets/example.svg)
 
 Compare [entmotif](https://dhh1128.github.io/entmotif), which turns entropy into music. The excellent [randomart](http://www.dirk-loss.de/sshvis/drunken_bishop.pdf) algorithm used with SSH keys is also related; it has a similar goal to entviz, but accepts different constraints and uses a different approach.
 
@@ -38,21 +38,21 @@ The head, middle, and tail are not contiguous, and the middle cells are a finger
 
 The text channel does not, by itself, provide a visual avalanche effect: two inputs that differ by a single character will show nearly identical text. Avalanche is provided by the fingerprint-driven channels. The text channel's role is verbatim fidelity, not difference amplification, and it should be understood as one channel among several rather than a sole comparison method.
 
-![text channel](assets/text-channel.png)
+![text channel](assets/text-channel.svg)
 
 Each entviz also conveys its entropy, in a second visual channel, via the **surround** around each cell's nucleus. The surround is composed of 24 small rectangles arranged in a ring (10 above the nucleus, 10 below, 2 on each side). Each box is either filled or empty, controlled by one bit of the cell's ftok quant; the filled boxes use a single per-cell **edge color** chosen as the palette entry perceptually closest to the cell's nucleus background. The result reads as the nucleus color "leaking outward" through a quant-controlled pixel pattern.
 
-![edge channel](assets/edge-channel.png)
+![surround channel](assets/surround-channel.svg)
 
 The edge color is chosen from a fixed 4-color palette (the 4 non-background entries of \[white, gold, red, blue, black\]). The palette is intentionally simple, and perceptual selection ensures that even color-blind viewers can detect each cell as a separate object distinct from the background.
 
 Each entviz conveys its entropy, in a third visual channel, via the color that provides the background for the text in each cell. This nucleus background color is derived from the entropy, so for inputs of 512 bits or less it remains lossless. However, fine gradations in the colors of the nucleus may not be perceptible to the human eye, and these gradations will disappear if less than 16 million colors are displayable. Therefore, the colors in the nucleus are a partially redundant hint; they will never be misleading, but they should not be a primary comparison method.
 
-![nucleus color channel](assets/nucleus-channel.png)
+![nucleus color channel](assets/nucleus-channel.svg)
 
 Zero or more cells in an entviz may be blank. The positioning of blank cells derives from the fingerprint. An entviz also contains small *quartile* marks on four cells. Blank cells and quartile marks are easily checked by viewers, and act as a sort of visual CRC. They surface differences that may be otherwise hidden in the middle of long strings and at the end of individual tokens.
 
-![visual CRC](assets/crc.png)
+![visual CRC](assets/crc.svg)
 
 Each entviz displays a **color bar** along its left edge. It is derived from the fingerprint and provides a redundant channel that allows rapid gestalt comparison: two entvizes with different 2-bit-pattern histograms will differ visibly in the bar even before a cell-by-cell comparison begins.
 
@@ -124,7 +124,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     A T1+T5+T6 attacker (see `threat-model.md`) who could previously collide only the head and tail must now additionally reproduce the 4 displayed fingerprint tokens — i.e. 96 specific bits of the *second*, domain-separated SHA-512 digest (an injective partial preimage, ≈2⁹⁶, uniform across all input alphabets) — on top of matching the head, tail, and the primary-fingerprint gestalt channels. Because the second digest is domain-separated from the primary, those two are independent requirements. This closes the head-and-tail-only collision pattern that adversarial review finding F5 demonstrated against v4. (v5 closed the same gap by forcing matching *body* bytes at fingerprint-selected offsets; v6 forces matching *fingerprint* bytes instead, which is comparable in cost and additionally guarantees the middle text avalanches, injectively, for read-aloud comparison.)
 
-    ![split string into tokens](assets/tokens.png)
+    ![split string into tokens](assets/tokens.svg)
 
     Also, if a token represents less than 24 bits of entropy, extend the bits of the token by repeating low-order bits until a full 24 bits is used. Call the 24-bit value associated with the token its **quant**.
 
@@ -153,11 +153,11 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·3):(2·2) = 18:4 = 9:2), 4 columns and 3 rows (12:6 = 2:1), 3 columns and 4 rows (9:8), or 2 columns and 6 rows (6:12 = 1:2). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
 
-    ![grid options](assets/grid-options.png)
+    ![grid options](assets/grid-options.svg)
 
 1. Moving from left to right and top to bottom &mdash; which is how ASCII text should read if it wraps &mdash; number the cells from 0 to N, and call the number associated with each cell its **cell index**. Assign a *cell index* to each token. Unless changed, the *cell index* of a token will equal its *token index*.
 
-    ![grid and cells](assets/grid-and-cells.png)
+    ![grid and cells](assets/grid-and-cells.svg)
 
 1. Define the **used ftoks** as the first *token count* ftoks of the fingerprint, taken in ftok index order. The used ftoks map one-to-one to tokens: the used ftok at index *i* corresponds to the token with *token index* *i*. (Because *token count* is at most 22 and the fingerprint provides 22 ftoks, there are always enough.) Any ftoks beyond *token count* are not used. From here on, all fingerprint-based calculations operate on the used ftoks. The 24-bit value of an ftok is its **quant**, defined exactly as for a token.
 
@@ -190,7 +190,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     At 96 DPI with a 12-point font: `font_size_px` = 16, `nucleus_width` = 48, `nucleus_height` = 20, `box_width` = 6, `box_height` = 10, `cell_width` = 60, `cell_height` = 40, GM = 5, `bar_width` = 20. Surround boxes are 6×10 (no longer square); the 3:5 width:height ratio of a box is *not* a fundamental constant — both dimensions are derived independently from their tiling constraints. If a future revision changes `nucleus_height` or `nucleus_width` independently, the box dimensions follow.
 
-    ![basic measurements for cell and grid](assets/cell-layout.png)
+    ![basic measurements for cell and grid](assets/cell-layout.svg)
 
 1. Allocate the **grid rect**, a rectangle of dimensions *grid width* x *grid height* that contains only the cells of the grid. We will assume that the top left corner of the *grid rect* is at position (0, 0) on the canvas for the purpose of the cell calculations, but its actual position is determined by the bounding rect below.
 

@@ -1,210 +1,32 @@
 """
-Generate the figures for the academic paper (docs/entviz-paper-v6.md).
+Generate the figures for the academic paper (docs/entviz-paper.md).
 
-House style — "entviz-fig":
-  * Clean page: white background, no figure border (the figure merges into
-    the typeset page; the paper supplies the numbered caption).
-  * Desaturated chrome ink, NOT pure black; one muted slate-blue accent for
-    leader lines and callouts. The entviz artwork itself keeps the full,
-    saturated palette — colour appears only where it carries meaning.
-  * Labels/captions in DejaVu Sans (a humanist sans that is reliably installed
-    here and that cairosvg + fontconfig resolve natively; Open Sans, Noto Sans
-    and Carlito all substitute to it on this machine anyway). Literal entropy /
-    hex / band-letter text reuses the renderer's own MONOSPACE_FONT_FAMILY so
-    glyph metrics match a real entviz.
+All shared infrastructure — house style, SVG primitives, entviz/gallery
+embedding, CVD maths, the build runner — lives in scripts/figlib.py; this file
+only defines the paper's figures. Outputs (SVG, checked in) land in
+docs/assets/paper/, each also rasterised to a 2x PNG for the PDF build. The
+figures are NOT hand-drawn: each wraps a real render() call or a gallery SVG.
+tests/test_figures.py fails CI if a committed figure drifts from this generator
+or from the current SPEC_VERSION; never edit the SVGs by hand — re-run this:
 
-Outputs (SVG, checked in) land in docs/assets/paper/; each is also rasterised
-to a 2x PNG so the PDF build has a bitmap that needs no font resolution.
-
-Run from the repo root:
     PYTHONPATH=src .venv/bin/python scripts/paper_figures.py
-    (or: uv run --python .venv python scripts/paper_figures.py)
 """
 import hashlib
-import math
 import os
 import sys
 
-from lxml import etree
-
-REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
-sys.path.insert(0, os.path.join(REPO_ROOT, "scripts"))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import segno  # noqa: E402
 
-from entviz import SPEC_VERSION  # noqa: E402
-from entviz.pipeline import render  # noqa: E402
-from entviz.renderer import MONOSPACE_FONT_FAMILY  # noqa: E402
-import palette_figures as pf  # noqa: E402  (reuse the CVD colour maths)
+import figlib  # noqa: E402
+from figlib import *  # noqa: E402,F401,F403  (house style + helpers)
+from figlib import _inner  # noqa: E402  (underscore helper not covered by *)
 
-# cairosvg is imported lazily inside main() so the SVG-building functions (and
-# the drift test that calls them) need only entviz + lxml + segno, not a system
-# libcairo. cairosvg is in the opt-in `render` group, not the default test env.
+GEN = "scripts/paper_figures.py"
+figlib.GENERATOR = GEN
 
-OUT = os.path.join(REPO_ROOT, "docs", "assets", "paper")
-GALLERY = os.path.join(REPO_ROOT, "docs", "assets", "gallery")
-SVGNS = "{http://www.w3.org/2000/svg}"
-
-# ---- house style ----------------------------------------------------------
-SANS = "'DejaVu Sans', 'Bitstream Vera Sans', Verdana, sans-serif"
-MONO = MONOSPACE_FONT_FAMILY
-INK = "#2b2b33"      # primary ink (titles, key strokes) — slate, not black
-INK2 = "#5a5f6a"     # secondary text
-HAIR = "#c9cdd4"     # hairlines / faint grids
-ACCENT = "#3f5b73"   # the one muted accent: leader lines, callout dots
-WARN = "#b00020"     # sub-threshold / failure flag
-OK = "#0a7d3f"       # meets-floor flag
-PAGE = "#ffffff"
-
-T_TITLE = 16
-T_PANEL = 14         # (a)/(b) panel labels, bold
-T_LABEL = 13         # feature labels
-T_SMALL = 12         # secondary notes (>= 10pt at 1:1)
-
-
-def loc(e):
-    return etree.QName(e).localname
-
-
-def esc(s):
-    return (s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
-
-
-# ---- primitive SVG emitters ----------------------------------------------
-def text(x, y, s, size=T_LABEL, family=SANS, anchor="start", weight="normal",
-         fill=INK, italic=False):
-    fam = family.replace('"', "&quot;")
-    style = "" if not italic else ' font-style="italic"'
-    return (f'<text x="{x:.2f}" y="{y:.2f}" font-family="{fam}" '
-            f'font-size="{size}px" font-weight="{weight}" text-anchor="{anchor}"'
-            f'{style} fill="{fill}">{esc(s)}</text>')
-
-
-def line(x1, y1, x2, y2, stroke=ACCENT, w=1.0, dash=None):
-    d = f' stroke-dasharray="{dash}"' if dash else ""
-    return (f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" '
-            f'stroke="{stroke}" stroke-width="{w}"{d}/>')
-
-
-def rect(x, y, w, h, fill="none", stroke="none", sw=1.0, rx=0, dash=None):
-    r = f' rx="{rx}" ry="{rx}"' if rx else ""
-    d = f' stroke-dasharray="{dash}"' if dash else ""
-    return (f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" '
-            f'fill="{fill}" stroke="{stroke}" stroke-width="{sw}"{r}{d}/>')
-
-
-def dot(x, y, r=3.0, fill=ACCENT):
-    return f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{r}" fill="{fill}"/>'
-
-
-def leader(tx, ty, lx, ly, label, anchor="start", size=T_LABEL, weight="normal",
-           fill=INK, knee=None):
-    """Leader line from a target point (tx,ty) to a label at (lx,ly)."""
-    out = []
-    if knee is not None:
-        out.append(line(tx, ty, knee[0], knee[1]))
-        out.append(line(knee[0], knee[1], lx, ly))
-    else:
-        out.append(line(tx, ty, lx, ly))
-    out.append(dot(tx, ty, 2.6))
-    ty_off = ly - 4 if anchor != "middle" else ly
-    out.append(text(lx, ty_off, label, size=size, anchor=anchor, weight=weight, fill=fill))
-    return "".join(out)
-
-
-def hbrace(x0, x1, y, label, depth=8, fill=INK2, size=T_SMALL):
-    """A simple downward square bracket spanning [x0,x1] at height y, labelled below."""
-    xm = (x0 + x1) / 2
-    out = [
-        line(x0, y, x0, y + depth, stroke=fill, w=1.0),
-        line(x0, y + depth, x1, y + depth, stroke=fill, w=1.0),
-        line(x1, y, x1, y + depth, stroke=fill, w=1.0),
-        line(xm, y + depth, xm, y + depth + 4, stroke=fill, w=1.0),
-        text(xm, y + depth + 4 + size, label, size=size, anchor="middle", fill=fill, weight="bold"),
-    ]
-    return "".join(out)
-
-
-def approx_w(s, size, mono=False):
-    """Rough rendered width of a label, for sizing canvases so captions fit."""
-    return len(s) * size * (0.62 if mono else 0.55)
-
-
-def caption(W, y, s, size=T_SMALL, fill=INK2):
-    return text(W / 2, y, s, size=size, anchor="middle", fill=fill)
-
-
-def svg_open(w, h):
-    # data-spec-version stamps the algorithm/spec revision the figure was built
-    # against; the drift test asserts it equals the current SPEC_VERSION, so a
-    # version bump forces regeneration even if the pixels happen not to change.
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{w:.2f}" '
-            f'height="{h:.2f}" viewBox="0 0 {w:.2f} {h:.2f}" font-family="{SANS}" '
-            f'data-spec-version="{SPEC_VERSION}" data-generator="scripts/paper_figures.py">'
-            + rect(0, 0, w, h, fill=PAGE))
-
-
-def svg_close():
-    return "</svg>"
-
-
-# ---- embed entviz / gallery artwork --------------------------------------
-def _inner(svg_text):
-    root = etree.fromstring(svg_text.encode())
-    w = float(root.get("width"))
-    h = float(root.get("height"))
-    vb = root.get("viewBox") or f"0 0 {w} {h}"
-    inner = b"".join(etree.tostring(c) for c in root).decode()
-    return inner, w, h, [float(t) for t in vb.split()]
-
-
-def place(svg_text, x, y, dest_w, crop=None):
-    """Embed artwork as a nested <svg>, optionally cropped to `crop`=(sx,sy,sw,sh).
-
-    Returns (nested_svg, dest_h, mapper) where mapper(ex,ey) -> figure coords.
-    """
-    inner, w, h, vb = _inner(svg_text)
-    sx, sy, sw, sh = crop if crop else vb
-    scale = dest_w / sw
-    dest_h = sh * scale
-    nested = (f'<svg x="{x:.2f}" y="{y:.2f}" width="{dest_w:.2f}" height="{dest_h:.2f}" '
-              f'viewBox="{sx:.3f} {sy:.3f} {sw:.3f} {sh:.3f}">{inner}</svg>')
-
-    def mp(ex, ey):
-        return (x + (ex - sx) * scale, y + (ey - sy) * scale)
-    return nested, dest_h, mp
-
-
-def gallery(name):
-    return open(os.path.join(GALLERY, name)).read()
-
-
-# ---- parsing helpers -------------------------------------------------------
-def parse(svg_text):
-    return etree.fromstring(svg_text.encode())
-
-
-def cells(root):
-    return [g for g in root.iter(SVGNS + "g") if g.get("data-channel") == "cell"]
-
-
-def nucleus(cell):
-    """First rect of a cell group (the nucleus / blank outline)."""
-    for r in cell.iter(SVGNS + "rect"):
-        return r
-    return None
-
-
-def rect_box(r):
-    return (float(r.get("x")), float(r.get("y")),
-            float(r.get("width")), float(r.get("height")))
-
-
-def surround_boxes(root):
-    grid = [g for g in root.iter(SVGNS + "g") if g.get("data-channel") == "grid"][0]
-    return [r for r in grid.iter(SVGNS + "rect")
-            if float(r.get("width")) < 20 and r.get("fill") != PAGE]
+OUT = os.path.join(figlib.REPO_ROOT, "docs", "assets", "paper")
 
 
 # ===========================================================================
@@ -215,28 +37,24 @@ def fig_cell_anatomy():
     """Figure 4a — labelled anatomy of one v6 cell."""
     art = render("0123456789abcdef0123456789abcdef", font_size_pt=24)
     root = parse(art)
-    # cell 0 is a data cell with nucleus + text '012345' + a top-right quartile.
     c0 = cells(root)[0]
     nuc = nucleus(c0)
     nx, ny, nw, nh = rect_box(nuc)
-    nuc_fill = nuc.get("fill")
     txt_el = next(c0.iter(SVGNS + "text"))
     tx, ty = float(txt_el.get("x")), float(txt_el.get("y"))
     poly = next(c0.iter(SVGNS + "polygon"))
     pts = [tuple(map(float, p.split(","))) for p in poly.get("points").split()]
     pcx = sum(p[0] for p in pts) / 3
     pcy = sum(p[1] for p in pts) / 3
-    # crop tightly to cell 0's exact extent so neighbours, the colour bar and
-    # the top label stay out: x=[52,172], y=[51,131] (cell = 10x4 boxes).
+    # crop tightly to cell 0's exact extent (cell = 10x4 boxes)
     cx0, cy0, cw, ch = 52.0, 51.0, 120.0, 80.0
-    # a filled surround box of THIS cell (top ring, within the crop window)
     boxes = [b for b in surround_boxes(root)
              if cx0 <= float(b.get("x")) < cx0 + cw and cy0 <= float(b.get("y")) < cy0 + ch
-             and b.get("fill") != "#e7be00"]  # avoid grid-bg-coloured boxes
+             and b.get("fill") != "#e7be00"]
     boxes = boxes or surround_boxes(root)
-    top = min(boxes, key=lambda b: float(b.get("y")))
-    bx, by = float(top.get("x")), float(top.get("y"))
-    bw, bh = float(top.get("width")), float(top.get("height"))
+    topbox = min(boxes, key=lambda b: float(b.get("y")))
+    bx, by = float(topbox.get("x")), float(topbox.get("y"))
+    bw, bh = float(topbox.get("width")), float(topbox.get("height"))
 
     art_x, art_y, art_w = 40, 48, 300
     nested, art_h, mp = place(art, art_x, art_y, art_w, crop=(cx0, cy0, cw, ch))
@@ -244,7 +62,7 @@ def fig_cell_anatomy():
     lx = art_x + art_w + 70
     W, H = lx + 360, art_y + art_h + 24
     s = [svg_open(W, H), nested]
-    s.append(rect(art_x, art_y, art_w, art_h, stroke=HAIR, sw=1))  # frame the zoom
+    s.append(rect(art_x, art_y, art_w, art_h, stroke=HAIR, sw=1))
     s.append(text(art_x, art_y - 12, "one cell, enlarged", size=T_SMALL, fill=INK2, italic=True))
 
     items = [
@@ -267,7 +85,6 @@ def fig_cell_anatomy():
 def _avalanche(name, left_file, right_file, left_cap, right_cap, note):
     al = gallery(left_file)
     ar = gallery(right_file)
-    _, lw, lh, _ = _inner(al)
     gap = 70
     art_w = 240
     margin = 30
@@ -279,12 +96,11 @@ def _avalanche(name, left_file, right_file, left_cap, right_cap, note):
     H = top + art_h + 70
     cy = top + art_h / 2
     s = [svg_open(W, H), nl, nr]
-    # neq sign between
     mx = margin + art_w + gap / 2
     s.append(text(mx, cy - 6, "≠", size=34, anchor="middle", fill=ACCENT, weight="bold"))
     s.append(text(margin + art_w / 2, top + art_h + 24, left_cap, size=T_LABEL, anchor="middle", weight="bold"))
     s.append(text(margin + art_w + gap + art_w / 2, top + art_h + 24, right_cap, size=T_LABEL, anchor="middle", weight="bold"))
-    s.append(text(W / 2, H - 16, note, size=T_SMALL, anchor="middle", fill=INK2))
+    s.append(caption(W, H - 16, note))
     s.append(svg_close())
     return name, "".join(s)
 
@@ -306,54 +122,45 @@ def fig_surround_avalanche():
 
 
 def fig_palette():
-    """Figure 4c — palette swatch (by L*) above the CVD grid, restyled."""
-    NAMES = pf.NAMES
-    PAL = pf.PALETTE
-    # ---- swatch row ----
+    """Figure 4c — palette swatch (by L*) above the CVD grid."""
     sw_w, sw_h, gap, mx, top = 120, 84, 22, 30, 28
     n = len(NAMES)
     W = mx * 2 + n * sw_w + (n - 1) * gap
     sw_block_h = top + sw_h + 70
-    # ---- cvd grid ----
     label_w, cell_w, cell_h, annot_w = 150, sw_w, 56, 210
     grid_x = mx + label_w
     cvd_top = sw_block_h + 44
-    cvd_h = len(pf.VISION_ROWS) * cell_h
-    # widen W if cvd grid needs more
-    cvd_W = grid_x + n * cell_w + annot_w + mx
-    W = max(W, cvd_W)
+    cvd_h = len(VISION_ROWS) * cell_h
+    W = max(W, grid_x + n * cell_w + annot_w + mx)
     H = cvd_top + cvd_h + 44
 
     s = [svg_open(W, H)]
     s.append(text(mx, top - 6, "Palette, spaced by CIELAB lightness (L*)", size=T_TITLE, weight="bold"))
-    # center swatches under full width
     sw_total = n * sw_w + (n - 1) * gap
     sw_x0 = (W - sw_total) / 2
     for i, nm in enumerate(NAMES):
         x = sw_x0 + i * (sw_w + gap)
-        hexv = PAL[nm]
+        hexv = PALETTE[nm]
         s.append(rect(x, top + 6, sw_w, sw_h, fill=hexv, stroke=HAIR, sw=1))
         cx = x + sw_w / 2
         s.append(text(cx, top + 6 + sw_h + 20, nm, size=T_LABEL, anchor="middle", weight="bold"))
         s.append(text(cx, top + 6 + sw_h + 38, hexv, size=T_SMALL, anchor="middle", family=MONO, fill=INK2))
-        s.append(text(cx, top + 6 + sw_h + 54, f"L* = {pf.lstar(hexv):.0f}", size=T_SMALL, anchor="middle", fill=INK2))
+        s.append(text(cx, top + 6 + sw_h + 54, f"L* = {lstar(hexv):.0f}", size=T_SMALL, anchor="middle", fill=INK2))
 
-    # ---- CVD grid ----
     s.append(text(mx, cvd_top - 16, "The same palette simulated under colour-vision deficiency "
                   "(Machado et al. 2009, severity 1.0)", size=T_TITLE, weight="bold"))
     for j, nm in enumerate(NAMES):
         s.append(text(grid_x + j * cell_w + cell_w / 2, cvd_top - 2, nm, size=T_SMALL, anchor="middle", weight="bold"))
     s.append(text(grid_x + n * cell_w + annot_w / 2, cvd_top - 2, "closest pair (ΔL*)", size=T_SMALL, anchor="middle", weight="bold", fill=INK2))
-    for r, (vision, vlabel) in enumerate(pf.VISION_ROWS):
+    for r, (vision, vlabel) in enumerate(VISION_ROWS):
         y = cvd_top + r * cell_h
         s.append(text(mx, y + cell_h / 2 + 5, vlabel, size=T_LABEL, weight="bold"))
         for j, nm in enumerate(NAMES):
-            s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=pf.sim_hex(PAL[nm], vision), stroke=HAIR, sw=0.5))
-        a, b, d = pf.min_pair(vision)
+            s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=sim_hex(PALETTE[nm], vision), stroke=HAIR, sw=0.5))
+        a, b, d = min_pair(vision)
         warn = d < 20
-        txt = f"{a}/{b} ΔL* = {d:.0f}"
-        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, txt, size=T_LABEL,
-                      weight="bold" if warn else "normal", fill=WARN if warn else OK))
+        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b} ΔL* = {d:.0f}",
+                      size=T_LABEL, weight="bold" if warn else "normal", fill=WARN if warn else OK))
     s.append(text(mx, H - 14, "All normal-vision pairs clear the ΔL* ≥ 20 design floor; the unavoidable "
                   "protan red/blue collapse falls back to the colour-bar letters.", size=T_SMALL, fill=INK2))
     s.append(svg_close())
@@ -365,7 +172,7 @@ def fig_color_bar():
     art = render("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", font_size_pt=24)
     root = parse(art)
     cbar = [g for g in root.iter(SVGNS + "g") if g.get("data-channel") == "color-bar"][0]
-    bands = []  # (fill, letter, letterfill, frac)
+    bands = []
     rects = [r for r in cbar.iter(SVGNS + "rect")]
     txts = [t for t in cbar.iter(SVGNS + "text")]
     total_h = sum(float(r.get("height")) for r in rects)
@@ -386,7 +193,7 @@ def fig_color_bar():
         y = top
         for fill, letter, lfill, frac in bands:
             h = frac * bar_h
-            f = pf.sim_hex(fill, vision) if vision != "normal" else fill
+            f = sim_hex(fill, vision) if vision != "normal" else fill
             out.append(rect(x, y, bar_w, h, fill=f, stroke=HAIR, sw=0.5))
             if letter:
                 out.append(text(x + bar_w / 2, y + h / 2 + 7, letter.lower(), size=20,
@@ -402,7 +209,6 @@ def fig_color_bar():
     s.append(draw_bar(x2, "protan"))
     s.append(text(x1 + bar_w / 2, top + bar_h + 24, "normal vision", size=T_LABEL, anchor="middle", weight="bold"))
     s.append(text(x2 + bar_w / 2, top + bar_h + 24, "protanopia (simulated)", size=T_LABEL, anchor="middle", weight="bold"))
-    # callout between
     mxx = (x1 + bar_w + x2) / 2
     s.append(text(mxx, top + bar_h / 2 - 8, "the letters", size=T_SMALL, anchor="middle", fill=INK2))
     s.append(text(mxx, top + bar_h / 2 + 8, "w / g / r / b / k", size=T_SMALL, anchor="middle", family=MONO, fill=INK))
@@ -440,7 +246,6 @@ def fig_ellipse():
     s = [svg_open(W, H)]
     for (nested, cap, xx) in nests:
         s.append(nested)
-    # trace silhouettes
     for (mp, ell), (nested, cap, xx) in zip(placements, nests):
         if ell is not None:
             el = ell.find(SVGNS + "ellipse")
@@ -448,10 +253,8 @@ def fig_ellipse():
             rx, ry = float(el.get("rx")), float(el.get("ry"))
             rot = ell.get("data-ellipse-rotation-deg") or "0"
             mcx, mcy = mp(cx, cy)
-            scale = art_w  # approx; use mapper delta for true scale
-            # scale from mapper
-            sx0, sy0 = mp(0, 0)
-            sx1, sy1 = mp(1, 0)
+            sx0, _ = mp(0, 0)
+            sx1, _ = mp(1, 0)
             sc = sx1 - sx0
             s.append(f'<ellipse cx="{mcx:.2f}" cy="{mcy:.2f}" rx="{rx*sc:.2f}" ry="{ry*sc:.2f}" '
                      f'transform="rotate({rot} {mcx:.2f} {mcy:.2f})" fill="none" stroke="{ACCENT}" '
@@ -487,13 +290,12 @@ def fig_crc():
     if mins:
         c = mins[0]
         rows.append((mp(float(c.get("cx")), float(c.get("cy"))),
-                     "blank-cell map — blue dot", "marks the cell holding the smallest token", "#1d4ed8"))
+                     "blank-cell map — blue dot", "marks the cell holding the smallest token", BLUE))
     if polys:
         p = polys[0]
         pts = [tuple(map(float, q.split(","))) for q in p.get("points").split()]
-        cx = sum(q[0] for q in pts) / 3
-        cy = sum(q[1] for q in pts) / 3
-        rows.append((mp(cx, cy), "quartile mark", "corner orientation encodes the token's rank quartile", ACCENT))
+        rows.append((mp(sum(q[0] for q in pts) / 3, sum(q[1] for q in pts) / 3),
+                     "quartile mark", "corner orientation encodes the token's rank quartile", ACCENT))
     ys = [70, 150, 230]
     for (target, head, sub, col), ry in zip(rows, ys[:len(rows)]):
         tx, ty = target
@@ -501,11 +303,9 @@ def fig_crc():
         s.append(leader(tx, ty, lx, ry, head, size=T_LABEL, weight="bold", knee=knee, fill=INK))
         s.append(text(lx, ry + 15, sub, size=T_SMALL, fill=INK2))
         s.append(dot(tx, ty, 3.0, fill=col))
-    s.append(text(margin + art_w / 2, top + art_h + 22,
-                  "blanks sit at fingerprint-derived positions —",
+    s.append(text(margin + art_w / 2, top + art_h + 22, "blanks sit at fingerprint-derived positions —",
                   size=T_SMALL, anchor="middle", fill=INK2))
-    s.append(text(margin + art_w / 2, top + art_h + 38,
-                  "their layout is itself a CRC",
+    s.append(text(margin + art_w / 2, top + art_h + 38, "their layout is itself a CRC",
                   size=T_SMALL, anchor="middle", fill=INK2))
     s.append(svg_close())
     return "fig-4f-crc", "".join(s)
@@ -515,13 +315,10 @@ def fig_large_input():
     """Figure 4g — head / fingerprint-middle / tail layout for a >512-bit input."""
     art = render("a" * 200, font_size_pt=14)
     root = parse(art)
-    cs = cells(root)
-    # classify by reading order (index)
     data = []
-    for c in cs:
+    for c in cells(root):
         idx = int(c.get("data-cell-index"))
-        nuc = nucleus(c)
-        x, y, w, h = rect_box(nuc)
+        x, y, w, h = rect_box(nucleus(c))
         blank = c.get("data-cell-blank") == "true"
         framed = c.get("data-cell-fingerprint") == "true"
         data.append((idx, x, y, w, h, blank, framed))
@@ -545,7 +342,7 @@ def fig_large_input():
     s = [svg_open(W, H), nested]
 
     def center(d):
-        idx, x, y, w, h, blank, fr = d
+        _, x, y, w, h, _, _ = d
         return mp(x + w / 2, y + h / 2)
 
     rows = []
@@ -566,40 +363,10 @@ def fig_large_input():
     return "fig-4g-large-input", "".join(s)
 
 
-# ---- comparison strip (randomart | QR | entviz) ---------------------------
-def drunken_bishop(fp_bytes, cols=17, rows=9):
-    field = [[0] * cols for _ in range(rows)]
-    x, y = cols // 2, rows // 2
-    for byte in fp_bytes:
-        b = byte
-        for _ in range(4):
-            d = b & 0b11
-            dx = -1 if (d & 1) == 0 else 1
-            dy = -1 if (d & 2) == 0 else 1
-            x = min(cols - 1, max(0, x + dx))
-            y = min(rows - 1, max(0, y + dy))
-            field[y][x] += 1
-            b >>= 2
-    chars = " .o+=*BOX@%&#/^SE"
-    sx, sy = cols // 2, rows // 2
-    lines = []
-    for r in range(rows):
-        line_chars = []
-        for c in range(cols):
-            if (c, r) == (sx, sy):
-                line_chars.append("S")
-            elif (c, r) == (x, y):
-                line_chars.append("E")
-            else:
-                line_chars.append(chars[min(field[r][c], 14)])
-        lines.append("".join(line_chars))
-    return lines
-
-
 def fig_comparison():
+    """Figure 2 — SSH randomart, a QR code, and an entviz side by side."""
     fp = hashlib.sha256(b"entviz-comparison-figure").digest()
     art_lines = drunken_bishop(fp)
-    # panel geometry
     margin = 30
     top = 40
     panel_w = 240
@@ -610,42 +377,35 @@ def fig_comparison():
 
     s = [svg_open(W, H)]
     labels = ["(a) SSH randomart", "(b) QR code", "(c) entviz"]
-    subs = ["emergent path; ~20–24 bits",
-            "dense matrix; for machines",
-            "designed; built for the eye"]
+    subs = ["emergent path; ~20–24 bits", "dense matrix; for machines", "designed; built for the eye"]
     xs = [margin, margin + panel_w + gap, margin + 2 * (panel_w + gap)]
 
-    # ---- (a) randomart as monospace block in a slate frame ----
+    # (a) randomart
     ax = xs[0]
-    box_w, box_h = panel_w, panel_h
-    s.append(rect(ax, top, box_w, box_h, fill="#fbfbfa", stroke=INK, sw=1.2))
-    nlines = len(art_lines) + 2  # header + body + footer
-    line_h = (box_h - 24) / nlines
+    s.append(rect(ax, top, panel_w, panel_h, fill="#fbfbfa", stroke=INK, sw=1.2))
+    nlines = len(art_lines) + 2
+    line_h = (panel_h - 24) / nlines
     fs = line_h / 1.18
     ry = top + line_h
-    header = "+--[ED25519 256]--+"
-    footer = "+----[SHA256]-----+"
+
     def mline(txt, yy):
-        return text(ax + box_w / 2, yy, txt, size=fs, family=MONO, anchor="middle", fill=INK)
-    s.append(mline(header, ry))
+        return text(ax + panel_w / 2, yy, txt, size=fs, family=MONO, anchor="middle", fill=INK)
+    s.append(mline("+--[ED25519 256]--+", ry))
     ry += line_h
     for ln in art_lines:
         s.append(mline("|" + ln + "|", ry))
         ry += line_h
-    s.append(mline(footer, ry))
+    s.append(mline("+----[SHA256]-----+", ry))
 
-    # ---- (b) QR ----
+    # (b) QR
     qx = xs[1]
     qr = segno.make("https://github.com/dhh1128/entviz", error="m")
     matrix = [row for row in qr.matrix]
-    n = len(matrix)
     quiet = 2
-    total = n + 2 * quiet
+    total = len(matrix) + 2 * quiet
     mod = panel_w / total
-    # center vertically in panel_h
-    qsize = panel_w
-    qy = top + (panel_h - qsize) / 2
-    s.append(rect(qx, qy, qsize, qsize, fill="#ffffff", stroke=HAIR, sw=1))
+    qy = top + (panel_h - panel_w) / 2
+    s.append(rect(qx, qy, panel_w, panel_w, fill="#ffffff", stroke=HAIR, sw=1))
     qg = [f'<g transform="translate({qx},{qy})">']
     for r, row in enumerate(matrix):
         for c, v in enumerate(row):
@@ -654,22 +414,19 @@ def fig_comparison():
     qg.append("</g>")
     s.append("".join(qg))
 
-    # ---- (c) entviz ----
+    # (c) entviz
     ex = xs[2]
     art = gallery("10-128-bit-hex.svg")
-    nested, ah, mp = place(art, ex, top + (panel_h - panel_w * 0.0) / 2, panel_w)
-    # recompute to vertically center
     _, aw0, ah0, _ = _inner(art)
     disp_h = panel_w * ah0 / aw0
-    nested, ah, mp = place(art, ex, top + (panel_h - disp_h) / 2, panel_w)
+    nested, _, _ = place(art, ex, top + (panel_h - disp_h) / 2, panel_w)
     s.append(nested)
 
     for x, lab, sub in zip(xs, labels, subs):
         s.append(text(x + panel_w / 2, top + panel_h + 28, lab, size=T_LABEL, anchor="middle", weight="bold"))
         s.append(text(x + panel_w / 2, top + panel_h + 46, sub, size=T_SMALL, anchor="middle", fill=INK2))
-    s.append(text(W / 2, H - 12,
-                  "Three answers to “show this value”: a machine baseline (QR), a naive human attempt "
-                  "(randomart), and a designed one (entviz).", size=T_SMALL, anchor="middle", fill=INK2))
+    s.append(caption(W, H - 12, "Three answers to “show this value”: a machine baseline (QR), a naive "
+             "human attempt (randomart), and a designed one (entviz)."))
     s.append(svg_close())
     return "fig-comparison", "".join(s)
 
@@ -689,16 +446,7 @@ FIGURES = [
 
 
 def main():
-    import cairosvg  # lazy: only the PNG step needs it (see import note up top)
-    os.makedirs(OUT, exist_ok=True)
-    for fn in FIGURES:
-        name, svg = fn()
-        svg_path = os.path.join(OUT, name + ".svg")
-        with open(svg_path, "w") as fh:
-            fh.write(svg + "\n")
-        png_path = os.path.join(OUT, name + ".png")
-        cairosvg.svg2png(bytestring=svg.encode(), write_to=png_path, scale=2.0, background_color="white")
-        print(f"wrote {svg_path}  +  {os.path.basename(png_path)}")
+    figlib.build(FIGURES, OUT)
 
 
 if __name__ == "__main__":

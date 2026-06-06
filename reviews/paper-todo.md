@@ -1,6 +1,6 @@
 # entviz paper — open items and critique disposition
 
-**Paper under management:** `docs/entviz-paper-v6.md` (v6 draft; peer-review target).
+**Paper under management:** `docs/entviz-paper.md` (v6 draft; peer-review target).
 **This file** is the single forward-looking tracker for that paper. It records what
 is still open and the disposition of prior external review, so the raw review
 inputs no longer need to live in the tree.
