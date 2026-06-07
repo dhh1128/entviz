@@ -72,3 +72,8 @@ render = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+# The conformance suite lives in a repo-root `compliance/` package that is NOT
+# part of the wheel (only `src/entviz` is packaged). Put the repo root on
+# sys.path so `import compliance` resolves under `uv run pytest`, which invokes
+# the pytest console script and so does not add the cwd automatically.
+pythonpath = ["."]
