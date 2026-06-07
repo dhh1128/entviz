@@ -63,6 +63,8 @@ def _annotated_cell(rows, italic_note="one cell, enlarged"):
     s = [svg_open(W, H), nested]
     s.append(rect(art_x, art_y, art_w, art_h, stroke=HAIR, sw=1))
     s.append(text(art_x, art_y - 12, italic_note, size=T_SMALL, fill=INK2, italic=True))
+    # Order labels by their target's y so the leader lines never cross.
+    rows = order_by_target_y(rows, lambda r: feat[r[0]][1])
     ys = [70 + 62 * i for i in range(len(rows))]
     for (key, head, sub), ry in zip(rows, ys):
         tx, ty = mp(*feat[key])
@@ -81,7 +83,7 @@ def fig_example():
     art = gallery("11-256-bit-hex.svg")
     margin, top = 40, 40
     art_w = 340
-    cap = ("A v6 entviz of a 256-bit input: text grid, colour bar, surround texture, "
+    cap = ("A v6 entviz of a 256-bit input: text grid, color bar, surround texture, "
            "ellipse overlay, and CRC landmarks.")
     _, aw0, ah0, _ = _inner(art)
     art_h = art_w * ah0 / aw0
@@ -126,8 +128,8 @@ def fig_surround_channel():
     rows = [
         ("box", "surround — 24 boxes", "10 above, 10 below, 2 each side"),
         ("box", "each box = one fingerprint bit", "filled or empty, by the cell's ftok quant"),
-        ("box", "edge colour", "filled boxes use the palette entry nearest the nucleus"),
-        ("nucleus", "the colour leaks outward", "binding the ring to the nucleus by Similarity"),
+        ("box", "edge color", "filled boxes use the palette entry nearest the nucleus"),
+        ("nucleus", "the color leaks outward", "binding the ring to the nucleus by Similarity"),
     ]
     W, H, s = _annotated_cell(rows)
     return "surround-channel", "".join(s)
@@ -135,9 +137,9 @@ def fig_surround_channel():
 
 def fig_nucleus_channel():
     rows = [
-        ("nucleus", "nucleus background", "the 24-bit token read as a 24-bit RGB colour"),
+        ("nucleus", "nucleus background", "the 24-bit token read as a 24-bit RGB color"),
         ("nucleus", "lossless ≤ 512 bits", "derived from the entropy, not the fingerprint"),
-        ("text", "a redundant hint, not primary", "fine gradations fall below the JND / vanish < 16M colours"),
+        ("text", "a redundant hint, not primary", "fine gradations fall below the JND / vanish < 16M colors"),
     ]
     W, H, s = _annotated_cell(rows)
     return "nucleus-channel", "".join(s)
@@ -170,6 +172,8 @@ def fig_crc():
         pts = [tuple(map(float, q.split(","))) for q in p.get("points").split()]
         rows.append((mp(sum(q[0] for q in pts) / 3, sum(q[1] for q in pts) / 3),
                      "quartile mark", "corner orientation encodes the token's rank quartile", ACCENT))
+    # Order labels by their target's y so the red/blue/quartile leaders never cross.
+    rows = order_by_target_y(rows, lambda r: r[0][1])
     for (target, head, sub, col), ry in zip(rows, [70, 150, 230]):
         tx, ty = target
         s.append(leader(tx, ty, lx, ry, head, size=T_LABEL, weight="bold", knee=(lx - 18, ry - 4), fill=INK))
@@ -281,12 +285,14 @@ def fig_grid_and_cells():
 
 def fig_cell_layout():
     """Cell + 24-box surround geometry, dimensioned from figlib.geometry()."""
+    # Larger type + a tighter canvas (≤ ~790 px) keep every label ≥ 9 pt on-page.
+    T_H, T_L, T_B = 18, 15, 13
     g = geometry(12)  # reference: 12pt @ 96dpi -> fs 16; cell 60x40, box 6x10
-    S = 7.0  # display scale (px per spec px)
+    S = 6.5  # display scale (px per spec px)
     nw, nh = g["nucleus_width"], g["nucleus_height"]
     bw, bh = g["box_width"], g["box_height"]
     cw, ch = g["cell_width"], g["cell_height"]
-    ox, oy = 210, 130  # origin of the cell on the canvas (room for left dim + top dim)
+    ox, oy = 205, 130  # origin of the cell on the canvas (room for left dim + top dim)
 
     def X(v):
         return ox + v * S
@@ -294,10 +300,10 @@ def fig_cell_layout():
     def Y(v):
         return oy + v * S
 
-    s = [svg_open(ox + cw * S + 250, oy + ch * S + 100)]
-    s.append(text(40, 36, "Cell and 24-box surround geometry", size=T_TITLE, weight="bold"))
+    s = [svg_open(ox + cw * S + 190, oy + ch * S + 100)]
+    s.append(text(40, 36, "Cell and 24-box surround geometry", size=T_H, weight="bold"))
     s.append(text(40, 56, "all lengths derive from font_size_px (12 pt @ 96 dpi → 16 px)",
-                  size=T_SMALL, fill=INK2))
+                  size=T_B, fill=INK2))
     # surround boxes (local cell coords): top 10, bottom 10, sides 2+2
     box_fill, box_stroke = "#eef0f3", HAIR
     for i in range(10):
@@ -309,17 +315,17 @@ def fig_cell_layout():
         s.append(rect(X(cw - bw), Y(yy), bw * S, bh * S, fill=box_fill, stroke=box_stroke, sw=0.8))
     # nucleus
     s.append(rect(X(bw), Y(bh), nw * S, nh * S, fill="#cdeacd", stroke="#7bbf7b", sw=1))
-    s.append(text(X(bw + nw / 2), Y(bh + nh / 2) + 6, "nucleus", size=T_LABEL, anchor="middle", fill=INK))
-    s.append(text(X(bw + nw / 2), Y(bh / 2) + 5, "surround box ×24", size=T_SMALL, anchor="middle", fill=INK2))
+    s.append(text(X(bw + nw / 2), Y(bh + nh / 2) + 6, "nucleus", size=T_L, anchor="middle", fill=INK))
+    s.append(text(X(bw + nw / 2), Y(bh / 2) + 5, "surround box ×24", size=T_B, anchor="middle", fill=INK2))
 
     # dimensions, each on its own side so nothing collides
-    s.append(dim(X(0), Y(-1.8), X(cw), Y(-1.8), f"cell width = 3.75·fs = {cw:.0f}", place="above"))
-    s.append(dim(X(bw), Y(ch + 1.8), X(bw + nw), Y(ch + 1.8), f"nucleus width = 3·fs = {nw:.0f}", place="below"))
-    s.append(dim(X(cw + 1.8), Y(0), X(cw + 1.8), Y(ch), f"cell height = 2.5·fs = {ch:.0f}", place="right"))
-    s.append(dim(X(-1.8), Y(bh), X(-1.8), Y(bh + nh), f"nucleus h = 1.25·fs = {nh:.0f}", place="left"))
+    s.append(dim(X(0), Y(-1.8), X(cw), Y(-1.8), f"cell width = 3.75·fs = {cw:.0f}", size=T_B, place="above"))
+    s.append(dim(X(bw), Y(ch + 1.8), X(bw + nw), Y(ch + 1.8), f"nucleus width = 3·fs = {nw:.0f}", size=T_B, place="below"))
+    s.append(dim(X(cw + 1.8), Y(0), X(cw + 1.8), Y(ch), f"cell height = 2.5·fs = {ch:.0f}", size=T_B, place="right"))
+    s.append(dim(X(-1.8), Y(bh), X(-1.8), Y(bh + nh), f"nucleus h = 1.25·fs = {nh:.0f}", size=T_B, place="left"))
     # one box's dimensions (bottom-right note)
     s.append(text(X(cw) + 70, Y(ch) + 30, f"box = {bw:.0f}×{bh:.0f}  (0.375·fs × 0.625·fs)",
-                  size=T_SMALL, anchor="middle", fill=INK2))
+                  size=T_B, anchor="middle", fill=INK2))
     s.append(svg_close())
     return "cell-layout", "".join(s)
 
@@ -329,51 +335,55 @@ def fig_cell_layout():
 # ===========================================================================
 
 def fig_palette_swatch():
-    sw_w, sw_h, gap, mx, top = 120, 96, 24, 30, 56
+    # Bigger type + smaller swatches keep the figure compact and ≥ 9 pt on-page.
+    T_H, T_L, T_B = 18, 15, 13
+    sw_w, sw_h, gap, mx, top = 100, 74, 22, 30, 52
     n = len(NAMES)
     W = mx * 2 + n * sw_w + (n - 1) * gap
-    H = top + sw_h + 90
+    H = top + sw_h + 116
     s = [svg_open(W, H)]
-    s.append(text(W / 2, 34, "entviz palette — spaced by CIELAB lightness (L*)", size=T_TITLE,
+    s.append(text(W / 2, 34, "entviz palette — spaced by CIELAB lightness (L*)", size=T_H,
                   anchor="middle", weight="bold"))
     for i, nm in enumerate(NAMES):
         x = mx + i * (sw_w + gap)
         hexv = PALETTE[nm]
         s.append(rect(x, top, sw_w, sw_h, fill=hexv, stroke=HAIR, sw=1))
         cx = x + sw_w / 2
-        s.append(text(cx, top + sw_h + 24, nm, size=T_LABEL, anchor="middle", weight="bold"))
-        s.append(text(cx, top + sw_h + 42, hexv, size=T_SMALL, anchor="middle", family=MONO, fill=INK2))
-        s.append(text(cx, top + sw_h + 60, f"L* = {lstar(hexv):.0f}", size=T_SMALL, anchor="middle", fill=INK2))
-    s.append(caption(W, H - 14, "indices 0–3 are background candidates; black (index 4) is always an "
-             "edge colour, never the background."))
+        s.append(text(cx, top + sw_h + 26, nm, size=T_L, anchor="middle", weight="bold"))
+        s.append(text(cx, top + sw_h + 46, hexv, size=T_B, anchor="middle", family=MONO, fill=INK2))
+        s.append(text(cx, top + sw_h + 64, f"L* = {lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
+    s.append(caption(W, H - 32, "indices 0–3 are background candidates;", size=T_B))
+    s.append(caption(W, H - 14, "black (index 4) is always an edge color, never the background.", size=T_B))
     s.append(svg_close())
     return "palette-swatch", "".join(s)
 
 
 def fig_palette_cvd():
-    label_w, cell_w, cell_h, mx, top, annot_w = 150, 110, 56, 30, 70, 210
+    # Bigger labels + a tighter grid keep this wide figure ≥ 9 pt on-page.
+    T_H, T_L, T_B = 17, 15, 13
+    label_w, cell_w, cell_h, mx, top, annot_w = 130, 88, 48, 28, 64, 168
     n = len(NAMES)
     grid_x = mx + label_w
     W = grid_x + n * cell_w + annot_w + mx
-    H = top + len(VISION_ROWS) * cell_h + 44
+    H = top + len(VISION_ROWS) * cell_h + 60
     s = [svg_open(W, H)]
-    s.append(text(mx, 34, "Palette under colour-vision deficiency (Machado et al. 2009, severity 1.0)",
-                  size=T_TITLE, weight="bold"))
+    s.append(text(mx, 32, "Palette under color-vision deficiency (Machado et al. 2009)",
+                  size=T_H, weight="bold"))
     for j, nm in enumerate(NAMES):
-        s.append(text(grid_x + j * cell_w + cell_w / 2, top - 8, nm, size=T_SMALL, anchor="middle", weight="bold"))
-    s.append(text(grid_x + n * cell_w + annot_w / 2, top - 8, "closest pair (ΔL*)", size=T_SMALL,
+        s.append(text(grid_x + j * cell_w + cell_w / 2, top - 8, nm, size=T_B, anchor="middle", weight="bold"))
+    s.append(text(grid_x + n * cell_w + annot_w / 2, top - 8, "closest pair (ΔL*)", size=T_B,
                   anchor="middle", weight="bold", fill=INK2))
     for r, (vision, vlabel) in enumerate(VISION_ROWS):
         y = top + r * cell_h
-        s.append(text(mx, y + cell_h / 2 + 5, vlabel, size=T_LABEL, weight="bold"))
+        s.append(text(mx, y + cell_h / 2 + 5, vlabel, size=T_L, weight="bold"))
         for j, nm in enumerate(NAMES):
             s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=sim_hex(PALETTE[nm], vision), stroke=HAIR, sw=0.5))
         a, b, d = min_pair(vision)
         warn = d < 20
         s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b} ΔL* = {d:.0f}",
-                      size=T_LABEL, weight="bold" if warn else "normal", fill=WARN if warn else OK))
-    s.append(caption(W, H - 14, "Every normal-vision pair clears the ΔL* ≥ 20 floor; the protan red/blue "
-             "collapse is unavoidable and falls back to the colour-bar letters."))
+                      size=T_L, weight="bold" if warn else "normal", fill=WARN if warn else OK))
+    s.append(caption(W, H - 32, "Every normal-vision pair clears the ΔL* ≥ 20 floor;", size=T_B))
+    s.append(caption(W, H - 14, "the protan red/blue collapse falls back to the color-bar letters.", size=T_B))
     s.append(svg_close())
     return "palette-cvd", "".join(s)
 

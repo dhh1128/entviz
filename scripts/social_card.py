@@ -60,7 +60,7 @@ TAGLINE_LINES = [
     "compare at a glance.",
 ]
 LANGUAGE = "Python"
-LANGUAGE_DOT = "#3572A5"        # GitHub's linguist colour for the language
+LANGUAGE_DOT = "#3572A5"        # GitHub's linguist color for the language
 LICENSE = "Apache-2.0"
 # MARK: "entviz-root" | path to an .svg logo | None
 MARK = "entviz-root"
@@ -144,12 +144,12 @@ def build_card_svg(mark_svg: str | None, caption: str) -> str:
         f'<rect width="{W}" height="{H}" fill="#ffffff"/>',
     ]
 
-    # ---- left accent stripe: the 5-colour palette (family signature) -----
+    # ---- left accent stripe: the 5-color palette (family signature) -----
     band = H / len(PALETTE)
-    for i, colour in enumerate(PALETTE):
+    for i, color in enumerate(PALETTE):
         parts.append(
             f'<rect x="0" y="{i * band:.2f}" width="{STRIPE_W}" '
-            f'height="{band:.2f}" fill="{colour}"/>'
+            f'height="{band:.2f}" fill="{color}"/>'
         )
 
     # ---- floating mark on the right, vertically centered -----------------

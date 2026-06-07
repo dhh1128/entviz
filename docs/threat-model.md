@@ -32,7 +32,7 @@ style bleed) merely by existing on the same page.
 
 * The input bytes, after the spec-defined normalization step has been applied.
 * The display device's color and resolution fidelity within the spec's stated
-  envelope (16M colors, ≥256 colors, ≥256 greys).
+  envelope (16M colors, ≥256 colors, ≥256 grays).
 * The user's font stack to render a monospace family with reasonable glyph
   shapes for the alphabets in use.
 * The browser (or other SVG renderer) to honor `clip-path`, `mix-blend-mode`,

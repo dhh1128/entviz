@@ -66,12 +66,14 @@ def fig_cell_anatomy():
     s.append(text(art_x, art_y - 12, "one cell, enlarged", size=T_SMALL, fill=INK2, italic=True))
 
     items = [
-        (mp(nx + nw / 2, ny + 3), "nucleus background", "24-bit token read as an RGB colour"),
+        (mp(nx + nw / 2, ny + 3), "nucleus background", "24-bit token read as an RGB color"),
         (mp(tx, ty - 4), "cell text", "the token in monospace; white/black by Oklab L*"),
         (mp(bx + bw / 2, by + bh / 2), "surround box (1 of 24)", "fingerprint bit i fills box i, or leaves it empty"),
-        (mp(bx + bw / 2, by + bh / 2), "per-cell edge colour", "the palette entry nearest the nucleus colour"),
+        (mp(bx + bw / 2, by + bh / 2), "per-cell edge color", "the palette entry nearest the nucleus color"),
         (mp(pcx, pcy), "quartile mark", "corner orientation encodes the token's rank"),
     ]
+    # Sort by target y so the leader lines to the stacked labels never cross.
+    items = order_by_target_y(items, lambda it: it[0][1])
     ys = [70, 120, 168, 212, 256]
     for (target, head, sub), ry in zip(items, ys):
         tgt_x, tgt_y = target
@@ -123,19 +125,22 @@ def fig_surround_avalanche():
 
 def fig_palette():
     """Figure 4c — palette swatch (by L*) above the CVD grid."""
-    sw_w, sw_h, gap, mx, top = 120, 84, 22, 30, 28
+    # Type sizes are bumped above the shared house-style minimum and the graphic
+    # is kept compact (≤ ~780 px) so the figure renders at/above 1:1 in the page
+    # column, keeping every label ≥ 9 pt instead of shrinking below it.
+    T_H, T_L, T_B = 17, 15, 13   # sub-heading / labels / body
+    sw_w, sw_h, gap, mx, top = 96, 66, 20, 28, 28
     n = len(NAMES)
-    W = mx * 2 + n * sw_w + (n - 1) * gap
     sw_block_h = top + sw_h + 70
-    label_w, cell_w, cell_h, annot_w = 150, sw_w, 56, 210
+    label_w, cell_w, cell_h, annot_w = 128, 84, 50, 168
     grid_x = mx + label_w
     cvd_top = sw_block_h + 44
     cvd_h = len(VISION_ROWS) * cell_h
-    W = max(W, grid_x + n * cell_w + annot_w + mx)
-    H = cvd_top + cvd_h + 44
+    W = max(mx * 2 + n * sw_w + (n - 1) * gap, grid_x + n * cell_w + annot_w + mx)
+    H = cvd_top + cvd_h + 60
 
     s = [svg_open(W, H)]
-    s.append(text(mx, top - 6, "Palette, spaced by CIELAB lightness (L*)", size=T_TITLE, weight="bold"))
+    s.append(text(mx, top - 6, "Palette, spaced by CIELAB lightness (L*)", size=T_H, weight="bold"))
     sw_total = n * sw_w + (n - 1) * gap
     sw_x0 = (W - sw_total) / 2
     for i, nm in enumerate(NAMES):
@@ -143,26 +148,27 @@ def fig_palette():
         hexv = PALETTE[nm]
         s.append(rect(x, top + 6, sw_w, sw_h, fill=hexv, stroke=HAIR, sw=1))
         cx = x + sw_w / 2
-        s.append(text(cx, top + 6 + sw_h + 20, nm, size=T_LABEL, anchor="middle", weight="bold"))
-        s.append(text(cx, top + 6 + sw_h + 38, hexv, size=T_SMALL, anchor="middle", family=MONO, fill=INK2))
-        s.append(text(cx, top + 6 + sw_h + 54, f"L* = {lstar(hexv):.0f}", size=T_SMALL, anchor="middle", fill=INK2))
+        s.append(text(cx, top + 6 + sw_h + 22, nm, size=T_L, anchor="middle", weight="bold"))
+        s.append(text(cx, top + 6 + sw_h + 40, hexv, size=T_B, anchor="middle", family=MONO, fill=INK2))
+        s.append(text(cx, top + 6 + sw_h + 57, f"L* = {lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
 
-    s.append(text(mx, cvd_top - 16, "The same palette simulated under colour-vision deficiency "
-                  "(Machado et al. 2009, severity 1.0)", size=T_TITLE, weight="bold"))
+    s.append(text(mx, cvd_top - 16, "Same palette under color-vision deficiency "
+                  "(Machado et al. 2009)", size=T_H, weight="bold"))
     for j, nm in enumerate(NAMES):
-        s.append(text(grid_x + j * cell_w + cell_w / 2, cvd_top - 2, nm, size=T_SMALL, anchor="middle", weight="bold"))
-    s.append(text(grid_x + n * cell_w + annot_w / 2, cvd_top - 2, "closest pair (ΔL*)", size=T_SMALL, anchor="middle", weight="bold", fill=INK2))
+        s.append(text(grid_x + j * cell_w + cell_w / 2, cvd_top - 2, nm, size=T_B, anchor="middle", weight="bold"))
+    s.append(text(grid_x + n * cell_w + annot_w / 2, cvd_top - 2, "closest pair (ΔL*)", size=T_B, anchor="middle", weight="bold", fill=INK2))
     for r, (vision, vlabel) in enumerate(VISION_ROWS):
         y = cvd_top + r * cell_h
-        s.append(text(mx, y + cell_h / 2 + 5, vlabel, size=T_LABEL, weight="bold"))
+        s.append(text(mx, y + cell_h / 2 + 5, vlabel, size=T_L, weight="bold"))
         for j, nm in enumerate(NAMES):
             s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=sim_hex(PALETTE[nm], vision), stroke=HAIR, sw=0.5))
         a, b, d = min_pair(vision)
         warn = d < 20
         s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b} ΔL* = {d:.0f}",
-                      size=T_LABEL, weight="bold" if warn else "normal", fill=WARN if warn else OK))
-    s.append(text(mx, H - 14, "All normal-vision pairs clear the ΔL* ≥ 20 design floor; the unavoidable "
-                  "protan red/blue collapse falls back to the colour-bar letters.", size=T_SMALL, fill=INK2))
+                      size=T_L, weight="bold" if warn else "normal", fill=WARN if warn else OK))
+    s.append(text(mx, H - 32, "All normal-vision pairs clear the ΔL* ≥ 20 design floor;", size=T_B, fill=INK2))
+    s.append(text(mx, H - 14, "the unavoidable protan red/blue collapse falls back to the color-bar letters.",
+                  size=T_B, fill=INK2))
     s.append(svg_close())
     return "fig-4c-palette", "".join(s)
 
@@ -180,13 +186,16 @@ def fig_color_bar():
         bands.append((r.get("fill"), (t.text or "").strip(), t.get("fill"),
                       float(r.get("height")) / total_h))
 
+    # Bigger labels + a two-line caption keep the figure narrow (≈640 px) so it
+    # renders near 1:1 and every label stays ≥ 9 pt.
+    T_L, T_B = 15, 13
     bar_w, bar_h = 64, 300
-    gap = 200
+    gap = 170
     mx, top = 60, 30
-    cap = ("Band heights are the fingerprint's 2-bit pattern counts, 4th-power skewed; "
-           "the letter names the colour for CVD and monochrome viewers.")
-    W = max(mx * 2 + bar_w * 2 + gap, approx_w(cap, T_SMALL) + 2 * mx)
-    H = top + bar_h + 56
+    cap1 = "Band heights are the fingerprint's 2-bit pattern counts, 4th-power skewed;"
+    cap2 = "the letter names the color for CVD and monochrome viewers."
+    W = max(mx * 2 + bar_w * 2 + gap, approx_w(cap1, T_B) + 2 * mx)
+    H = top + bar_h + 84
 
     def draw_bar(x, vision):
         out = []
@@ -207,13 +216,14 @@ def fig_color_bar():
     x2 = x1 + bar_w + gap
     s.append(draw_bar(x1, "normal"))
     s.append(draw_bar(x2, "protan"))
-    s.append(text(x1 + bar_w / 2, top + bar_h + 24, "normal vision", size=T_LABEL, anchor="middle", weight="bold"))
-    s.append(text(x2 + bar_w / 2, top + bar_h + 24, "protanopia (simulated)", size=T_LABEL, anchor="middle", weight="bold"))
+    s.append(text(x1 + bar_w / 2, top + bar_h + 26, "normal vision", size=T_L, anchor="middle", weight="bold"))
+    s.append(text(x2 + bar_w / 2, top + bar_h + 26, "protanopia (simulated)", size=T_L, anchor="middle", weight="bold"))
     mxx = (x1 + bar_w + x2) / 2
-    s.append(text(mxx, top + bar_h / 2 - 8, "the letters", size=T_SMALL, anchor="middle", fill=INK2))
-    s.append(text(mxx, top + bar_h / 2 + 8, "w / g / r / b / k", size=T_SMALL, anchor="middle", family=MONO, fill=INK))
-    s.append(text(mxx, top + bar_h / 2 + 24, "survive", size=T_SMALL, anchor="middle", fill=INK2))
-    s.append(caption(W, H - 14, cap))
+    s.append(text(mxx, top + bar_h / 2 - 9, "the letters", size=T_B, anchor="middle", fill=INK2))
+    s.append(text(mxx, top + bar_h / 2 + 9, "w / g / r / b / k", size=T_B, anchor="middle", family=MONO, fill=INK))
+    s.append(text(mxx, top + bar_h / 2 + 27, "survive", size=T_B, anchor="middle", fill=INK2))
+    s.append(caption(W, H - 32, cap1, size=T_B))
+    s.append(caption(W, H - 14, cap2, size=T_B))
     s.append(svg_close())
     return "fig-4d-color-bar", "".join(s)
 
@@ -296,6 +306,8 @@ def fig_crc():
         pts = [tuple(map(float, q.split(","))) for q in p.get("points").split()]
         rows.append((mp(sum(q[0] for q in pts) / 3, sum(q[1] for q in pts) / 3),
                      "quartile mark", "corner orientation encodes the token's rank quartile", ACCENT))
+    # Sort by target y so the red/blue/quartile leaders never cross.
+    rows = order_by_target_y(rows, lambda r: r[0][1])
     ys = [70, 150, 230]
     for (target, head, sub, col), ry in zip(rows, ys[:len(rows)]):
         tx, ty = target
@@ -389,7 +401,11 @@ def fig_comparison():
     ry = top + line_h
 
     def mline(txt, yy):
-        return text(ax + panel_w / 2, yy, txt, size=fs, family=MONO, anchor="middle", fill=INK)
+        # preserve=True: the randomart's interior spaces are load-bearing (an
+        # unvisited cell is a space, per OpenSSH); without it SVG collapses runs
+        # of spaces and the |...| frame goes ragged.
+        return text(ax + panel_w / 2, yy, txt, size=fs, family=MONO, anchor="middle",
+                    fill=INK, preserve=True)
     s.append(mline("+--[ED25519 256]--+", ry))
     ry += line_h
     for ln in art_lines:

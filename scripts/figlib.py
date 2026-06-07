@@ -13,7 +13,7 @@ House style — "entviz-fig":
     typeset page; the surrounding document supplies the numbered caption).
   * Desaturated chrome ink, NOT pure black; one muted slate-blue accent for
     leader lines and callouts. The entviz artwork itself keeps the full,
-    saturated palette — colour appears only where it carries meaning.
+    saturated palette — color appears only where it carries meaning.
   * Labels/captions in DejaVu Sans (a humanist sans reliably installed here that
     cairosvg + fontconfig resolve natively). Literal entropy / hex / band-letter
     text reuses the renderer's own MONOSPACE_FONT_FAMILY so glyph metrics match
@@ -52,7 +52,7 @@ HAIR = "#c9cdd4"     # hairlines / faint grids
 ACCENT = "#3f5b73"   # the one muted accent: leader lines, callout dots
 WARN = "#b00020"     # sub-threshold / failure flag
 OK = "#0a7d3f"       # meets-floor flag
-BLUE = "#1d4ed8"     # the renderer's blank-map "smallest" dot colour
+BLUE = "#1d4ed8"     # the renderer's blank-map "smallest" dot color
 PAGE = "#ffffff"
 
 T_TITLE = 16
@@ -94,12 +94,17 @@ def esc(s):
 
 # ---- primitive SVG emitters ----------------------------------------------
 def text(x, y, s, size=T_LABEL, family=SANS, anchor="start", weight="normal",
-         fill=INK, italic=False):
+         fill=INK, italic=False, preserve=False):
     fam = family.replace('"', "&quot;")
     style = "" if not italic else ' font-style="italic"'
+    # xml:space="preserve" stops SVG renderers from collapsing runs of interior
+    # whitespace (and trimming leading/trailing spaces). Needed for monospace
+    # ASCII art (e.g. the randomart panel), where every space is load-bearing
+    # and a collapsed run misaligns the |...| frame.
+    sp = ' xml:space="preserve"' if preserve else ""
     return (f'<text x="{x:.2f}" y="{y:.2f}" font-family="{fam}" '
             f'font-size="{size}px" font-weight="{weight}" text-anchor="{anchor}"'
-            f'{style} fill="{fill}">{esc(s)}</text>')
+            f'{style} fill="{fill}"{sp}>{esc(s)}</text>')
 
 
 def line(x1, y1, x2, y2, stroke=ACCENT, w=1.0, dash=None):
@@ -132,6 +137,18 @@ def leader(tx, ty, lx, ly, label, anchor="start", size=T_LABEL, weight="normal",
     ty_off = ly - 4 if anchor != "middle" else ly
     out.append(text(lx, ty_off, label, size=size, anchor=anchor, weight=weight, fill=fill))
     return "".join(out)
+
+
+def order_by_target_y(rows, ykey):
+    """Reorder annotation rows so their leader lines don't cross.
+
+    Leaders run from a target point to a label stacked top-to-bottom on the
+    right. Two leaders cross whenever a lower target is wired to a higher label.
+    Stable-sorting the rows by target y (so the topmost target gets the topmost
+    label slot) makes the target order match the slot order and removes every
+    crossing. `ykey(row)` returns the row's target y.
+    """
+    return sorted(rows, key=ykey)
 
 
 def dim(x1, y1, x2, y2, label, fill=INK2, size=T_SMALL, place=None):
@@ -249,7 +266,7 @@ def surround_boxes(root):
             if float(r.get("width")) < 20 and r.get("fill") != PAGE]
 
 
-# ---- CVD colour maths (Machado, Oliveira & Fernandes 2009, severity 1.0) --
+# ---- CVD color maths (Machado, Oliveira & Fernandes 2009, severity 1.0) --
 NAMES = ["white", "gold", "red", "blue", "black"]
 PALETTE = dict(zip(NAMES, POSSIBLE_EDGE_COLORS))
 

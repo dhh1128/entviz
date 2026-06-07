@@ -6,6 +6,8 @@ Entviz is a simple way to visualize values with high entropy &mdash; cryptograph
 
 ![example entviz](assets/example.svg)
 
+**Figure 1.** A representative v6 entviz, showing every channel at once.
+
 Compare [entmotif](https://dhh1128.github.io/entmotif), which turns entropy into music. The excellent [randomart](http://www.dirk-loss.de/sshvis/drunken_bishop.pdf) algorithm used with SSH keys is also related; it has a similar goal to entviz, but accepts different constraints and uses a different approach.
 
 ## Notation and requirements language
@@ -58,9 +60,13 @@ Note that decoding *is* used elsewhere — to compute a token's 24-bit quant fro
 
 ![text channel](assets/text-channel.svg)
 
+**Figure 2.** The text channel: the normalized input, tokenized into grid cells.
+
 Each entviz also conveys its entropy, in a second visual channel, via the **surround** around each cell's nucleus. The surround is composed of 24 small rectangles arranged in a ring (10 above the nucleus, 10 below, 2 on each side). Each box is either filled or empty, controlled by one bit of the cell's ftok quant; the filled boxes use a single per-cell **edge color** chosen as the palette entry perceptually closest to the cell's nucleus background. The result reads as the nucleus color "leaking outward" through a quant-controlled pixel pattern.
 
 ![surround channel](assets/surround-channel.svg)
+
+**Figure 3.** The surround channel: 24 fingerprint-driven boxes ringing each nucleus.
 
 The edge color is chosen from a fixed 4-color palette (the 4 non-background entries of \[white, gold, red, blue, black\]). The palette is intentionally simple, and perceptual selection ensures that even color-blind viewers can detect each cell as a separate object distinct from the background.
 
@@ -68,9 +74,13 @@ Each entviz conveys its entropy, in a third visual channel, via the color that p
 
 ![nucleus color channel](assets/nucleus-channel.svg)
 
+**Figure 4.** The nucleus-color channel: each cell's 24-bit token read as an RGB background.
+
 Zero or more cells in an entviz may be blank. The positioning of blank cells derives from the fingerprint. An entviz also contains small *quartile* marks on four cells. Blank cells and quartile marks are easily checked by viewers, and act as a sort of visual CRC. They surface differences that may be otherwise hidden in the middle of long strings and at the end of individual tokens.
 
 ![visual CRC](assets/crc.svg)
+
+**Figure 5.** The visual CRC: blank-cell map dots and quartile marks.
 
 Each entviz displays a **color bar** along its left edge. It is derived from the fingerprint and provides a redundant channel that allows rapid gestalt comparison: two entvizes with different 2-bit-pattern histograms will differ visibly in the bar even before a cell-by-cell comparison begins.
 
@@ -265,6 +275,8 @@ Rejection MUST be reported through the implementation's normal error channel (an
 
     ![split string into tokens](assets/tokens.svg)
 
+    **Figure 6.** Splitting the normalized input into 24-bit tokens.
+
     Also, if a token represents less than 24 bits of entropy, extend the bits of the token by repeating low-order bits until a full 24 bits is used. Call the 24-bit value associated with the token its **quant**.
 
     Specifically, given an integer value `v` with `actual_bits` bits of information (where `0 < actual_bits < 24`), the extension proceeds by repeated doubling of the current value, taking each pad chunk from the low-order bits of the *current* (already extended) value:
@@ -294,9 +306,13 @@ Rejection MUST be reported through the implementation's normal error channel (an
 
     ![grid options](assets/grid-options.svg)
 
+    **Figure 7.** Choosing the grid whose aspect ratio is closest to the target.
+
 1. Moving from left to right and top to bottom &mdash; which is how ASCII text should read if it wraps &mdash; number the cells from 0 to N, and call the number associated with each cell its **cell index**. Assign a *cell index* to each token. Unless changed, the *cell index* of a token will equal its *token index*.
 
     ![grid and cells](assets/grid-and-cells.svg)
+
+    **Figure 8.** Cell indexing, read left-to-right and top-to-bottom.
 
 1. Define the **used ftoks** as the first *token count* ftoks of the fingerprint, taken in ftok index order. The used ftoks map one-to-one to tokens: the used ftok at index *i* corresponds to the token with *token index* *i*. (Because *token count* is at most 22 and the fingerprint provides 22 ftoks, there are always enough.) Any ftoks beyond *token count* are not used. From here on, all fingerprint-based calculations operate on the used ftoks. The 24-bit value of an ftok is its **quant**, defined exactly as for a token.
 
@@ -331,6 +347,8 @@ Rejection MUST be reported through the implementation's normal error channel (an
 
     ![basic measurements for cell and grid](assets/cell-layout.svg)
 
+    **Figure 9.** Cell and 24-box surround geometry, all derived from `font_size_px`.
+
 1. Allocate the **grid rect**, a rectangle of dimensions *grid width* x *grid height* that contains only the cells of the grid. We will assume that the top left corner of the *grid rect* is at position (0, 0) on the canvas for the purpose of the cell calculations, but its actual position is determined by the bounding rect below.
 
 1. Allocate the **bounding rect**, the outermost rectangle of the entviz. It contains the *color bar* at its left, the *grid rect*, and the **label strips** (see the label-strip step below). Its dimensions are:
@@ -348,9 +366,13 @@ Rejection MUST be reported through the implementation's normal error channel (an
 
     ![entviz palette swatch](assets/palette-swatch.svg)
 
+    **Figure 10.** The entviz palette, spaced by CIELAB lightness (L\*).
+
     *Palette rationale.* The five colors are spaced primarily along **lightness** (CIELAB L\*), not hue, because lightness is the one channel that survives every color-vision deficiency, monochrome rendering, and CSS color filtering — the channels (hue, chroma) that read as vivid to normal vision are exactly the ones that collapse under CVD. Their L\* values are white 100, gold ≈78, red ≈57, blue ≈34, black 0. Gold sits at the **maximin** point between its neighbors: the white→gold and gold→red lightness gaps are equalized at ΔL\* ≈ 21, so neither is the weak link. (Gold was darkened from v5's `#ffd966` at L\*≈88, where the white/gold gap was only ΔL\* ≈ 12 — white and gold were near-indistinguishable on a grayscale/achromat rendering and the weakest pair in the whole palette.) Gold/red carries an additional hue cue (yellow vs red) on top of its lightness gap, so it tolerates the smaller gap; white/gold has no such backup, which is why the budget is spent equalizing it. **Honesty caveat:** under *protanopia* the red and blue swatches collapse to ΔL\* ≈ 7 regardless of palette choice — red darkens under protan simulation and no lightness assignment can prevent it; those two remain separable only via the retained blue-yellow axis and the color-bar letters (`r`/`b`). The palette is robust, not CVD-proof; the letters (see the color bar below) are the guaranteed fallback. The figure below shows the palette under normal vision plus the three dichromacies and achromatopsia (lightness-only), with the closest pair flagged per row; see `reviews/palette-optimization-findings.md` for the full derivation and rejected alternatives.
 
     ![entviz palette under color-vision deficiency](assets/palette-cvd.svg)
+
+    **Figure 11.** The palette under color-vision deficiency (normal vision, three dichromacies, and achromatopsia).
 
     The implementation MUST select the 2 low-order bits of the *quant* of the *median ftok* and use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. The implementation MUST then remove the selected color from the full *possible edge colors* array to form a new array of the 4 remaining colors, the **edge palette**. Black is therefore always present in the *edge palette* regardless of which background was chosen.
 
