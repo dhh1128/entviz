@@ -1,0 +1,10 @@
+{
+  "id": "cid-v1",
+  "entropy": "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

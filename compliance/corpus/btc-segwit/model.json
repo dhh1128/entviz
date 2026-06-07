@@ -1,0 +1,211 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ffa803",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 16655851,
+      "text": "qw50",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#00743b",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 9054897,
+      "text": "8d6q",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#990eb3",
+      "quartile": 3,
+      "row": 3,
+      "surround_bits": 16630379,
+      "text": "kv8f",
+      "text_size_px": 16.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#75eb8a",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 3457797,
+      "text": "3t4",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#bb8ccc",
+      "quartile": 1,
+      "row": 0,
+      "surround_bits": 9529924,
+      "text": "ejxt",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        0,
+        0
+      ],
+      "map_min": [
+        2,
+        2
+      ],
+      "quartile": null,
+      "row": 1
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#442a6a",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 6328910,
+      "text": "dg4y",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#22e2a0",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 14104867,
+      "text": "5r3z",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": true,
+      "blank_map": false,
+      "col": 0,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 2
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ddd9e8",
+      "quartile": 4,
+      "row": 2,
+      "surround_bits": 10959090,
+      "text": "arva",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#881f19",
+      "quartile": 2,
+      "row": 2,
+      "surround_bits": 1132559,
+      "text": "ry0c",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ee9da1",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 1642209,
+      "text": "5xw7",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 0
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 3
+    }
+  ],
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      147.0,
+      66.0
+    ],
+    "rotation": 24.0,
+    "rx": 94.356,
+    "ry": 57.7
+  },
+  "input_bytes": 42,
+  "labels": {
+    "bottom": null,
+    "top": "BTC SegWit: bc1...",
+    "truncation_marker": false
+  },
+  "rows": 4,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

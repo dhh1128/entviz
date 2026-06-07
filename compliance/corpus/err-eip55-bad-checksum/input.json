@@ -1,0 +1,10 @@
+{
+  "id": "err-eip55-bad-checksum",
+  "entropy": "0x5aaeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "eip55-checksum"
+}

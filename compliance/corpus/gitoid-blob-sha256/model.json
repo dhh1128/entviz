@@ -1,0 +1,217 @@
+{
+  "bg_color": "#ffffff",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#0f3a47",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 7144213,
+      "text": "473a0f",
+      "text_size_px": 12.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#e83b4c",
+      "quartile": 2,
+      "row": 0,
+      "surround_bits": 13955001,
+      "text": "4c3be8",
+      "text_size_px": 12.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#7203a3",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 14370807,
+      "text": "a30372",
+      "text_size_px": 12.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#131318",
+      "quartile": 1,
+      "row": 3,
+      "surround_bits": 11475637,
+      "text": "1813",
+      "text_size_px": 12.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#8136a9",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 15060800,
+      "text": "a93681",
+      "text_size_px": 12.0
+    },
+    "3": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        0,
+        2
+      ],
+      "map_min": [
+        2,
+        0
+      ],
+      "quartile": null,
+      "row": 1
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#e367a2",
+      "quartile": 3,
+      "row": 1,
+      "surround_bits": 5673284,
+      "text": "a267e3",
+      "text_size_px": 12.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#a7e9b1",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 11351968,
+      "text": "b1e9a7",
+      "text_size_px": 12.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#11dadc",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 1144450,
+      "text": "dcda11",
+      "text_size_px": 12.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#6f4385",
+      "quartile": 4,
+      "row": 2,
+      "surround_bits": 8383580,
+      "text": "85436f",
+      "text_size_px": 12.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#f741e1",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 14273269,
+      "text": "e141f7",
+      "text_size_px": 12.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#209174",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 9695305,
+      "text": "749120",
+      "text_size_px": 12.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 3
+    }
+  ],
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      87.0,
+      146.0
+    ],
+    "rotation": 0.0,
+    "rx": 37.335,
+    "ry": 57.7
+  },
+  "input_bytes": 83,
+  "labels": {
+    "bottom": null,
+    "top": "gitoid:blob:sha256:...",
+    "truncation_marker": false
+  },
+  "rows": 4,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

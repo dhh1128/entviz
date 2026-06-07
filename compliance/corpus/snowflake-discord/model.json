@@ -1,0 +1,105 @@
+{
+  "bg_color": "#e7be00",
+  "cells": {
+    "0": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        1,
+        0
+      ],
+      "map_min": [
+        0,
+        1
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#113580",
+      "quartile": 2,
+      "row": 0,
+      "surround_bits": 2000605,
+      "text": "803511",
+      "text_size_px": 12.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#462210",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 14655000,
+      "text": "102246",
+      "text_size_px": 12.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#229178",
+      "quartile": 3,
+      "row": 1,
+      "surround_bits": 6540200,
+      "text": "78912",
+      "text_size_px": 12.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 0
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 1
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 2
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 3
+    }
+  ],
+  "cols": 2,
+  "ellipse": {
+    "anchor": [
+      87.0,
+      26.0
+    ],
+    "rotation": 60.0,
+    "rx": 48.4,
+    "ry": 29.2
+  },
+  "input_bytes": 17,
+  "labels": {
+    "bottom": null,
+    "top": "snowflake:",
+    "truncation_marker": false
+  },
+  "rows": 2,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

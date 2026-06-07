@@ -1,0 +1,217 @@
+{
+  "bg_color": "#ffffff",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#dd1710",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 1214171,
+      "text": "EBfd",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#11ef96",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 4184416,
+      "text": "lu8R",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#46a669",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 12087014,
+      "text": "aaZG",
+      "text_size_px": 16.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#6fb1fc",
+      "quartile": 4,
+      "row": 3,
+      "surround_bits": 277610,
+      "text": "_LFv",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#5bb1db",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 420914,
+      "text": "27Fb",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#a1f7c7",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 3305170,
+      "text": "x_eh",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#08acae",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 8601162,
+      "text": "rqwI",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#bf729a",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 8650449,
+      "text": "mnK_",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        2,
+        2
+      ],
+      "map_min": [
+        3,
+        2
+      ],
+      "quartile": null,
+      "row": 2
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#bb29f0",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 4302568,
+      "text": "8Cm7",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#9bcaf6",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 12892555,
+      "text": "9sqb",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#1c0e01",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 4622806,
+      "text": "AQ4c",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 0
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 1
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 2
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 3
+    }
+  ],
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      147.0,
+      106.0
+    ],
+    "rotation": 84.0,
+    "rx": 76.726,
+    "ry": 80.187
+  },
+  "input_bytes": 44,
+  "labels": {
+    "bottom": null,
+    "top": "CESR Blake3-256:",
+    "truncation_marker": false
+  },
+  "rows": 4,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

@@ -1,0 +1,10 @@
+{
+  "id": "avalanche-b",
+  "entropy": "550e8400-e29b-41d4-a716-446655440001",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

@@ -1,0 +1,217 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#493b20",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 10289799,
+      "text": "IDtJ",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#617f54",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 4284015,
+      "text": "VH9h",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#539a4b",
+      "quartile": 1,
+      "row": 3,
+      "surround_bits": 12630981,
+      "text": "S5pT",
+      "text_size_px": 16.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#d84592",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 5489109,
+      "text": "kkXY",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#83ed33",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 10607251,
+      "text": "M+2D",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#a019ca",
+      "quartile": 4,
+      "row": 1,
+      "surround_bits": 13530596,
+      "text": "yhmg",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#5f9045",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 1085540,
+      "text": "RZBf",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": true,
+      "blank_map": true,
+      "col": 2,
+      "fingerprint": false,
+      "map_max": [
+        3,
+        0
+      ],
+      "map_min": [
+        1,
+        1
+      ],
+      "quartile": null,
+      "row": 1
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#e88078",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 7816414,
+      "text": "eIDo",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#93a056",
+      "quartile": 3,
+      "row": 2,
+      "surround_bits": 15731100,
+      "text": "VqCT",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#3e766d",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 9392401,
+      "text": "bXY+",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#a572d2",
+      "quartile": 2,
+      "row": 3,
+      "surround_bits": 16471827,
+      "text": "0nKl",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 2
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 3
+    }
+  ],
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      147.0,
+      146.0
+    ],
+    "rotation": 0.0,
+    "rx": 65.846,
+    "ry": 78.065
+  },
+  "input_bytes": 97,
+  "labels": {
+    "bottom": null,
+    "top": "SSH ed25519: AAAAC3NzaC1lZDI1NTE5AAAA...",
+    "truncation_marker": false
+  },
+  "rows": 4,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

@@ -1,0 +1,10 @@
+{
+  "id": "cesr-aid-b",
+  "entropy": "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

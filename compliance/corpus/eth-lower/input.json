@@ -1,0 +1,10 @@
+{
+  "id": "eth-lower",
+  "entropy": "0x742d35cc6634c0532925a3b844bc454e4438f44e",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

@@ -114,6 +114,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         raise ValueError(
             f"input must be at most {MAX_INPUT_CHARS} characters "
             f"(got {len(entropy_text)})")
+    # Reject out-of-range render parameters at the render() boundary so the
+    # library API matches the spec's Conformance error catalog (a Rust/TS port
+    # validates here too, not only in its CLI). Ranges mirror the CLI: font size
+    # [6, 30] pt; target aspect ratio [0.01, 100] (components 1..100). Only
+    # already-invalid inputs are rejected; no valid render output changes.
+    if not (6 <= font_size_pt <= 30):
+        raise ValueError(
+            f"font_size_pt must be in [6, 30] (got {font_size_pt})")
+    if not (0.01 <= target_ar <= 100):
+        raise ValueError(
+            f"target_ar must be in [0.01, 100] (got {target_ar})")
     # --- Normalize and tokenize the entropy ---
     raw_input = entropy_text.strip()
     parsed = parse(raw_input)

@@ -1,0 +1,217 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#72ac0c",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 8826827,
+      "text": "DKxy",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#33c8da",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 6370305,
+      "text": "2sgz",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#188abf",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 3760984,
+      "text": "v4oY",
+      "text_size_px": 16.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#71608a",
+      "quartile": 3,
+      "row": 3,
+      "surround_bits": 6041427,
+      "text": "imBx",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#72997e",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 14010089,
+      "text": "fply",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#60fbaf",
+      "quartile": 4,
+      "row": 1,
+      "surround_bits": 6599072,
+      "text": "r_tg",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#528cc0",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 15390324,
+      "text": "wIxS",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": true,
+      "blank_map": true,
+      "col": 2,
+      "fingerprint": false,
+      "map_max": [
+        1,
+        1
+      ],
+      "map_min": [
+        3,
+        0
+      ],
+      "quartile": null,
+      "row": 1
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#f6d7d7",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 5347530,
+      "text": "19f2",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#45c839",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 3724124,
+      "text": "OchF",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#f0d21e",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 7292930,
+      "text": "HtLw",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#f7603d",
+      "quartile": 2,
+      "row": 3,
+      "surround_bits": 2859269,
+      "text": "PWD3",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 0
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 1
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 2
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 3
+    }
+  ],
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      87.0,
+      66.0
+    ],
+    "rotation": 180.0,
+    "rx": 90.283,
+    "ry": 49.554
+  },
+  "input_bytes": 44,
+  "labels": {
+    "bottom": null,
+    "top": "CESR Ed25519 pubkey:",
+    "truncation_marker": false
+  },
+  "rows": 4,
+  "spec_version": "v7",
+  "truncated": false,
+  "user_note": null
+}

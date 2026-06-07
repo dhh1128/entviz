@@ -1,0 +1,222 @@
+"""Run an entviz implementation against the conformance corpus.
+
+Two ways to supply the implementation under test:
+
+* **In-process** (the reference, or any importable Python callable): pass a
+  ``render_fn(entropy, *, target_ar, font_size_pt, note) -> svg_str`` that
+  raises on rejected inputs.
+* **External / language-agnostic** (``--impl-cmd``): a shell command that reads
+  one vector's ``input.json`` on **stdin** and writes the SVG to **stdout** for
+  a render vector, or exits **non-zero** for an error vector. This is the
+  contract entviz-rs and entviz-js are certified through.
+
+Each render vector is checked at Tier A (render-model equality vs. the golden
+model) and Tier B (canonical raster vs. the golden PNG, text excluded). Error
+vectors are checked for rejection. Invariant pairs are checked for
+model equality.
+
+Run the reference self-certification:
+    PYTHONPATH=src:. python -m compliance.runner
+External impl:
+    PYTHONPATH=src:. python -m compliance.runner --impl-cmd './entviz-cli'
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+from dataclasses import dataclass, field
+
+from . import raster
+from .model import diff_models, extract_model
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CORPUS = os.path.join(HERE, "corpus")
+
+
+@dataclass
+class VectorResult:
+    vid: str
+    kind: str            # "render" | "error" | "invariant"
+    tier_a: bool | None = None
+    tier_b: bool | None = None
+    passed: bool = False
+    messages: list[str] = field(default_factory=list)
+
+
+@dataclass
+class Report:
+    results: list[VectorResult] = field(default_factory=list)
+
+    @property
+    def passed(self) -> bool:
+        return all(r.passed for r in self.results)
+
+    def summary(self) -> str:
+        n = len(self.results)
+        ok = sum(1 for r in self.results if r.passed)
+        lines = [f"{ok}/{n} vectors passed"]
+        for r in self.results:
+            if not r.passed:
+                lines.append(f"  FAIL [{r.kind}] {r.vid}")
+                for m in r.messages[:8]:
+                    lines.append(f"        {m}")
+        return "\n".join(lines)
+
+
+def reference_render(entropy, *, target_ar=1.0, font_size_pt=12, note=None):
+    from entviz.pipeline import render
+    return render(entropy, target_ar=target_ar, font_size_pt=font_size_pt, note=note)
+
+
+def _load(corpus_dir, vid, name):
+    with open(os.path.join(corpus_dir, vid, name)) as f:
+        return f.read()
+
+
+def _run_external(cmd: str, input_json: dict):
+    """Returns (svg_or_None, rejected_bool). rejected when exit code != 0."""
+    proc = subprocess.run(
+        cmd, shell=True, input=json.dumps(input_json).encode("utf-8"),
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if proc.returncode != 0:
+        return None, True
+    return proc.stdout.decode("utf-8"), False
+
+
+def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
+            impl_cmd: str | None = None, tiers=("A", "B"),
+            only: set[str] | None = None) -> Report:
+    """Certify an implementation against the corpus.
+
+    `only`, if given, restricts certification to that set of vector ids — used
+    to certify an implementation against the subset of vectors whose parsers it
+    has ported (the remainder are reported separately as out of scope, not as
+    failures). Invariant pairs are checked only when both members are in scope.
+    """
+    with open(os.path.join(corpus_dir, "manifest.json")) as f:
+        manifest = json.load(f)
+    report = Report()
+    models: dict[str, dict] = {}
+
+    def in_scope(vid):
+        return only is None or vid in only
+
+    for vid in manifest["render_vectors"]:
+        if not in_scope(vid):
+            continue
+        res = VectorResult(vid=vid, kind="render")
+        inp = json.loads(_load(corpus_dir, vid, "input.json"))
+        p = inp["params"]
+        try:
+            if impl_cmd:
+                svg, rejected = _run_external(impl_cmd, inp)
+                if rejected or svg is None:
+                    raise RuntimeError("implementation rejected a render vector")
+            else:
+                svg = render_fn(inp["entropy"], target_ar=p["target_ar"],
+                                font_size_pt=p["font_size_pt"], note=p["note"])
+        except Exception as e:  # noqa: BLE001
+            res.messages.append(f"render raised: {e!r}")
+            report.results.append(res)
+            continue
+
+        # Tier A
+        if "A" in tiers:
+            golden = json.loads(_load(corpus_dir, vid, "model.json"))
+            actual = extract_model(svg)
+            models[vid] = actual
+            d = diff_models(golden, actual)
+            res.tier_a = not d
+            if d:
+                res.messages.extend(d)
+        # Tier B
+        if "B" in tiers:
+            golden_png = open(os.path.join(corpus_dir, vid, "golden.png"), "rb").read()
+            try:
+                actual_png = raster.rasterize(
+                    svg, scale=manifest["raster_scale"])
+                rd = raster.compare_png(
+                    golden_png, actual_png,
+                    channel_tol=manifest["channel_tol"],
+                    pixel_fraction=manifest["pixel_fraction"])
+                res.tier_b = rd.ok
+                if not rd.ok:
+                    res.messages.append(
+                        f"raster diff: {rd.diff_pixels} px "
+                        f"({rd.fraction:.4%}) max={rd.max_channel_diff} {rd.note}")
+            except Exception as e:  # noqa: BLE001
+                res.tier_b = False
+                res.messages.append(f"rasterize failed: {e!r}")
+
+        res.passed = (res.tier_a is not False) and (res.tier_b is not False)
+        report.results.append(res)
+
+    # Error vectors: must be rejected.
+    for vid in manifest["error_vectors"]:
+        if not in_scope(vid):
+            continue
+        res = VectorResult(vid=vid, kind="error")
+        inp = json.loads(_load(corpus_dir, vid, "input.json"))
+        p = inp["params"]
+        rejected = False
+        try:
+            if impl_cmd:
+                _, rejected = _run_external(impl_cmd, inp)
+            else:
+                render_fn(inp["entropy"], target_ar=p["target_ar"],
+                          font_size_pt=p["font_size_pt"], note=p["note"])
+                rejected = False
+        except Exception:  # noqa: BLE001
+            rejected = True
+        res.passed = rejected
+        if not rejected:
+            res.messages.append(f"expected rejection ({inp['expect']}), got an SVG")
+        report.results.append(res)
+
+    # Invariant pairs: identical render models (only meaningful with Tier A).
+    if "A" in tiers and not impl_cmd:
+        for a, b in manifest.get("invariant_pairs", []):
+            if not (in_scope(a) and in_scope(b)):
+                continue
+            res = VectorResult(vid=f"{a}=={b}", kind="invariant")
+            if a in models and b in models:
+                # The invariant is that the VISUALIZATION is identical. The raw
+                # input-length metadata (data-input-bytes) legitimately differs
+                # (e.g. a dashed vs undashed UUID is 36 vs 32 chars) without any
+                # change to the entviz, so it is excluded from this comparison.
+                ma = {k: v for k, v in models[a].items() if k != "input_bytes"}
+                mb = {k: v for k, v in models[b].items() if k != "input_bytes"}
+                d = diff_models(ma, mb)
+                res.passed = not d
+                if d:
+                    res.messages.extend(d[:8])
+            else:
+                res.passed = False
+                res.messages.append("missing model for invariant pair")
+            report.results.append(res)
+
+    return report
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--corpus", default=DEFAULT_CORPUS)
+    ap.add_argument("--impl-cmd", default=None,
+                    help="external impl: reads input.json on stdin, writes SVG on stdout")
+    ap.add_argument("--tiers", default="AB", help="subset of A,B to run (default AB)")
+    ap.add_argument("--only", default=None,
+                    help="comma-separated vector ids to certify (subset)")
+    args = ap.parse_args()
+    tiers = tuple(t for t in ("A", "B") if t in args.tiers.upper())
+    only = set(args.only.split(",")) if args.only else None
+    report = certify(args.corpus, impl_cmd=args.impl_cmd, tiers=tiers, only=only)
+    print(report.summary())
+    sys.exit(0 if report.passed else 1)
+
+
+if __name__ == "__main__":
+    main()

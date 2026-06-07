@@ -1,0 +1,10 @@
+{
+  "id": "uuid-dashed",
+  "entropy": "550e8400-e29b-41d4-a716-446655440000",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

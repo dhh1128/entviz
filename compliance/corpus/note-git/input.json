@@ -1,0 +1,10 @@
+{
+  "id": "note-git",
+  "entropy": "309cf2674ee7a0749978cf8265ab91a60aea0f7d",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": "git"
+  },
+  "expect": "render"
+}

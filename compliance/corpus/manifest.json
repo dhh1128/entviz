@@ -1,0 +1,78 @@
+{
+  "spec_version": "v7",
+  "lib_version": "0.7.0",
+  "rasterizer": "cairosvg-2.9.0@scale2.0",
+  "raster_scale": 2.0,
+  "channel_tol": 16,
+  "pixel_fraction": 0.002,
+  "render_vectors": [
+    "hex-64",
+    "hex-128",
+    "hex-256",
+    "hex-512",
+    "uuid-dashed",
+    "uuid-undashed",
+    "uuid-nil",
+    "uuid-max",
+    "avalanche-a",
+    "avalanche-b",
+    "eth-lower",
+    "eth-checksummed",
+    "ulid-canonical",
+    "ulid-lowercase",
+    "btc-legacy",
+    "ripple",
+    "btc-segwit",
+    "btc-segwit-p2wsh",
+    "litecoin",
+    "bitcoincash",
+    "cosmos",
+    "stellar",
+    "cid-v1",
+    "cid-v0",
+    "lei-bloomberg",
+    "lei-lowercase",
+    "snowflake-discord",
+    "snowflake-19",
+    "cesr-aid-d",
+    "cesr-aid-b",
+    "cesr-said-e",
+    "ssh-ed25519",
+    "swhid-rev",
+    "swhid-cnt",
+    "gitoid-blob-sha256",
+    "text-hello",
+    "text-lorem",
+    "hex-1024",
+    "b64-large",
+    "ar-1x1",
+    "ar-2x1",
+    "ar-1x2",
+    "fs-6",
+    "fs-12",
+    "fs-24",
+    "note-git"
+  ],
+  "error_vectors": [
+    "err-eip55-bad-checksum",
+    "err-note-too-long",
+    "err-note-space",
+    "err-note-punct",
+    "err-fontsize-low",
+    "err-fontsize-high"
+  ],
+  "invariant_pairs": [
+    [
+      "uuid-dashed",
+      "uuid-undashed"
+    ],
+    [
+      "ulid-canonical",
+      "ulid-lowercase"
+    ],
+    [
+      "avalanche-a",
+      "uuid-dashed"
+    ]
+  ]
+}

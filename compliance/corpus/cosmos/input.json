@@ -1,0 +1,10 @@
+{
+  "id": "cosmos",
+  "entropy": "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

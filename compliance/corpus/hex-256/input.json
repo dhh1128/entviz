@@ -1,0 +1,10 @@
+{
+  "id": "hex-256",
+  "entropy": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

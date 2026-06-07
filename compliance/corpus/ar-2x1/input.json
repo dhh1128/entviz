@@ -1,0 +1,10 @@
+{
+  "id": "ar-2x1",
+  "entropy": "deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef",
+  "params": {
+    "target_ar": 2.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}
