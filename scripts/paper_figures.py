@@ -34,7 +34,7 @@ OUT = os.path.join(figlib.REPO_ROOT, "docs", "assets", "paper")
 # ===========================================================================
 
 def fig_cell_anatomy():
-    """Figure 4a — labelled anatomy of one v6 cell."""
+    """Figure 4a — labelled anatomy of one v7 cell."""
     art = render("0123456789abcdef0123456789abcdef", font_size_pt=24)
     root = parse(art)
     c0 = cells(root)[0]

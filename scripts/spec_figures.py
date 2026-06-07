@@ -79,11 +79,11 @@ def _annotated_cell(rows, italic_note="one cell, enlarged"):
 # ===========================================================================
 
 def fig_example():
-    """A clean, representative v6 entviz — the spec's opening illustration."""
+    """A clean, representative v7 entviz — the spec's opening illustration."""
     art = gallery("11-256-bit-hex.svg")
     margin, top = 40, 40
     art_w = 340
-    cap = ("A v6 entviz of a 256-bit input: text grid, color bar, surround texture, "
+    cap = ("A v7 entviz of a 256-bit input: text grid, color bar, surround texture, "
            "ellipse overlay, and CRC landmarks.")
     _, aw0, ah0, _ = _inner(art)
     art_h = art_w * ah0 / aw0

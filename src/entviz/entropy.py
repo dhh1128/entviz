@@ -1322,6 +1322,15 @@ def _core_byte_length(core: str, alphabet) -> int:
 #   F2 — domain separation guarantees this digest differs from the primary
 #        fingerprint, so the displayed middle is independent evidence rather
 #        than a re-readout of bytes that already drive the surround/color bar.
+# NOTE: the "/v6" is the version of THIS fingerprint-middle construction
+# (introduced in spec v6, unchanged since) — NOT the spec-document version. It
+# is a cryptographic domain-separation constant: do NOT bump it to track the
+# spec version (it is "v6" even though the spec is now v7). Changing this byte
+# string changes the 4 middle cells of every >512-bit entviz, which would break
+# comparison stability and the golden conformance corpus. Change it ONLY on a
+# breaking change to this derivation, never to mirror the spec version. (The
+# corpus's large-input vectors pin the current value, so an accidental change is
+# caught by tests/test_compliance.py.)
 _MIDDLE_DOMAIN_TAG = b"entviz/fingerprint-middle/v6\x00"
 
 
