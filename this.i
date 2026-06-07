@@ -2880,3 +2880,96 @@ Entviz = goal:
         output-preserving claims are corroborated by the byte-identical gallery
         regeneration. The only follow-up was correcting this batch's
         residual-cost wording in [[1nputcap]] ("microseconds" -> a few ms).
+
+    Conformance Formalization = decision:
+      id: c0nf0rm1
+      why: >
+        Record (2026-06-06): the v6 spec was given a rigorous, RFC-2119
+        conformance pass so that independent implementers (a Rust and a
+        TypeScript port are planned) can produce provably compliant renderers.
+        The pass is EDITORIAL and output-neutral: no algorithm, constant, or
+        rendered pixel changed, SPEC_VERSION stays v6, and the gallery + figure
+        SVGs remain byte-identical (verified by the figure drift guard + gallery
+        regen).
+
+        Two substantive additions to docs/spec.md: (1) a "Notation and
+        requirements language" section adopting RFC 2119/8174, with load-bearing
+        instructions re-voiced to MUST/SHOULD and rationale explicitly marked
+        non-normative (readability retained, normative core now extractable);
+        and (2) a normative "Conformance" section defining the abstract RENDER
+        MODEL an implementation must compute, a three-tier conformance model,
+        the EQUIVALENCE RELATION a checker uses, the SVG profile (required
+        data-* attributes + normative paint order), and the error-condition
+        catalog.
+
+        Key design choice — three conformance tiers, because the semantic model
+        alone is insufficient. Tier A (render model from the emitted data-*
+        attributes) proves the algorithm COMPUTED the right values and localizes
+        failures, but cannot prove what a human SEES: two SVGs with identical
+        render models can still paint in the wrong z-order or place. Tier B
+        rasterizes via one fixed reference rasterizer and pixel-compares — the
+        visual authority for layering/color/position/size/occlusion — excluding
+        text-glyph regions, since cross-platform glyph equality is explicitly a
+        non-goal (the font-fallback clause) and text is instead proven through
+        Tier A. Tier C is an optional non-blocking headless-browser smoke. This
+        decision drives the compliance suite (Phase 2) and the corpus published
+        as a release asset that each implementation certifies against. Tracked
+        in the tick ledger (Phase tickets); relates to [[s3cch41n]] (build
+        surface) and the threat-model channels [[usrn0te1]]/[[3ip55rj1]] whose
+        rejects are now in the normative error catalog.
+
+    Compliance Suite = decision:
+      id: c0mpsu1t
+      why: >
+        Record (2026-06-06): Phase 2 landed the conformance suite under
+        compliance/ (Tier A render-model extractor from data-* attrs +
+        normative geometry; Tier B canonical raster via cairosvg with text
+        stripped; corpus generator + language-agnostic runner; 44 render + 6
+        error + 3 invariant vectors). The reference self-certifies 53/53. Wired
+        into pytest with a corpus drift guard mirroring the figure guard
+        (tests/test_compliance.py). Implements the [[c0nf0rm1]] design.
+
+        Two follow-ons the suite forced out (both correct, both small):
+        (1) render() now validates font_size_pt in [6,30] and target_ar in
+        [0.01,100] at the LIBRARY boundary, not only in the CLI (app.py), so the
+        spec's error catalog is true of the importable API and a Rust/TS port
+        has a self-validating render() contract. Output-neutral: only
+        already-invalid params are rejected; no valid SVG changes.
+        (2) Fixed a spec self-contradiction the corpus surfaced (a 128-bit UUID
+        has an ellipse): the Guarantees section claimed inputs <256 bits omit
+        the ellipse, but the algorithm step + impl always draw it. The
+        Guarantees prose was corrected to match (resolves tick 5s5a). The
+        canonical reference rasterizer is pinned per-corpus in manifest.json
+        (cairosvg now; resvg is the intended longer-term authority for closer
+        browser fidelity — the rasterizer is pluggable).
+
+    Multi-Language Implementations = decision:
+      id: mult1mpl
+      why: >
+        Record (2026-06-06): Phases 3-5 of the [[entviz-multiimpl-plan]] — the
+        Rust + TypeScript + React implementations — live in SEPARATE repos
+        (~/code/entviz-rs, ~/code/entviz-js), not this one, for idiomatic
+        cargo/npm publishing; they certify against the corpus this repo
+        publishes (consumed locally for now).
+
+        entviz-js (TypeScript, Node native type-stripping, zero deps beyond
+        node:crypto) ports the full SHORT-INPUT shared algorithm and is
+        CERTIFIED 24/24 supported corpus vectors at Tier A (render model) AND
+        Tier B (canonical raster) via the real compliance runner. This proves
+        the cross-language pipeline end to end: an independent impl yields
+        identical render models and pixel-identical (non-text) rasters. Parsers
+        ported: hex, UUID, utf8->base64url fallback (+ note/font-size error
+        handling); the blockchain/CESR/SSH/etc parsers and the >512-bit branch
+        are mechanical follow-ons. A thin @entviz/react <Entviz/> wraps the
+        certified core. Two cross-language gotchas the corpus caught and pinned:
+        Python round() is banker's rounding (round-half-EVEN) — JS Math.round
+        and naive ports round half UP, which broke the 6pt cell-text size until
+        a roundHalfEven() was added; and the white bounding-rect fill is a real
+        painted element (not a cairosvg default), so omitting it failed Tier B
+        across the margins.
+
+        entviz-rs (Rust) is BLOCKED: this host has no rustc/cargo. It is
+        scaffolded with the deterministic shared core ported (mirroring the
+        certified TS) + cargo unit tests, but UNVERIFIED (uncompiled). Needs
+        rustup to build/test and to port the renderer + certify. Tracked by
+        tick 77ua / 3t6v.

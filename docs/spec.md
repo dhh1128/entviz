@@ -8,6 +8,14 @@ Entviz is a simple way to visualize values with high entropy &mdash; cryptograph
 
 Compare [entmotif](https://dhh1128.github.io/entmotif), which turns entropy into music. The excellent [randomart](http://www.dirk-loss.de/sshvis/drunken_bishop.pdf) algorithm used with SSH keys is also related; it has a similar goal to entviz, but accepts different constraints and uses a different approach.
 
+## Notation and requirements language
+
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in this document are to be interpreted as described in [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119) and [RFC 8174](https://www.rfc-editor.org/rfc/rfc8174) when, and only when, they appear in all capitals. Lowercase uses of these words carry their ordinary English meaning and impose no requirement.
+
+This document interleaves **normative** text (the requirements an implementation must satisfy) with **non-normative** text (explanation of *why* a requirement exists). Non-normative passages are introduced by **Note** or **Rationale**, or set off as block quotes. An implementation cannot become non-conformant by disregarding a note; such notes are retained deliberately for readability, but they never add or relax an obligation. Figures are illustrative and non-normative except where a normative passage cites a specific value they depict.
+
+The **[Conformance](#conformance)** section defines what it means to produce a correct entviz: the abstract *render model* an implementation must compute, the *equivalence relation* a checker uses to compare two renderings, the required *SVG profile* and *paint order*, and the *error conditions* every implementation MUST enforce. Read it together with the [Entviz Algorithm](#entviz-algorithm): the algorithm says *how* to compute an entviz; Conformance says *what a checker is entitled to verify*.
+
 ## Requirements
 * Work in environments that can draw bitmapped or vector graphics.
 * Losslessly represent all bits of entropy up to 512 bits. For larger inputs, losslessly represent the first 8 and last 8 tokens in the text channel (192 bits each for 4-/6-bit alphabets; 160 bits for the 5-bit alphabets, where a token is 4 characters); additionally show 4 tokens rendering a second, domain-separated fingerprint as hex in the text channel; and bind the entire input through the fingerprint.
@@ -66,7 +74,9 @@ Zero or more cells in an entviz may be blank. The positioning of blank cells der
 
 Each entviz displays a **color bar** along its left edge. It is derived from the fingerprint and provides a redundant channel that allows rapid gestalt comparison: two entvizes with different 2-bit-pattern histograms will differ visibly in the bar even before a cell-by-cell comparison begins.
 
-Each entviz that has at least 256 bits of input entropy also displays a partially transparent **ellipse overlay** derived from the fingerprint. The ellipse is anchored at a corner *interior* to the grid (a cell-corner that is not on the grid's outer boundary), sized to produce a visibly curved arc clipped within the grid, and it darkens or lightens the surround boxes and grid background beneath it without affecting the nuclei or text. This creates a large, organic shape that contributes to the overall gestalt identity of the entviz and makes a quick, high-level glance more informative. Inputs smaller than 256 bits omit the overlay entirely; their grids are too small for the curve to be readable.
+Each entviz displays a partially transparent **ellipse overlay** derived from the fingerprint. The ellipse darkens or lightens the surround boxes and grid background beneath it without affecting the nuclei or text. This creates a large, organic shape that contributes to the overall gestalt identity of the entviz and makes a quick, high-level glance more informative. The overlay is drawn on every entviz regardless of input size; its anchor enumeration adapts to grid size (see the ellipse-overlay step), so a large grid gets a centered, mostly-visible ellipse anchored at an *interior* corner, while a small grid gets a quarter- or half-ellipse silhouette anchored at an *external* corner — in both cases a visibly curved arc clipped within the grid.
+
+> **Note (non-normative).** Earlier drafts skipped the overlay for inputs under 256 bits; v4 removed that skip rule (see the ellipse-overlay step's "always draws an overlay") because the adaptive anchor enumeration keeps the silhouette readable even on the smallest 2×2 grid. The normative behavior is therefore: always draw the overlay.
 
 ## Thoughts About Comparing
 
@@ -77,10 +87,111 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 * spotcheck by reading a row or column or by having a column / row slider
 * render with a legend for rows and columns
 
+## Conformance
+
+This section is **normative**. It defines what a conformant entviz implementation is, and exactly which properties of its output a checker is entitled to verify. The [Entviz Algorithm](#entviz-algorithm) and [Cell Rendering Algorithm](#cell-rendering-algorithm) define *how* to compute the output; this section defines *what counts as correct*.
+
+### Conformant implementation
+
+A **conformant implementation** is a program that accepts the render inputs below and, for every input it does not reject, produces an SVG document that is **conformant-equivalent** (defined under [Equivalence relation](#equivalence-relation)) to the SVG the reference algorithm produces for the same inputs.
+
+The **render inputs** are:
+
+* **entropy** — the input string to visualize (REQUIRED).
+* **target aspect ratio** — a positive rational `W:H` (OPTIONAL; the default, and the value used throughout the worked examples, is `1:1`).
+* **reference font size** — an integer point size (OPTIONAL; default `12`). An implementation MUST support at least the range `[6, 30]` points; behavior outside an implementation's supported range is governed by [Error conditions](#error-conditions).
+* **user note** — an OPTIONAL out-of-band caption, supplied through a dedicated parameter and **never** as part of the entropy string (see the label-strip step).
+
+An implementation MUST be **deterministic**: identical render inputs MUST yield conformant-equivalent output on every invocation, on every platform. No part of the output may depend on wall-clock time, locale, environment, or a random source. (The clip-path `id` salt is derived from the fingerprint, not from randomness; see the SVG profile.)
+
+### The three conformance tiers
+
+Correctness is verified at three tiers. A checker compares an implementation's output, for each input in the published **conformance corpus**, against that input's golden artifacts.
+
+* **Tier A — render model (semantic correctness).** The checker recovers the abstract [render model](#the-render-model-tier-a) from the implementation's SVG (via the [SVG profile](#svg-profile)'s required attributes) and compares it field-for-field to the golden render model. Tier A proves that the algorithm computed the right *values*. It is fast and it **localizes** failures (e.g. "edge color of cell 7 is wrong"), which a pixel comparison cannot.
+* **Tier B — canonical raster (visual correctness).** The implementation's SVG is rasterized by the single **reference rasterizer** pinned by the corpus, and the result is compared, pixel-by-pixel, to the golden raster. Tier B is the authority on what a human actually *sees*: it proves layering, color, position, size, and occlusion — properties Tier A cannot prove, because two SVGs with identical render models can still paint them in the wrong order or place. See [Canonical rasterization](#canonical-rasterization-tier-b) for the text-region exclusion and tolerance.
+* **Tier C — browser smoke (deployment sanity).** A small subset of the corpus is rendered in a headless browser and screenshot-compared with loose tolerance. Browsers are the real deployment target but are not bit-reproducible, so Tier C is a non-blocking sanity check, never the authority.
+
+**Conformance levels.** An implementation is **Core-conformant** if it passes Tier A for the entire corpus; **Visual-conformant** if it additionally passes Tier B; and **Fully conformant** if it additionally passes Tier C. A claim of conformance MUST state the level and the corpus (spec) version it was certified against.
+
+### The render model (Tier A)
+
+The **render model** is the abstract structure the algorithm computes prior to SVG serialization. For a given set of render inputs it comprises exactly the following, and two render models are **equal** iff all of these fields are equal:
+
+* **version**: spec version and library version stamps.
+* **input metadata**: the normalized byte length of the input; the `truncated` flag (true iff the large-input path was taken); the user note, if any.
+* **grid**: `cols`, `rows` (hence cell count).
+* **entviz background color** (one of the four background candidates).
+* **cells**, keyed by *cell index*; each cell is either blank or filled.
+  * A **filled** cell records: token text; nucleus background color (RGB); foreground color (`#000000`/`#ffffff`); edge color (a palette entry); the 24 surround bits (which boxes are filled); the rendered-font-size class (full vs. 0.75×); whether it is a fingerprint (middle) cell; and the quartile orientation, if the cell carries a quartile mark.
+  * A **blank** cell records its presence, and — for the single map-bearing blank — the `(row, col)` of the minftok and maxftok dots.
+* **color bar**: the ordered list of bands, each with its color, rank, and letter.
+* **ellipse**: absent, or present with `anchor (x, y)`, `rx`, `ry`, `rotation`, and the fill/stroke color and opacities implied by the background.
+* **labels**: the top-label text (including the truncation marker, type, and stripped prefix) and the bottom-label text (suffix and/or note), with the marker segment distinguished.
+
+An implementation MUST expose enough machine-readable structure in its SVG — at minimum the attributes enumerated in the [SVG profile](#svg-profile) — for a checker to recover every field of the render model unambiguously. The authoritative serialization of each field, for each corpus input, is the golden render model published with the corpus (generated by the reference implementation).
+
+### Equivalence relation
+
+Two SVG documents are **conformant-equivalent** iff (a) their render models are equal (Tier A) **and** (b) their canonical rasters match within tolerance (Tier B). Visual-conformance requires both; Core-conformance requires only (a).
+
+The following are **purely serialization-level** differences. They MUST NOT be treated as non-conformance, and the equivalence relation ignores them:
+
+* the XML prolog, `DOCTYPE`, character-encoding declaration, and namespace declarations;
+* attribute ordering, element indentation, and insignificant whitespace;
+* numeric formatting that denotes the same value within the geometry-rounding rules of this spec (e.g. `60` vs `60.0` vs `60.00`);
+* the concrete value of any salted `id` (e.g. the clip-path id), provided ids remain unique within the document as required;
+* element grouping (`<g>` nesting) that changes neither paint order nor geometry;
+* the presence of additional, advisory metadata beyond the REQUIRED attribute set, provided it does not alter rendering.
+
+Conversely, any difference in the render model, or any difference visible in the canonical raster outside text-glyph regions beyond tolerance, **is** non-conformance.
+
+### Canonical rasterization (Tier B)
+
+The corpus pins exactly one **reference rasterizer** (name, version, and rendering DPI) and ships, per input, a **golden raster** produced by it. An implementation's SVG, rasterized by that same rasterizer at that DPI, MUST match the golden raster.
+
+**Text-glyph regions are excluded** from the pixel comparison. This spec does not require glyph-shape equality across platforms (see the font-family fallback chain in the algorithm): the visible glyph depends on which monospace font the environment provides. Text is therefore proven through the render model (Tier A: content, position via cell geometry, rendered size class, and fill color), not through pixel equality. The excluded regions are the bounding boxes of the `<text>` elements (cell text, label strips, and color-bar letters). **Every other channel** — surround boxes, nucleus fills, quartile triangles, the color-bar band fills, the ellipse overlay, blank-cell outlines and the blank-cell map dots, and the gray borders — MUST match the golden raster within the corpus's stated per-channel tolerance (a small allowance for anti-aliasing only).
+
+Because Tier B fixes one rasterizer for all implementations, a pixel difference means the *SVG* differs, not the renderer — which is what makes cross-language certification meaningful.
+
+### SVG profile
+
+A conformant SVG MUST satisfy the following. These requirements are what make Tiers A and B checkable; they constrain *structure and paint order*, not serialization style (see the equivalence relation).
+
+* The root `<svg>` MUST carry `width`, `height`, and `viewBox="0 0 <bounding_width> <bounding_height>"`, so consumers can scale the entviz responsively.
+* The SVG MUST carry the spec-version and library-version stamps (`data-entviz-version`, `data-entviz-lib`) and the grid dimensions (`data-cols`, `data-rows`).
+* Each grid cell MUST be identifiable by `data-cell-index` and locatable by `data-cell-col`/`data-cell-row`. Blank cells MUST be flagged (`data-cell-blank`), the map-bearing blank distinguished (`data-cell-blank-map`) with its dot positions (`data-blank-map-min`, `data-blank-map-max`), fingerprint/middle cells flagged (`data-cell-fingerprint`), and quartile-bearing cells marked (`data-cell-quartile`).
+* Each color-bar band MUST carry its stable uppercase identifier (`data-color-bar-band` ∈ `{W,G,R,B,K}`), its `data-color-bar-rank`, and `data-color-bar-letter`.
+* When an ellipse overlay is present, its parameters MUST be exposed (`data-ellipse-anchor-x`, `data-ellipse-anchor-y`, `data-ellipse-rx`, `data-ellipse-ry`, `data-ellipse-rotation-deg`).
+* Truncated (large-input) renders MUST set `data-truncated`; a user note MUST be exposed on its `<text>` element as `data-user-note`. Logical channels MAY be grouped and tagged with `data-channel`.
+* The clip-path `id` confining the ellipse overlay MUST be unique within the enclosing HTML document; the reference implementation salts it with the fingerprint and grid dimensions (see the ellipse step). Its concrete value is not significant (equivalence relation).
+
+**Paint order (normative layering).** Implementations MUST paint in the following back-to-front order, because the visual result — what occludes what — depends on it and is verified by Tier B:
+
+1. the bounding-rect white fill and the color bar (with its letters);
+2. per cell, the **surround boxes**;
+3. the **ellipse overlay**, clipped to the grid rect;
+4. per cell, the **nucleus rect**, then the **cell text**, then the **quartile mark** (so text and nuclei are never tinted by the overlay);
+5. the **blank-cell** outlines and the **blank-cell map** (so the map sits on top of any overlay tint);
+6. the **label strips**;
+7. the gray **border lines** last, so nothing overwrites them.
+
+### Error conditions
+
+A conformant implementation MUST reject the following inputs with an error and MUST NOT emit an SVG for them:
+
+* a **mixed-case Ethereum (EIP-55) address whose case pattern fails the EIP-55 checksum** — the error MUST identify the first mismatched-case digit (see the normalization step). All-lowercase and all-uppercase Ethereum addresses are accepted ("checksum not asserted").
+* a **user note that violates sanitization** — anything other than a single token of 1–8 ASCII alphanumerics (`[A-Za-z0-9]{1,8}`). The note MUST NOT be silently truncated or otherwise mangled (see the label-strip step).
+* render parameters **outside the implementation's supported range** — e.g. a reference font size outside `[6, 30]` or an aspect-ratio component outside the implementation's accepted bounds. (The reference implementation rejects font sizes outside `[6, 30]` and aspect-ratio components outside `[1, 100]`.)
+
+A well-formed input that selects a degenerate grid (fewer than 2 columns or 2 rows) cannot arise from the grid-selection rule, which guarantees at least a 2×2 grid; an implementation MUST NOT emit a single-row or single-column grid regardless.
+
+Rejection MUST be reported through the implementation's normal error channel (an exception, a non-zero exit, etc.); the specific mechanism is implementation-defined, but the *set* of rejected inputs is normative.
+
 ## Entviz Algorithm
 1. Normalize the input.
     * Remove all whitespace.
-    * Detect the entropy type, if possible, and split the input into prefix, core, and suffix, with all three pieces of data normalized. This should eliminate case differences, putting the entropy in canonical case, with canonical punctuation. It should identify prefixes that are not true entropy (e.g., the "0x" prefix on an Ethereum address, the "AAAA" at the front of an SSH key, etc.). It should identify suffixes that are checksums or derivations of the true entropy. A suffix is reserved for material **bound** to the entropy — a checksum or derivation that cannot vary while the entropy is fixed (e.g. an LEI's MOD 97-10 check digits, a base58check checksum). Material that is merely a **free** annotation — attached to the value but able to vary while the value stays fixed, and often unbounded in length (an SSH public-key comment such as `user@host`, or SWHID qualifiers such as `;origin=…;lines=…`) — is **not** a suffix: the parser still recognizes the input via its core, but the annotation is dropped (not entered into the core, not surfaced as a suffix). Dropping free annotations keeps non-value, attacker-mutable, potentially-unbounded text out of the visualization (see the label-strip step), and is consistent with the out-of-band-only treatment of user captions. The reference implementation in python has an `entropy` module with a `parse(txt)` method that can be used as an oracle, and it has unit tests that can provide a test vector.
+    * Detect the entropy type, if possible, and split the input into prefix, core, and suffix, with all three pieces of data normalized. Normalization MUST eliminate case differences, putting the entropy in canonical case, with canonical punctuation. It MUST identify prefixes that are not true entropy (e.g., the "0x" prefix on an Ethereum address, the "AAAA" at the front of an SSH key, etc.). It MUST identify suffixes that are checksums or derivations of the true entropy. A suffix is reserved for material **bound** to the entropy — a checksum or derivation that cannot vary while the entropy is fixed (e.g. an LEI's MOD 97-10 check digits, a base58check checksum). Material that is merely a **free** annotation — attached to the value but able to vary while the value stays fixed, and often unbounded in length (an SSH public-key comment such as `user@host`, or SWHID qualifiers such as `;origin=…;lines=…`) — is **not** a suffix: the parser still recognizes the input via its core, but the annotation is dropped (not entered into the core, not surfaced as a suffix). Dropping free annotations keeps non-value, attacker-mutable, potentially-unbounded text out of the visualization (see the label-strip step), and is consistent with the out-of-band-only treatment of user captions. The reference implementation in python has an `entropy` module with a `parse(txt)` method that can be used as an oracle, and it has unit tests that can provide a test vector.
     **Presentation vs. identity vs. annotation (the swap test).** Every part of the input is classified by whether it carries *identity bits* — information that distinguishes this value from another value of the same shape. The fingerprint (and, where possible, the cells) **MUST** bind exactly the identity bits and **MUST NOT** bind the rest. There are three classes:
 
       * **Presentation** — describes *how* the value is written, not what it is: `0x` (hex notation), a multibase base selector, SSH/PEM serialization framing, and **case** itself. Presentation is normalized away: it is shown in the label (as the encoding/type name) but enters **neither** the cells **nor** the fingerprint. This is the same principle as case-normalization, generalized to radix and serialization.
@@ -99,7 +210,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     (This is the prefix-side analogue of the **bound vs. free** rule for suffixes above: both ask whether a piece of the input carries identity bits. See `this.i:s3mpr3fx`.)
 
-    * If no specific-format parser matches, attempt **alphabet detection by disproof**: iterate through the known alphabets from most-restrictive to least and return the first one whose character set contains every character of the input. The order is: `hex` → `base32` → `bech32` → `base58` → `base64` → `base64url`. Hex/base32/bech32 detection is case-insensitive; base58/base64/base64url are case-sensitive (they treat upper and lower case as distinct characters). A successful disproof match treats the input itself as the normalized core under the detected alphabet (no re-encoding). *Known limitation:* bech32's alphabet excludes `1` (it's the bech32 separator character), so a bare bech32 fragment that happens to contain a `1` will fail bech32 disproof and resolve to the next matching alphabet (base58, base64, base64url, or UTF-8 fallback). Real bech32 addresses with their `bc1`/`tb1`/`ltc1`/`addr1`/`bitcoincash:` prefixes are handled correctly by the specific-format parsers ahead of disproof; this caveat applies only to bare fragments pasted without their prefix.
+    * If no specific-format parser matches, the implementation MUST attempt **alphabet detection by disproof**: iterate through the known alphabets from most-restrictive to least and return the first one whose character set contains every character of the input. The order MUST be: `hex` → `base32` → `bech32` → `base58` → `base64` → `base64url`. Hex/base32/bech32 detection is case-insensitive; base58/base64/base64url are case-sensitive (they treat upper and lower case as distinct characters). A successful disproof match treats the input itself as the normalized core under the detected alphabet (no re-encoding). *Known limitation:* bech32's alphabet excludes `1` (it's the bech32 separator character), so a bare bech32 fragment that happens to contain a `1` will fail bech32 disproof and resolve to the next matching alphabet (base58, base64, base64url, or UTF-8 fallback). Real bech32 addresses with their `bc1`/`tb1`/`ltc1`/`addr1`/`bitcoincash:` prefixes are handled correctly by the specific-format parsers ahead of disproof; this caveat applies only to bare fragments pasted without their prefix.
     * If even disproof finds no fit (e.g., the input contains a space, punctuation, or other unencodable characters), fall back to treating the input as an arbitrary bag of bits: encode the input string to UTF-8 bytes, then re-render those bytes as a URL-safe base64 string (no padding). The resulting base64 string is treated as the normalized core; the type is `base64`. UTF-8 is the canonical byte encoding for the fallback path; implementations MUST NOT use other encodings (Latin-1, UTF-16, etc.) because that would change the fingerprint of identical-looking inputs.
 
     **Case normalization is intentional and load-bearing.** For every case-insensitive alphabet, normalization canonicalizes case before the input is fingerprinted. Most alphabets (hex, UUID, bech32, crockford32, and EOS's base alphabet) canonicalize to **lower** case; base32 canonicalizes to **upper** case, which is its RFC 4648 convention (see the base32 alphabet note below). The direction does not matter — what matters is that it is consistent per alphabet. As a result, two inputs differing only in case for a case-insensitive alphabet produce **identical** entvizes. This is required: without it, a benign tooling difference (one system emits uppercase hex, another lowercase) would render as an entropy difference. Cell text shows the *normalized* form, not the input form. (See `this.i:c4s3norm`.)
@@ -177,7 +288,7 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
 1. The complete entropy is visualized as a rectangular **grid** consisting of a certain number of **cells**. Call this number of cells the **cell count**. Each token is rendered into one cell in the grid, and if the rectangle of the grid has more cells than *token count*, one or more cells will be empty.
 
-    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of **3:2** (= `cell_width` : `cell_height` = `3.75·font_size_px` : `2.5·font_size_px`). Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
+    Grids of a single row or a single column are invalid: the minimum grid is 2 columns by 2 rows. Each cell touches its neighbors directly and has an aspect ratio of **3:2** (= `cell_width` : `cell_height` = `3.75·font_size_px` : `2.5·font_size_px`). Given a **target aspect ratio** for the entviz (or, if none is given, using 1:1 as the target), the implementation MUST choose the grid layout that produces an overall rectangle with an aspect ratio closest to the target, without being less than the target when the ratios are written as fractions, and with at least 2 columns and 2 rows.
 
     >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·3):(2·2) = 18:4 = 9:2), 4 columns and 3 rows (12:6 = 2:1), 3 columns and 4 rows (9:8), or 2 columns and 6 rows (6:12 = 1:2). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
 
@@ -241,9 +352,9 @@ Each entviz that has at least 256 bits of input entropy also displays a partiall
 
     ![entviz palette under color-vision deficiency](assets/palette-cvd.svg)
 
-    Select the 2 low-order bits of the *quant* of the *median ftok*. Use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. Remove the selected color from the full *possible edge colors* array to generate a new array consisting of the 4 remaining colors, and call this the **edge palette**. Black is therefore always present in the *edge palette* regardless of which background was chosen.
+    The implementation MUST select the 2 low-order bits of the *quant* of the *median ftok* and use this 2-bit number as an index into the background-candidates portion of the array (indices 0-3) to select the **entviz background color**. For example, if the 2-bit number == 1, the background color is gold. The implementation MUST then remove the selected color from the full *possible edge colors* array to form a new array of the 4 remaining colors, the **edge palette**. Black is therefore always present in the *edge palette* regardless of which background was chosen.
 
-    *Note on entropy.* The entviz background color carries only 2 bits of entropy (4 possible values), so a grinding attacker can match a target's background color in an expected ~4 candidate inputs. This is intentional and acceptable: the background is a hint channel — its job is to make two unrelated entvizes look unrelated *at a glance*, not to provide independent collision resistance. The serious collision resistance lives in the surround pattern, the color bar histogram, the ellipse overlay, the blank-cell positions, and the quartile marks. A would-be attacker who matches the background color must still independently match each of those higher-bandwidth channels.
+    > **Rationale (non-normative).** The entviz background color carries only 2 bits of entropy (4 possible values), so a grinding attacker can match a target's background color in an expected ~4 candidate inputs. This is intentional and acceptable: the background is a hint channel — its job is to make two unrelated entvizes look unrelated *at a glance*, not to provide independent collision resistance. The serious collision resistance lives in the surround pattern, the color bar histogram, the ellipse overlay, the blank-cell positions, and the quartile marks. A would-be attacker who matches the background color must still independently match each of those higher-bandwidth channels.
 
 1. Inside the *grid rect*, render each token T into its appropriate cell in the grid, using its corresponding used ftok and the *edge palette*, according to the [cell rendering algorithm](#cell-rendering-algorithm) below.
 
