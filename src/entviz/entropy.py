@@ -492,12 +492,17 @@ def parse_cesr(text) -> Parsed:
             for item in items:
                 if text.startswith(item[0]) and len_text == item[2]:
                     if BASE64URL_NO_PAD_REGEX.match(text):
-                        # The derivation code is identity-bearing (swap test):
-                        # the same body under a different code is a different
-                        # object, so the code MUST bind the fingerprint.
-                        return Parsed(f"CESR {item[1]}", BASE64URL, item[0],
-                                      text[len(item[0]):], None,
-                                      prefix_semantic=True)
+                        # The derivation code is IDENTITY, not a stripped
+                        # prefix: the same body under a different code is a
+                        # different object (swap test). It is base64url like
+                        # the body and sits contiguously at the front, so it
+                        # stays IN the core — rendered in the cells AND bound
+                        # by the fingerprint (which hashes the core text). The
+                        # decoded type ("CESR Ed25519 pubkey") goes in the
+                        # label; we do NOT split the code into `prefix`.
+                        # See `this.i:s3mpr3fx` and `this.i:h4shtext`.
+                        return Parsed(f"CESR {item[1]}", BASE64URL, None,
+                                      text, None)
 
 def parse_ssh_key(text) -> Parsed:
     """
@@ -852,10 +857,20 @@ def parse_lei(text) -> Parsed:
     2-char MOD 97-10 checksum. Case-insensitive; normalized to upper.
 
     Returns the ISO 17442 split:
-      * prefix = 4-char LOU issuer code + "00" reserved (6 chars, structural)
-      * core   = 12-char entity body (the per-entity entropy)
-      * suffix = 2-char MOD 97-10 checksum
-    Mirrors how Bitcoin legacy reports its version byte and base58 checksum.
+      * prefix = None — the LOU issuer code is IDENTITY, not structural
+      * core   = LOU + "00" + 12-char entity body (18 chars, base36)
+      * suffix = 2-char MOD 97-10 checksum (bound; see this.i:sufxbind)
+
+    The LOU (the issuing organization's 4-char code) is part of the LEI's
+    identity, not framing: the same 12-char entity body under a different
+    LOU is a *different registration* (swap test). It is base36 like the
+    rest and contiguous at the front, so it stays IN the core — rendered in
+    the cells AND bound by the fingerprint. (Earlier versions split LOU+"00"
+    off as a structural prefix, leaving the LOU out of the fingerprint — the
+    same bug we fixed for CESR codes.) The reserved "00" is constant framing
+    but is kept in the core to keep the core a contiguous substring of the
+    input (verbatim-fidelity for the text channel); being constant it adds
+    no distinguishing bits. See `this.i:s3mpr3fx`.
     """
     if not text:
         return None
@@ -867,7 +882,7 @@ def parse_lei(text) -> Parsed:
         return None
     if not _lei_checksum_ok(upper):
         return None
-    return Parsed("LEI", BASE36, upper[:6], upper[6:18], upper[18:])
+    return Parsed("LEI", BASE36, None, upper[:18], upper[18:])
 
 def parse_did(text) -> Parsed:
     """
@@ -914,6 +929,12 @@ def parse_swhid(text) -> Parsed:
         m.group(1).lower(),
         m.group(2).lower(),
         None,
+        # The object-type (cnt/rev/snp/…) is IDENTITY: the same hash under a
+        # different type is a different object (swap test). It lives in the
+        # prefix (it is letters, a different alphabet from the hex body, so
+        # it can't join the hex cell stream), so it binds the fingerprint via
+        # the prefix-fold path rather than the cells. See `this.i:s3mpr3fx`.
+        prefix_semantic=True,
     )
 
 def parse_gitoid(text) -> Parsed:
@@ -940,8 +961,12 @@ def parse_gitoid(text) -> Parsed:
         return None
     # No type: the gitoid:<obj>:<algo>: prefix is self-describing, so a type
     # would just echo it. The label shows the prefix alone. See
-    # this.i:lbldedup.
-    return Parsed("", HEX, m.group(1).lower(), body, None)
+    # this.i:lbldedup. The object-type (blob/tree/…) and hash-algo are
+    # IDENTITY (swap test) and live in the prefix (a different alphabet from
+    # the hex body), so they bind the fingerprint via the prefix-fold path.
+    # Without this, a gitoid and a SWHID over the same git hash would collide
+    # in every fingerprint channel. See `this.i:s3mpr3fx`.
+    return Parsed("", HEX, m.group(1).lower(), body, None, prefix_semantic=True)
 
 def _bech32_polymod(values):
     """BIP-173 bech32 checksum polymod over a list of 5-bit values."""

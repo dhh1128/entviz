@@ -60,16 +60,19 @@ VALID_LEIS = [
 
 
 def test_canonical_lei_parses():
-    """ISO 17442 split: first 4 chars = LOU (issuer code) + "00" reserved
-    → `prefix` (structural, identifies issuer); middle 12 chars = entity
-    body → `core`; last 2 chars = MOD 97-10 checksum → `suffix`."""
+    """ISO 17442 split, identity-aware (see this.i:s3mpr3fx): the LOU issuer
+    code is IDENTITY, not framing — the same entity body under a different
+    LOU is a different registration — so it stays IN the `core` (rendered in
+    the cells AND bound by the fingerprint), not split into a prefix. core =
+    LOU + "00" + 12-char entity body (the whole LEI minus its checksum);
+    suffix = the 2-char MOD 97-10 checksum (bound)."""
     p = parse_lei("5493001KJTIIGC8Y1R12")
     assert p is not None
     assert p.type == "LEI"
     assert p.alphabet is BASE36
-    assert p.prefix == "549300"             # 4-char LOU + "00" reserved
-    assert p.core == "1KJTIIGC8Y1R"         # 12-char entity body
-    assert p.suffix == "12"                 # 2-char MOD 97-10 check
+    assert p.prefix is None                       # LOU is identity, not prefix
+    assert p.core == "5493001KJTIIGC8Y1R"         # LOU + "00" + entity body
+    assert p.suffix == "12"                       # 2-char MOD 97-10 check
 
 
 def test_all_three_fixtures_parse():
@@ -77,24 +80,24 @@ def test_all_three_fixtures_parse():
         p = parse_lei(lei)
         assert p is not None, f"failed to parse known-valid LEI {lei}"
         assert p.type == "LEI"
-        assert p.prefix == lei[:6].upper()
-        assert p.core == lei[6:-2].upper()
+        assert p.prefix is None
+        assert p.core == lei[:-2].upper()         # everything but the checksum
         assert p.suffix == lei[-2:].upper()
 
 
 def test_lowercase_input_is_normalized_to_uppercase():
     p = parse_lei("5493001kjtiigc8y1r12")
     assert p is not None
-    assert p.prefix == "549300"
-    assert p.core == "1KJTIIGC8Y1R"
+    assert p.prefix is None
+    assert p.core == "5493001KJTIIGC8Y1R"
     assert p.suffix == "12"
 
 
 def test_mixed_case_input_is_normalized_to_uppercase():
     p = parse_lei("5493001kJtIiGc8Y1R12")
     assert p is not None
-    assert p.prefix == "549300"
-    assert p.core == "1KJTIIGC8Y1R"
+    assert p.prefix is None
+    assert p.core == "5493001KJTIIGC8Y1R"
     assert p.suffix == "12"
 
 

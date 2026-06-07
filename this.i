@@ -1874,15 +1874,19 @@ Entviz = goal:
         content-role guess that [[g1tha5h0]] rejects.
 
         SUPERSEDED in part by [[s3mpr3fx]]: the claim above that the
-        CESR code is label-only (like the CID codec in clause (a))
-        was WRONG. Unlike a CID's interior codec — which names what
-        the digest wraps but does not change the digest's bytes — the
-        CESR derivation code is identity-bearing: the same body under
-        a different code is a different object. So the code now binds
-        the fingerprint (hashed as `prefix + core`), and the
-        "fingerprint unchanged" symmetry with CIDs no longer holds
-        for CESR. The gallery taxonomy was also corrected there (`D`
-        is a verification key, not "the transferable AID"; the usual
+        CESR code is label-only (clause (a)'s "fingerprint unchanged")
+        was WRONG. The CESR derivation code is identity-bearing: the
+        same body under a different code is a different object, so it
+        MUST bind the fingerprint. The fix keeps the code IN the core
+        (it is base64url and contiguous), so it now drives both the
+        cells and the fingerprint; the clause-(a) "fingerprint
+        unchanged" symmetry no longer holds for CESR. NB the CID
+        interior codec IS also identity (a dag-pb vs raw CID over the
+        same hash is a different object) — but it is already bound,
+        because in a CIDv1 it sits inside the base32 body that IS the
+        core, so no change was needed there (see [[s3mpr3fx]]'s
+        sweep). The gallery taxonomy was also corrected (`D` is a
+        verification key, not "the transferable AID"; the usual
         transferable AID is the self-addressing `E`).
 
     Semantic Prefixes Bind the Fingerprint = decision:
@@ -1909,26 +1913,62 @@ Entviz = goal:
         the format; no other prefix could precede the same 20 bytes
         to mean a different address, so it carries no identity bits.
 
-        THE SWAP TEST (the crisp rule, now in docs/spec.md). Hold
-        the body fixed; is there another legal prefix that could sit
-        there and make the string denote a DIFFERENT value?
-          * No  → SIGNAL prefix (0x, gitoid:, swh:1:, SSH AAAA…):
-                  label only; fingerprint over core. The default.
-          * Yes → SEMANTIC prefix (every CESR code): label AND
-                  fingerprint. This is the prefix-side analogue of
-                  the bound-vs-free suffix rule in [[sufxbind]] —
-                  both ask "does this slice carry identity bits?"
+        THE RULE — three categories (refined through discussion
+        2026-06-06; full text in docs/spec.md). Classify every part
+        of the input by whether it carries IDENTITY BITS:
+          * PRESENTATION — how the value is written, not what it is
+            (0x, multibase base selector, SSH/PEM framing, case).
+            Normalized away: neither cells nor fingerprint; shown in
+            the label as the encoding/type. Same principle as
+            case-normalization, generalized to radix/serialization.
+          * IDENTITY — a type/role discriminator that changes the
+            denoted object (CESR code, LEI LOU, SWHID/gitoid
+            object-type, CID multicodec). MUST bind the fingerprint.
+          * ANNOTATION — freely attached (SSH comment, SWHID
+            ;origin=…). Dropped. See [[sufxbind]] (suffix analogue).
 
-        MECHANISM. Parsed grew a `prefix_semantic` flag (default
-        False, so all signal-prefix parsers are untouched);
-        parse_cesr sets it True. render() folds a semantic prefix
-        into the fingerprint input: it hashes `prefix + core`
-        instead of `core` (all three compute_fingerprint call sites
-        — used_ftoks, clip-id salt, ellipse digest — read the same
-        `fingerprint_core`). The head/tail TEXT cells still tokenize
-        `core` (the body) alone: the code is already in the label,
-        and folding it propagates to every gestalt channel AND the
-        4 read-aloud fingerprint-middle cells, which is sufficient.
+        THE SWAP TEST distinguishes presentation from identity. Hold
+        the body fixed and swap the prefix:
+          * No legal alternative, OR the body must RE-ENCODE to stay
+            legal → PRESENTATION. The body-must-re-encode case is the
+            tell of an encoding selector (multibase f↔b forces
+            hex↔base32). This sub-clause — added when the user probed
+            why multibase is presentation — is what cleanly separates
+            multibase (encoding) from multicodec (identity), which the
+            bare swap test handled awkwardly.
+          * Body byte-for-byte unchanged, meaning changes → IDENTITY
+            (CESR B↔D↔E; SWHID cnt↔rev).
+
+        MECHANISM — two ways to bind identity, by alphabet. Parsed
+        has a `prefix_semantic` flag (default False). render()
+        computes fingerprint_core = (prefix+core) if (prefix and
+        prefix_semantic) else core, used by all three
+        compute_fingerprint sites (used_ftoks, clip-id, ellipse).
+          (1) IN THE CORE (preferred; same alphabet + contiguous):
+              the discriminator is NOT split off — it stays in `core`,
+              so it is rendered in the CELLS *and* hashed (we hash
+              core TEXT, so this Just Works). Used by the CESR code
+              (parse_cesr: prefix=None, core=whole primitive) and the
+              LEI LOU (parse_lei: prefix=None, core=LOU+"00"+entity).
+          (2) PREFIX-FOLD (different alphabet / not cell-stream-able):
+              kept as `prefix` (label, not cells), prefix_semantic=
+              True, hash input = prefix+core. Used by SWHID/gitoid
+              (letters ahead of a hex body; parse_swhid/parse_gitoid).
+
+        WHY CODE-IN-CELLS, not fingerprint-only (the user's Question
+        A, 2026-06-06). The first v7 cut folded the CESR code into the
+        fingerprint but left the cells as the body alone. That misses
+        the TEXT channel for SHORT inputs: a 44-char CESR primitive
+        has no fingerprint-middle cells (those exist only >512 bits),
+        so the code reached the gestalt but no cell — a read-aloud of
+        the cells could not tell B from D. v6's whole philosophy is
+        "the text channel independently catches what the gestalt
+        catches," so the code belongs in the cells. Keeping it in the
+        core (mechanism 1) achieves cells+fingerprint with no split
+        and is the most faithful (cells show the literal identifier).
+        The fingerprint VALUE is unchanged from the fold cut (hashing
+        core=prefix+core ≡ hashing prefix+core); only the cells gained
+        the code.
 
         NO DELIMITER. The first proposal hashed `code + "\x1f" +
         core` out of generic anti-concatenation habit (boundary-
@@ -1958,14 +1998,83 @@ Entviz = goal:
         ../kswg-cesr-specification/spec/spec-body.md master code
         table. Supersedes the label-only CESR note in [[mult1c0d]].
 
-        FOLLOW-UP (not done here). The swap test reaches other
-        types whose "prefix" is currently label-only but is
-        identity-bearing: SWHID/gitoid object-type+algorithm
-        (`cnt`→`rev` over the same hash = different object), the
-        multihash/CID content codec, and the LEI LOU issuer code
-        (same 12-char body under a different LOU = different
-        registration). These are the same fix and should be
-        audited next.
+        OTHER IDENTITY PREFIXES (swept 2026-06-06, same change).
+          * LEI LOU — DONE (mechanism 1, in-core). Same 12-char body
+            under a different LOU = a different registration. core is
+            now LOU+"00"+entity; previously the LOU was split off
+            structurally and left out of the fingerprint — the same
+            bug as CESR.
+          * SWHID / gitoid object-type+algo — DONE (mechanism 2,
+            fold). Without it a SWHID content and a gitoid blob over
+            the same git hash collide in every fingerprint channel.
+          * multibase (CID leading b/f/z/m/u) — NO CHANGE NEEDED: it
+            is PRESENTATION (the base selector), already stripped.
+          * multicodec / CID content codec — NO CHANGE NEEDED: it is
+            identity, but in a CIDv1 it lives INSIDE the base32 body,
+            so it is already part of `core` text and already bound.
+            (This corrects the earlier note that listed it as a
+            pending fix; it was already covered.)
+        Built on [[h4shtext]] (the fingerprint hashes core TEXT,
+        which is exactly what makes mechanism 1 bind the in-core
+        discriminator without any decode step).
+
+    Fingerprint Hashes Text, Not Decoded Bytes = decision:
+      id: h4shtext
+      status: drafted
+      why: >
+        Surfaced 2026-06-06 while pinning the [[s3mpr3fx]] rule: the
+        user assumed the fingerprint hashes the value's DECODED RAW
+        BYTES; the implementation has always hashed the UTF-8 bytes
+        of the normalized core TEXT (fingerprint.py:
+        sha512(normalized_core.encode('utf-8'))). The spec said
+        "SHA-512 of the normalized entropy bytes" — ambiguous, never
+        ratified, and silently resolved to text by accreted code.
+        Sober lesson on stating intentions precisely; the spec is now
+        explicit (RFC 2119 MUST) either way.
+
+        DECISION: keep hashing canonical normalized TEXT. Cross-
+        encoding invariance is an explicit NON-GOAL (hex vs base64 of
+        the same 32 bytes, or one CID in two multibases, render
+        differently). Reasoning, after steelmanning both (the user
+        asked for a red-team, not a rubber stamp):
+
+          (1) FAIL-SAFE vs FAIL-UNSAFE. The text channel is verbatim
+              by design (it shows the chars the user holds), so it can
+              NEVER be made encoding-invariant without destroying
+              fidelity. If the fingerprint hashed bytes, two encodings
+              of one value would share a gestalt but show different
+              cell text — the channels would DISAGREE about identity,
+              the exact ambiguous signal entviz exists to kill.
+              Text-hashing keeps all channels in agreement; its worst
+              case is a FALSE NEGATIVE (fail to notice two encodings
+              match → investigate further), never a false "same".
+          (2) COLLISION SURFACE. Byte-hashing inserts a decoder before
+              the hash, and base64/base58/bech32/base32 are MALLEABLE
+              (distinct text → same bytes). That yields attacker-
+              manufacturable "different text, identical gestalt"
+              collisions — a primary win. Text-hashing denies the
+              lever. (See threat-model.md, T3.)
+          (3) CONFORMANCE. The 3-impl certification goal needs
+              byte-identical output. Hashing UTF-8 text needs only
+              case/punct normalization; byte-decoding every alphabet
+              identically (base58 leading zeros, bech32 5-bit unpack,
+              base64 trailing bits, decimal width) is a large,
+              divergence-prone surface. The arbitrary-text fallback
+              has no "raw bytes" but its UTF-8 anyway.
+
+        NOTE the user's intent was principled — in a single-impl world
+        optimizing for "true byte identity" it is defensible. The
+        cost/benefit flipped once "verbatim text channel" and "3
+        certified impls" became hard constraints.
+
+        NOT a contradiction: decoding still happens to compute a
+        token's 24-bit quant from its chars, and to measure core byte
+        length for the >512-bit truncation threshold — but NEVER as
+        the hash input. Identity discriminators are bound by living in
+        the hashed TEXT (in core, or folded as prefix+core per
+        [[s3mpr3fx]]), not by decoding. This is also exactly why
+        mechanism (1) of [[s3mpr3fx]] works: an in-core code is part
+        of the text, so it is hashed with no decode step.
 
     Additional Alphabets / Address Formats = decision:
       id: xtra4lph

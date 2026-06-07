@@ -98,8 +98,13 @@ name which tier(s) it applies to.
   render, print vs. screen.
 * **T3.** Can manipulate the input string at the encoding layer: change case
   for case-insensitive alphabets, add or remove a leading prefix, exploit
-  alphabet ambiguity (a string valid in more than one parser), or attach
-  trailing junk that the parser may silently drop.
+  alphabet ambiguity (a string valid in more than one parser), attach
+  trailing junk that the parser may silently drop, or present a value in a
+  **non-canonical or alternate encoding** that decodes to the same bytes
+  (base64/base58/bech32 malleability, alternate alphabets, padding/trailing
+  bits). The last of these is structurally defused by hashing **text, not
+  decoded bytes** — see *Fingerprint hashes text (encoding-layer defense)*
+  below.
 * **T4.** Can manipulate the user's environment: induce a CVD-simulating
   filter, force a monochrome display, force a small viewport, substitute a
   hostile or narrow-glyph font.
@@ -167,8 +172,47 @@ Findings should not treat correct behavior as a defect.
 
 ---
 
+## Fingerprint hashes text (encoding-layer defense)
+
+The fingerprint is SHA-512 of the **canonical normalized text** of the entropy
+(its UTF-8 bytes), **not** the value's decoded raw bytes (see `spec.md`,
+*Why the fingerprint hashes text, not decoded bytes*). This is a deliberate
+defense against the T3 encoding-layer attacker, on three counts:
+
+* **No decoder-malleability collisions.** Hashing decoded bytes would insert a
+  parser ahead of the hash, and many text encodings are malleable — distinct
+  strings decode to identical bytes. Under byte-hashing those become *different
+  text, identical gestalt*: a collision an attacker manufactures to make a
+  tampered value's high-bandwidth channels match a target's (a **primary win**).
+  Hashing the normalized text removes the lever: different text → different
+  fingerprint. (Case and a few documented punctuation/dash conventions are the
+  *only* normalizations applied, each narrow and specified.)
+* **Fail-safe failure mode.** The cost is that two encodings of the *same* value
+  render differently (a **secondary-win** "renders differently under encoding
+  form"). This is an accepted, fail-safe outcome: it can only cause a *false
+  negative* (a reader fails to notice two encodings match and investigates
+  further), never a false "same." A verification tool should err this way.
+* **Cross-implementation determinism.** Byte-decoding every alphabet identically
+  across the certified implementations (base58 leading zeros, bech32 5-bit
+  unpacking, base64 trailing-bit policy) is a large, divergence-prone surface;
+  a mismatch would make the *same input* fingerprint differently per
+  implementation. Text-hashing reduces the shared surface to case/punctuation
+  normalization.
+
+Identity-bearing prefixes (CESR derivation codes, LEI LOU, SWHID/gitoid
+object-types) are still bound — by being present in the hashed *text* (kept in
+the core, or folded in as `prefix ‖ core`), not by decoding. See `spec.md`'s
+swap-test rule and `this.i:s3mpr3fx` / `this.i:h4shtext`.
+
+---
+
 ## Accepted risks (per spec)
 
+* **Cross-encoding non-invariance.** The same value in two encodings (hex vs.
+  base64 of one digest; one CID in two multibases) renders as two different
+  entvizes. This is intentional (see *Fingerprint hashes text* above): entviz
+  protects *"this value in its canonical textual form."* Fail-safe; not a goal
+  to remove.
 * **Pure-text environments.** entviz is explicitly not designed for them; use
   randomart or similar instead.
 * **Recall of all details.** The user is not expected to remember every cell
