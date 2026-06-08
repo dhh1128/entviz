@@ -247,12 +247,26 @@ def parse(svg_text):
 def marker_center(el):
     """(cx, cy) of a blank-cell-map marker. The minftok marker is a <circle>
     (cx/cy attributes); the maxftok marker is the v8 plus <path>, whose centre
-    is parsed from its `d` ("M cx-arm,cy H cx+arm M cx,cy-arm V cy+arm")."""
+    is parsed from its `d` ("M cx-arm,cy H cx+arm M cx,cy-arm V cy+arm").
+
+    Fails loudly (ValueError) rather than with a bare IndexError/ValueError if
+    handed anything but those two shapes — so a future change to the plus
+    geometry surfaces a clear message here instead of a cryptic crash mid-figure
+    (this annotation code is exactly what broke when the marker shape changed)."""
     cx, cy = el.get("cx"), el.get("cy")
     if cx is not None and cy is not None:
         return float(cx), float(cy)
-    parts = el.get("d", "").split()
-    return float(parts[5].split(",")[0]), float(parts[1].split(",")[1])
+    # Expected plus path: "M cx-arm,cy H cx+arm M cx,cy-arm V cy+arm" → 8 tokens.
+    d = el.get("d", "")
+    parts = d.split()
+    if len(parts) != 8 or parts[0] != "M" or parts[4] != "M":
+        raise ValueError(
+            f"marker_center: element is neither a <circle> (cx/cy) nor the "
+            f"expected plus <path>; got tag={el.tag!r} d={d!r}")
+    try:
+        return float(parts[5].split(",")[0]), float(parts[1].split(",")[1])
+    except (IndexError, ValueError) as e:
+        raise ValueError(f"marker_center: cannot parse plus centre from d={d!r}") from e
 
 
 def cells(root):

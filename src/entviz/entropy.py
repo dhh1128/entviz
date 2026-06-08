@@ -779,22 +779,28 @@ def parse_ulid(text) -> Parsed:
 def parse_snowflake(text) -> Parsed:
     """
     See if we can parse text as a Twitter/Discord/Mastodon-style snowflake
-    ID — a 64-bit integer serialized as 17-20 ASCII decimal digits, with
-    the top 42 bits encoding a millisecond timestamp relative to a
-    platform-specific epoch.
+    ID — a 64-bit integer serialized as 17-20 ASCII decimal digits, with a
+    sign bit, then a 41-bit millisecond timestamp (relative to a platform
+    epoch), then 10-bit machine and 12-bit sequence fields.
 
-    Detection requires two filters together:
+    Detection requires two CLOCK-FREE filters together (v8, SPEC-F1):
       1. Length 17-20 and ASCII digits only (SNOWFLAKE_REGEX).
-      2. The implied timestamp (top 42 bits + Discord epoch) decodes to a
-         date in [2015-01-01, today + 5y]. This rejects almost all
-         non-snowflake decimals (bank accounts, phone numbers, random
-         integers): random 18-digit decimals fall inside the 5-year
-         window about 3.6% of the time, and longer or shorter decimals
-         are rejected by length first.
+      2. The value's sign bit (bit 63) is clear, i.e. n < 2**63. A canonical
+         snowflake is a non-negative signed 64-bit integer, so with the sign
+         bit clear the 41-bit timestamp field decodes, by construction, to a
+         date in [2015, ~2084] — making "the implied date is plausible" a
+         STRUCTURAL property of the bit pattern, not a comparison against the
+         wall clock. This also subsumes the >=2**64 overflow case.
 
-    The integer must fit in 64 bits — a 20-digit decimal can overflow
-    (max uint64 = 18446744073709551615, 20 digits). We reject the
-    overflow case explicitly.
+    There is deliberately NO wall-clock check. Through v7 filter 2 was a
+    "timestamp within [2015, today + 5y]" window that consulted time.time();
+    it made the same boundary decimal classify as snowflake at one time and
+    hex at another — a determinism violation (see this.i:sn0wfl4k choice 2).
+    Do NOT reintroduce any time-based gate while "fixing" a perceived
+    mismatch. The sign-bit rule accepts ~all 17-20 digit decimals below
+    2**63; that wider false-positive rate is accepted because it only changes
+    the type label/tokenization (snowflake vs hex), never comparison
+    correctness, and determinism (a spec MUST) outranks label precision.
 
     Returns Parsed("snowflake", DECIMAL, None, text, None) on a match.
     The core is the verbatim decimal string the user typed — see
