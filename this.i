@@ -1290,6 +1290,26 @@ Entviz = goal:
             per alphabet is what matters. spec.md line 101 was
             corrected during the 2026-06-02 audit to stop
             claiming base32 lowercases.
+
+            v8 (SPEC-F3): the disproof-fallback path
+            (detect_alphabet_by_disproof in parse_entropy) was
+            the lone violator of this rule — it lowercased EVERY
+            case-insensitive alphabet it detected, including
+            base32. So a bare base32 fragment that missed the
+            specific parsers (Stellar/CIDv1) fingerprinted under
+            a LOWER core while the same value via a specific
+            parser fingerprinted under an UPPER core — a per-
+            alphabet inconsistency that changed the SHA-512 and
+            every channel. Fixed by uppercasing base32 (and only
+            base32) on the disproof path, matching the specific
+            parsers. This did NOT change base32's normalization
+            rule (it was always UPPER); it brought the outlier
+            path into line. spec.md's disproof step said "treats
+            the input itself as the normalized core ... no
+            re-encoding", which read as exempting the path from
+            case canonicalization; clarified in v8 that "no
+            re-encoding" means no alphabet re-serialization and
+            does not waive per-alphabet case normalization.
             This means two inputs differing only in case for a
             case-insensitive alphabet produce identical
             entvizes. This is correct and required behavior —

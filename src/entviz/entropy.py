@@ -1137,7 +1137,20 @@ def parse(entropy: str) -> Parsed:
         # defensive: the disproof path also resolves HEX for short
         # strings that bypass parse_hex's odd-length guard. See review
         # F2 in reviews/adversarial-2026-05-27.md.
-        core = entropy.lower() if detected in (BECH32, HEX, BASE32) else entropy
+        #
+        # The canonical case is PER ALPHABET (this.i:c4s3norm, spec §226):
+        # base32 canonicalizes to UPPER (RFC 4648), matching the specific
+        # base32 parsers (Stellar, IPFS CIDv1); bech32 and hex to lower.
+        # Before v8 (SPEC-F3) this path lowercased base32 too, so a bare
+        # base32 fragment fingerprinted differently here than via a
+        # specific parser. "no re-encoding" on the disproof path means no
+        # alphabet re-serialization; it does not waive case normalization.
+        if detected is BASE32:
+            core = entropy.upper()
+        elif detected in (BECH32, HEX):
+            core = entropy.lower()
+        else:
+            core = entropy
         # type name = alphabet name (e.g., "base32:", "bech32:"), so
         # the per-entviz top label can show what was detected.
         return Parsed(detected.name, detected, None, core, None)
