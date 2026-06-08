@@ -161,11 +161,11 @@ def fig_crc():
     rows = []
     if maxs:
         c = maxs[0]
-        rows.append((mp(float(c.get("cx")), float(c.get("cy"))),
-                     "blank-cell map — red dot", "the cell holding the largest fingerprint token", WARN))
+        rows.append((mp(*marker_center(c)),
+                     "blank-cell map — red plus", "the cell holding the largest fingerprint token", WARN))
     if mins:
         c = mins[0]
-        rows.append((mp(float(c.get("cx")), float(c.get("cy"))),
+        rows.append((mp(*marker_center(c)),
                      "blank-cell map — blue dot", "the cell holding the smallest token", BLUE))
     if polys:
         p = polys[0]

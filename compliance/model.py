@@ -139,12 +139,8 @@ def extract_model(svg: str | bytes) -> dict:
                 mr = rects[0]
                 map_rect_by_cell[ci] = mr
             if cell["blank_map"]:
-                cell["map_min"] = _dot_rowcol(g, "data-blank-map-min",
-                                              map_rect_by_cell.get(ci),
-                                              cols, rows)
-                cell["map_max"] = _dot_rowcol(g, "data-blank-map-max",
-                                              map_rect_by_cell.get(ci),
-                                              cols, rows)
+                cell["map_min"] = _dot_rowcol(g, "data-blank-map-min")
+                cell["map_max"] = _dot_rowcol(g, "data-blank-map-max")
         else:
             # Filled cell: nucleus rect (first rect) + text.
             nuc = rects[0]
@@ -312,26 +308,22 @@ def _text_size_px(text_el) -> Optional[float]:
     return None
 
 
-def _dot_rowcol(g, attr: str, map_rect, cols: int, rows: int):
-    """Recover (row, col) of a blank-map dot from its center within the map
-    sub-grid. The dot is centered at sub_cell (row+0.5, col+0.5)."""
-    if map_rect is None:
-        return None
-    mx = _num(map_rect.get("x"))
-    my = _num(map_rect.get("y"))
-    mw = _num(map_rect.get("width"))
-    mh = _num(map_rect.get("height"))
-    sub_w = mw / cols
-    sub_h = mh / rows
+def _dot_rowcol(g, attr: str):
+    """Recover (row, col) of a blank-map marker from its data-blank-map-*
+    attribute, which carries the literal "row,col" of the cell (v8, SPEC-F2).
+
+    Reading the named attribute directly — rather than reverse-engineering the
+    position from the marker's pixel geometry — is what the SVG profile (§173)
+    requires, and it works regardless of the marker's element type (the minftok
+    dot is a <circle>, the maxftok plus is a <path>)."""
     for c in g:
-        if c.get(attr) != "true":
+        v = c.get(attr)
+        if v is None:
             continue
-        cx = c.get("cx")
-        cy = c.get("cy")
-        if cx is None or cy is None:
-            continue
-        col = int(round((_num(cx) - mx) / sub_w - 0.5))
-        row = int(round((_num(cy) - my) / sub_h - 0.5))
+        try:
+            row, col = (int(x) for x in v.split(","))
+        except (ValueError, TypeError):
+            return None
         return [row, col]
     return None
 

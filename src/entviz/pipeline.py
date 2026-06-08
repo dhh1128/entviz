@@ -504,42 +504,48 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         if not is_map:
             continue
         # Map: subdivide the nucleus rect into cols×rows logical sub-cells
-        # mirroring the grid, then place a red dot (maxftok cell) and a blue
-        # dot (minftok cell) at their matching (row, col) positions.
+        # mirroring the grid, then mark the maxftok cell with a red PLUS and
+        # the minftok cell with a blue DOT at their matching (row, col)
+        # positions. The SHAPE (plus vs dot) — not the colour — carries the
+        # max/min semantic, so it survives total colour blindness, under which
+        # the red and blue collapse to near-equal grays (PSY-F1). Each marker's
+        # data-blank-map-min / data-blank-map-max attribute carries the literal
+        # "row,col" of its cell, so a conformance checker recovers the position
+        # directly from the named attribute instead of reverse-engineering it
+        # from pixel geometry (SPEC-F2).
         cg.set("data-cell-blank-map", "true")
         sub_w = nucleus_width / grid.cols
         sub_h = nucleus_height / grid.rows
-        # Fixed dot radius (independent of grid dims) so dots are a consistent
-        # size across entvizes; centered in the sub-cell, may overflow it on
-        # dense grids (acceptable). The `+ font_size_px / 16` term adds exactly
-        # 1 px at the 12 pt / 96 dpi nominal size and scales with the entviz.
+        # Fixed marker radius (independent of grid dims) so markers are a
+        # consistent size across entvizes; centered in the sub-cell, may
+        # overflow it on dense grids (acceptable). The `+ font_size_px / 16`
+        # term adds exactly 1 px at the 12 pt / 96 dpi nominal size.
         dot_r = nucleus_height / 8 + font_size_px / 16
 
         max_cx, max_cy = _blank_map_sub_center(
             max_ftok_cell_idx, nx, ny, grid, sub_w, sub_h)
         min_cx, min_cy = _blank_map_sub_center(
             min_ftok_cell_idx, nx, ny, grid, sub_w, sub_h)
-        if max_ftok_cell_idx == min_ftok_cell_idx:
-            # Degenerate (single used ftok): blue ring + concentric red dot
-            # so both remain visible.
-            etree.SubElement(
-                cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
-                fill='none', stroke='#1d4ed8',
-                **{'stroke-width': '1', 'data-blank-map-min': 'true'},
-            )
-            etree.SubElement(
-                cg, 'circle', cx=str(max_cx), cy=str(max_cy), r=str(dot_r * 0.5),
-                fill='#d62828', **{'data-blank-map-max': 'true'},
-            )
-        else:
-            etree.SubElement(
-                cg, 'circle', cx=str(max_cx), cy=str(max_cy), r=str(dot_r),
-                fill='#d62828', **{'data-blank-map-max': 'true'},
-            )
-            etree.SubElement(
-                cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
-                fill='#1d4ed8', **{'data-blank-map-min': 'true'},
-            )
+        max_row, max_col = divmod(max_ftok_cell_idx, grid.cols)
+        min_row, min_col = divmod(min_ftok_cell_idx, grid.cols)
+        # Plus geometry: arms a touch longer than the dot radius, with a thinner
+        # stroke, so the cross reads as a distinct shape rather than a blob.
+        plus_arm = dot_r * 1.2
+        plus_w = max(1.0, dot_r * 0.55)
+        # minftok = blue dot (drawn first); maxftok = red plus (drawn on top, so
+        # it stays visible in the degenerate case where both land on one cell).
+        etree.SubElement(
+            cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
+            fill='#1d4ed8', **{'data-blank-map-min': f'{min_row},{min_col}'},
+        )
+        etree.SubElement(
+            cg, 'path',
+            d=f'M {max_cx - plus_arm},{max_cy} H {max_cx + plus_arm} '
+              f'M {max_cx},{max_cy - plus_arm} V {max_cy + plus_arm}',
+            fill='none', stroke='#d62828',
+            **{'stroke-width': str(plus_w), 'stroke-linecap': 'butt',
+               'data-blank-map-max': f'{max_row},{max_col}'},
+        )
 
     # Layer 4: quartile marks at the cells of the four quartile ftoks
     # (mapped through the 1:1 ftok→token→cell correspondence). The mark

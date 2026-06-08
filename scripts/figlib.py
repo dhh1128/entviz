@@ -244,6 +244,17 @@ def parse(svg_text):
     return etree.fromstring(svg_text.encode())
 
 
+def marker_center(el):
+    """(cx, cy) of a blank-cell-map marker. The minftok marker is a <circle>
+    (cx/cy attributes); the maxftok marker is the v8 plus <path>, whose centre
+    is parsed from its `d` ("M cx-arm,cy H cx+arm M cx,cy-arm V cy+arm")."""
+    cx, cy = el.get("cx"), el.get("cy")
+    if cx is not None and cy is not None:
+        return float(cx), float(cy)
+    parts = el.get("d", "").split()
+    return float(parts[5].split(",")[0]), float(parts[1].split(",")[1])
+
+
 def cells(root):
     return [g for g in root.iter(SVGNS + "g") if g.get("data-channel") == "cell"]
 

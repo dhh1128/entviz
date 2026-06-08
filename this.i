@@ -2590,6 +2590,50 @@ Entviz = goal:
             to grid AR); gold (not an arbitrary yellow) for the white-bg
             fill. Tests in tests/test_v6_blank_map.py.
 
+        Blank-Cell Map: Shape Cue + Position Attributes = decision:
+          id: v8blnkmp
+          why: >
+            Two v8 changes to the blank-cell map, from the 2026-06-08 review
+            (PSY-F1 + SPEC-F2). Both are comparison-breaking (they change the
+            rendered marker and an emitted attribute), so they land together
+            under the v7 -> v8 SPEC_VERSION bump.
+
+            (PSY-F1) SHAPE, not just colour, now carries the max/min semantic.
+            Through v7 both markers were dots distinguished only by hue
+            (red=max #d62828, blue=min #1d4ed8). The blank-cell map is the
+            channel a habituated reader checks first, but under achromatopsia
+            the two dots collapse to near-equal grays (ΔL* ~ 8), so a reader
+            could see THAT two cells are marked but not WHICH is max and which
+            is min — a silent loss of the map's meaning for that population.
+            v8 keeps the minftok marker a blue DOT (filled circle) and makes
+            the maxftok marker a red PLUS (a crossed stroked path: arms
+            +/-1.2*marker_radius, stroke-width max(1, 0.55*marker_radius),
+            fill none, butt caps). The colours are retained as a redundant
+            cue; the shape is the primary discriminator and survives total
+            colour blindness. The maintainer chose the plus (over a "v" or
+            other glyph) and chose dot=min / plus=max. Because the shapes
+            differ, the v6 degenerate-case special marker (blue ring +
+            concentric half-size red dot, for min==max on a single used ftok)
+            is no longer needed: both markers are drawn at the one centre and
+            the red plus over the blue dot stays legible.
+
+            (SPEC-F2) The markers now expose their POSITION directly. v6
+            emitted data-blank-map-min/max = "true" (a boolean flag) and the
+            reference checker reverse-engineered the (row,col) from the dot's
+            cx/cy pixel geometry — fragile, and a checker written faithfully to
+            the SVG profile (which names "dot positions") would have found no
+            position to read. v8 emits the literal "row,col" of the cell as the
+            attribute value (data-blank-map-min on the blue dot,
+            data-blank-map-max on the red plus), so a Tier-A checker recovers
+            the position from the named attribute without any geometry. This
+            also decouples recovery from the marker's element type, which now
+            differs (circle vs path) between the two markers. compliance/model.py
+            _dot_rowcol was simplified to parse the attribute string. The
+            abstract render model is UNCHANGED (still records map_min/map_max as
+            [row,col]), so Tier-A goldens did not move; only the SVG/raster
+            (Tier B), figures, and gallery regenerated. Tests in
+            tests/test_v6_blank_map.py. See also [[v6blnkmp]].
+
         Ellipse Coverage Clamp = decision:
           id: v6elclmp
           why: >

@@ -361,7 +361,7 @@
     "truncation_marker": true
   },
   "rows": 6,
-  "spec_version": "v7",
+  "spec_version": "v8",
   "truncated": true,
   "user_note": null
 }
