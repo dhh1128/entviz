@@ -101,3 +101,26 @@ def test_render_stellar_address_does_not_crash():
     from entviz.pipeline import render
     svg = render("GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM")
     assert svg.startswith("<svg")
+
+
+# --- v8 (SPEC-F3): the disproof fallback must canonicalize base32 to UPPER ---
+# A bare base32 fragment (one that misses the specific Stellar/CIDv1 parsers and
+# resolves via detect_alphabet_by_disproof) must be uppercased, matching the
+# specific parsers and RFC 4648 (this.i:c4s3norm, spec §226). Before v8 this path
+# lowercased base32, so the same value fingerprinted differently here than via a
+# specific parser. We do NOT change base32's rule (always UPPER) — only this path.
+
+def test_disproof_base32_fragment_canonicalizes_to_upper():
+    """A bare base32 fragment routed through disproof must uppercase its core."""
+    p = parse("mfrggzdfmztwq2lk")
+    assert p.alphabet is BASE32
+    assert p.core == "MFRGGZDFMZTWQ2LK"  # UPPER, not the lowercase input
+
+
+def test_disproof_base32_is_case_invariant():
+    """Lower-, upper-, and mixed-case base32 fragments produce the same core,
+    hence the same SHA-512 fingerprint and the same entviz — the per-alphabet
+    case-consistency the specific base32 parsers already guarantee."""
+    cores = {parse(t).core for t in
+             ("mfrggzdfmztwq2lk", "MFRGGZDFMZTWQ2LK", "MfRgGzDfMzTwQ2Lk")}
+    assert cores == {"MFRGGZDFMZTWQ2LK"}

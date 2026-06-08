@@ -49,9 +49,9 @@ def _strip_data_attrs(svg_str: str) -> str:
 def test_svg_carries_version_attribute():
     from entviz import SPEC_VERSION
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    # data-entviz-version is the spec/algorithm version, sourced from the
-    # single SPEC_VERSION constant (currently "v7").
-    assert svg.get("data-entviz-version") == "v7"
+    # data-entviz-version is the spec/algorithm version, sourced from the single
+    # SPEC_VERSION constant — assert equality to that constant, never to a
+    # hardcoded literal, so a SPEC_VERSION bump doesn't require touching this test.
     assert svg.get("data-entviz-version") == SPEC_VERSION
 
 

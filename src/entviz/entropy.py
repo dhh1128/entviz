@@ -3,7 +3,6 @@ import re
 import base64
 import hashlib
 import math
-import time
 
 from .keccak import keccak256
 
@@ -234,29 +233,12 @@ SWHID_REGEX = re.compile(
 GITOID_REGEX = re.compile(
     r'^(gitoid:(blob|tree|commit|tag):(sha1|sha256):)([0-9a-f]+)$', re.I)
 _GITOID_ALGO_LEN = {"sha1": 40, "sha256": 64}
-# Discord epoch: 2015-01-01T00:00:00.000Z = 1420070400000 ms since UNIX
-# epoch. Twitter's snowflake epoch is earlier (2010-11-04T01:42:54.657Z)
-# but we use Discord's epoch as the lower bound because (a) it is the
-# more conservative filter — anything decoding to a pre-2015 timestamp
-# under Discord's epoch is rejected even if it would be a valid Twitter
-# ID, and (b) Twitter snowflakes from 2010-2014 are increasingly rare in
-# entropy-comparison use cases. See `this.i:sn0wfl4k`.
-DISCORD_EPOCH_MS = 1420070400000
-# Future-acceptance window: 5 years past the current wall clock. Wide
-# enough to absorb clock skew and "future" test snowflakes, narrow enough
-# to keep false-positive rate on random 18-digit decimals around 3.6%.
-_SNOWFLAKE_FUTURE_WINDOW_MS = 5 * 365 * 86400 * 1000
-
-
-def _now_ms() -> int:
-    """Current wall-clock time in unix milliseconds.
-
-    Isolated as a one-line seam (rather than inlining `time.time()` at the
-    call site) so the snowflake future-window tests can pin a deterministic
-    reference clock and stop depending on the real wall clock — see
-    tests/test_snowflake.py and the testability review (TST-F3).
-    """
-    return int(time.time() * 1000)
+# Snowflake detection is clock-free as of v8 (SPEC-F1): a canonical 64-bit
+# snowflake has its sign bit clear, which structurally bounds the 41-bit
+# timestamp field to [2015-01-01, ~2084] without consulting the wall clock.
+# The pre-v8 Discord-epoch + 5-year-future-window gate (and its _now_ms seam)
+# was removed because it made the same input render differently over time --
+# a determinism-MUST violation. See `this.i:sn0wfl4k` choice (2).
 
 # Crockford input-alias translation table: I/L -> 1, O -> 0 (in either
 # case). Applied during parse_ulid after the regex match, before
@@ -797,22 +779,28 @@ def parse_ulid(text) -> Parsed:
 def parse_snowflake(text) -> Parsed:
     """
     See if we can parse text as a Twitter/Discord/Mastodon-style snowflake
-    ID — a 64-bit integer serialized as 17-20 ASCII decimal digits, with
-    the top 42 bits encoding a millisecond timestamp relative to a
-    platform-specific epoch.
+    ID — a 64-bit integer serialized as 17-20 ASCII decimal digits, with a
+    sign bit, then a 41-bit millisecond timestamp (relative to a platform
+    epoch), then 10-bit machine and 12-bit sequence fields.
 
-    Detection requires two filters together:
+    Detection requires two CLOCK-FREE filters together (v8, SPEC-F1):
       1. Length 17-20 and ASCII digits only (SNOWFLAKE_REGEX).
-      2. The implied timestamp (top 42 bits + Discord epoch) decodes to a
-         date in [2015-01-01, today + 5y]. This rejects almost all
-         non-snowflake decimals (bank accounts, phone numbers, random
-         integers): random 18-digit decimals fall inside the 5-year
-         window about 3.6% of the time, and longer or shorter decimals
-         are rejected by length first.
+      2. The value's sign bit (bit 63) is clear, i.e. n < 2**63. A canonical
+         snowflake is a non-negative signed 64-bit integer, so with the sign
+         bit clear the 41-bit timestamp field decodes, by construction, to a
+         date in [2015, ~2084] — making "the implied date is plausible" a
+         STRUCTURAL property of the bit pattern, not a comparison against the
+         wall clock. This also subsumes the >=2**64 overflow case.
 
-    The integer must fit in 64 bits — a 20-digit decimal can overflow
-    (max uint64 = 18446744073709551615, 20 digits). We reject the
-    overflow case explicitly.
+    There is deliberately NO wall-clock check. Through v7 filter 2 was a
+    "timestamp within [2015, today + 5y]" window that consulted time.time();
+    it made the same boundary decimal classify as snowflake at one time and
+    hex at another — a determinism violation (see this.i:sn0wfl4k choice 2).
+    Do NOT reintroduce any time-based gate while "fixing" a perceived
+    mismatch. The sign-bit rule accepts ~all 17-20 digit decimals below
+    2**63; that wider false-positive rate is accepted because it only changes
+    the type label/tokenization (snowflake vs hex), never comparison
+    correctness, and determinism (a spec MUST) outranks label precision.
 
     Returns Parsed("snowflake", DECIMAL, None, text, None) on a match.
     The core is the verbatim decimal string the user typed — see
@@ -823,11 +811,18 @@ def parse_snowflake(text) -> Parsed:
     if not SNOWFLAKE_REGEX.match(text):
         return None
     n = int(text)
-    if n.bit_length() > 64:
-        return None
-    ts_ms = (n >> 22) + DISCORD_EPOCH_MS
-    now_ms = _now_ms()
-    if ts_ms < DISCORD_EPOCH_MS or ts_ms > now_ms + _SNOWFLAKE_FUTURE_WINDOW_MS:
+    # Deterministic structural validity (v8, SPEC-F1): a canonical 64-bit
+    # snowflake is a non-negative signed integer, so its sign bit (bit 63) is
+    # clear -> n < 2**63. Reject when it is set. With the sign bit clear the
+    # 41-bit timestamp field (bits 22..62) decodes, by construction, to a date
+    # in [2015-01-01, ~2084], so "the implied date is plausible" is a structural
+    # property of the bit pattern -- NOT a comparison against the wall clock.
+    # The pre-v8 rule gated on time.time() + a 5-year future window, which made
+    # the SAME input render differently over time (a determinism-MUST violation;
+    # see this.i:sn0wfl4k choice 2 and spec.md determinism clause). This also
+    # subsumes the old `bit_length() > 64` overflow guard (n >= 2**63 already
+    # rejects the >=2**64 case).
+    if n >> 63:
         return None
     return Parsed("snowflake", DECIMAL, None, text, None)
 
@@ -1137,7 +1132,20 @@ def parse(entropy: str) -> Parsed:
         # defensive: the disproof path also resolves HEX for short
         # strings that bypass parse_hex's odd-length guard. See review
         # F2 in reviews/adversarial-2026-05-27.md.
-        core = entropy.lower() if detected in (BECH32, HEX, BASE32) else entropy
+        #
+        # The canonical case is PER ALPHABET (this.i:c4s3norm, spec §226):
+        # base32 canonicalizes to UPPER (RFC 4648), matching the specific
+        # base32 parsers (Stellar, IPFS CIDv1); bech32 and hex to lower.
+        # Before v8 (SPEC-F3) this path lowercased base32 too, so a bare
+        # base32 fragment fingerprinted differently here than via a
+        # specific parser. "no re-encoding" on the disproof path means no
+        # alphabet re-serialization; it does not waive case normalization.
+        if detected is BASE32:
+            core = entropy.upper()
+        elif detected in (BECH32, HEX):
+            core = entropy.lower()
+        else:
+            core = entropy
         # type name = alphabet name (e.g., "base32:", "bech32:"), so
         # the per-entviz top label can show what was detected.
         return Parsed(detected.name, detected, None, core, None)

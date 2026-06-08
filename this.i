@@ -1290,6 +1290,26 @@ Entviz = goal:
             per alphabet is what matters. spec.md line 101 was
             corrected during the 2026-06-02 audit to stop
             claiming base32 lowercases.
+
+            v8 (SPEC-F3): the disproof-fallback path
+            (detect_alphabet_by_disproof in parse_entropy) was
+            the lone violator of this rule — it lowercased EVERY
+            case-insensitive alphabet it detected, including
+            base32. So a bare base32 fragment that missed the
+            specific parsers (Stellar/CIDv1) fingerprinted under
+            a LOWER core while the same value via a specific
+            parser fingerprinted under an UPPER core — a per-
+            alphabet inconsistency that changed the SHA-512 and
+            every channel. Fixed by uppercasing base32 (and only
+            base32) on the disproof path, matching the specific
+            parsers. This did NOT change base32's normalization
+            rule (it was always UPPER); it brought the outlier
+            path into line. spec.md's disproof step said "treats
+            the input itself as the normalized core ... no
+            re-encoding", which read as exempting the path from
+            case canonicalization; clarified in v8 that "no
+            re-encoding" means no alphabet re-serialization and
+            does not waive per-alphabet case normalization.
             This means two inputs differing only in case for a
             case-insensitive alphabet produce identical
             entvizes. This is correct and required behavior —
@@ -1671,20 +1691,63 @@ Entviz = goal:
             surprise that defeats the verbatim-text guarantee
             in the spec's Guarantees section).
 
-        (2) Plausible-timestamp range check. A bare 17-20
-            digit decimal is ambiguous (bank account, phone,
-            tracking number, random integer). Detection
-            requires that the top 42 bits, interpreted as a
-            Discord-epoch timestamp (2015-01-01 UTC), decode
-            to a date in [2015-01-01, today + 5 years]. The
-            5-year future window absorbs clock skew, fake
-            future IDs, and the slow drift of "today" as the
-            codebase ages without weakening the filter
-            meaningfully. Twitter snowflakes from 2010-2014
-            (Twitter epoch is earlier) are rejected; a
-            future broadening to Twitter's epoch is possible
-            but no current entropy-comparison use case
-            warrants the wider false-positive surface.
+        (2) Deterministic structural validity check (v8,
+            SPEC-F1). A bare 17-20 digit decimal is ambiguous
+            (bank account, phone, tracking number, random
+            integer), so detection needs a second filter beyond
+            length. Through v7 that filter was a PLAUSIBLE-
+            TIMESTAMP WINDOW: the top 42 bits, read as a
+            Discord-epoch (2015-01-01 UTC) timestamp, had to
+            fall in [2015-01-01, today + 5 years]. The upper
+            bound consulted the WALL CLOCK (time.time() via
+            _now_ms), which made the SAME input render
+            DIFFERENTLY over time: a boundary decimal whose
+            implied date sits just past "now + 5y" parsed as
+            hex today and as snowflake a few years later —
+            different type label, different alphabet, different
+            SVG. That is a direct violation of the spec's
+            determinism MUST (spec.md "An implementation MUST be
+            deterministic ... No part of the output may depend
+            on wall-clock time"), and the frozen golden corpus
+            could never catch it because it was generated at one
+            instant.
+
+            v8 replaces the wall-clock window with a CLOCK-FREE
+            STRUCTURAL test: a canonical 64-bit snowflake is a
+            non-negative signed integer, i.e. bit 63 (the sign
+            bit) is clear, so n < 2**63. Reject when bit 63 is
+            set. This is not an arbitrary cutoff — it is exactly
+            the well-formedness of the layout: with the sign bit
+            clear the 41-bit timestamp field (bits 22..62)
+            decodes, by construction, to a date in
+            [2015-01-01, ~2084], so "the implied date is
+            plausible" becomes a structural property of the bit
+            pattern rather than a comparison against the moving
+            present. A truly absurd future decimal still fails,
+            because its timestamp overflows the 41-bit field and
+            sets bit 63. No clock, no pinned date, identical
+            across implementations and across time. (The old
+            n.bit_length() > 64 overflow guard is subsumed:
+            n >= 2**63 already rejects everything from 2**63 up,
+            including the >=2**64 overflow case.)
+
+            Tradeoff, recorded honestly: dropping the future
+            window WIDENS acceptance. The window admitted random
+            18-digit decimals ~3.6% of the time; the structural
+            rule admits ESSENTIALLY ALL 17-20 digit decimals
+            below 2**63. So more non-snowflake decimals now
+            classify as "snowflake". This is acceptable because
+            the consequence is confined to the TYPE LABEL and
+            tokenization (snowflake: + DECIMAL alphabet vs
+            hex(N): + HEX) — both render the verbatim digits and
+            both are deterministic, so comparison correctness is
+            unaffected in either classification. Determinism (a
+            spec MUST) outranks label precision (a cosmetic
+            nicety). A future revision MAY add a clock-free
+            tightening (e.g. rejecting all-zero machine/sequence
+            bits) if the false-positive label rate proves
+            annoying, but MUST NOT reintroduce any wall-clock
+            dependence.
 
         (3) Parser ordering: parse_snowflake must precede
             parse_hex in the dispatch chain because every
@@ -2526,6 +2589,50 @@ Entviz = goal:
             only; rect = nucleus rect (sub-cells stretched, not letterboxed
             to grid AR); gold (not an arbitrary yellow) for the white-bg
             fill. Tests in tests/test_v6_blank_map.py.
+
+        Blank-Cell Map: Shape Cue + Position Attributes = decision:
+          id: v8blnkmp
+          why: >
+            Two v8 changes to the blank-cell map, from the 2026-06-08 review
+            (PSY-F1 + SPEC-F2). Both are comparison-breaking (they change the
+            rendered marker and an emitted attribute), so they land together
+            under the v7 -> v8 SPEC_VERSION bump.
+
+            (PSY-F1) SHAPE, not just colour, now carries the max/min semantic.
+            Through v7 both markers were dots distinguished only by hue
+            (red=max #d62828, blue=min #1d4ed8). The blank-cell map is the
+            channel a habituated reader checks first, but under achromatopsia
+            the two dots collapse to near-equal grays (ΔL* ~ 8), so a reader
+            could see THAT two cells are marked but not WHICH is max and which
+            is min — a silent loss of the map's meaning for that population.
+            v8 keeps the minftok marker a blue DOT (filled circle) and makes
+            the maxftok marker a red PLUS (a crossed stroked path: arms
+            +/-1.2*marker_radius, stroke-width max(1, 0.55*marker_radius),
+            fill none, butt caps). The colours are retained as a redundant
+            cue; the shape is the primary discriminator and survives total
+            colour blindness. The maintainer chose the plus (over a "v" or
+            other glyph) and chose dot=min / plus=max. Because the shapes
+            differ, the v6 degenerate-case special marker (blue ring +
+            concentric half-size red dot, for min==max on a single used ftok)
+            is no longer needed: both markers are drawn at the one centre and
+            the red plus over the blue dot stays legible.
+
+            (SPEC-F2) The markers now expose their POSITION directly. v6
+            emitted data-blank-map-min/max = "true" (a boolean flag) and the
+            reference checker reverse-engineered the (row,col) from the dot's
+            cx/cy pixel geometry — fragile, and a checker written faithfully to
+            the SVG profile (which names "dot positions") would have found no
+            position to read. v8 emits the literal "row,col" of the cell as the
+            attribute value (data-blank-map-min on the blue dot,
+            data-blank-map-max on the red plus), so a Tier-A checker recovers
+            the position from the named attribute without any geometry. This
+            also decouples recovery from the marker's element type, which now
+            differs (circle vs path) between the two markers. compliance/model.py
+            _dot_rowcol was simplified to parse the attribute string. The
+            abstract render model is UNCHANGED (still records map_min/map_max as
+            [row,col]), so Tier-A goldens did not move; only the SVG/raster
+            (Tier B), figures, and gallery regenerated. Tests in
+            tests/test_v6_blank_map.py. See also [[v6blnkmp]].
 
         Ellipse Coverage Clamp = decision:
           id: v6elclmp

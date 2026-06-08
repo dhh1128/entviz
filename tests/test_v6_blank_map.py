@@ -2,8 +2,15 @@
 v6 blank-cell marker: every blank cell carries a black-outlined rounded
 rectangle coincident with the nucleus rect. The FIRST blank cell (lowest
 cell index) additionally becomes a "map" — a miniature scale model of the
-grid, filled (white, or gold on a white-background entviz), with a red dot
-at the maxftok cell's grid position and a blue dot at the minftok cell's.
+grid, filled (white, or gold on a white-background entviz), with a red PLUS
+at the maxftok cell's grid position and a blue DOT at the minftok cell's.
+
+v8 (PSY-F1 + SPEC-F2): the markers differ in SHAPE — minftok = blue dot
+(<circle>), maxftok = red plus (<path>) — so the max/min semantic survives
+total colour blindness (where red and blue collapse to near-equal grays), not
+just colour. Each marker carries its cell's literal "row,col" in
+data-blank-map-min / data-blank-map-max, so a checker reads the position from
+the named attribute rather than reverse-engineering it from pixel geometry.
 
 This replaces v5's white-disc + clock-hands marker. Crucially it uses no
 `mix-blend-mode`, so it renders identically in browsers and non-browser SVG
@@ -48,6 +55,10 @@ def _children(g, tag):
 
 def _circles(g):
     return _children(g, "circle")
+
+
+def _paths(g):
+    return _children(g, "path")
 
 
 # ---- F-A6: no mix-blend-mode anywhere -----------------------------------
@@ -104,41 +115,50 @@ def test_exactly_one_map_cell_is_the_first_blank():
     assert map_idx == min(blank_idx)
 
 
-def test_non_map_blanks_have_no_dots():
-    """Only the map cell carries the red/blue dots; other blanks are just
-    the outline rect (no circles)."""
+def test_non_map_blanks_have_no_markers():
+    """Only the map cell carries the min/max markers; other blanks are just
+    the outline rect (no dot circle, no plus path)."""
     svg = _doc(render("0123456789abcdef" * 16))  # large input → several blanks
     maps = {int(g.get("data-cell-index")) for g in _map_group(svg)}
     for g in _blank_groups(svg):
         if int(g.get("data-cell-index")) in maps:
             continue
-        assert _circles(g) == [], "non-map blank should have no circles"
+        assert _circles(g) == [], "non-map blank should have no dot"
+        assert _paths(g) == [], "non-map blank should have no plus"
 
 
 # ---- Map dots: colors, positions, fill ----------------------------------
 
 
-def test_map_has_one_red_and_one_blue_dot():
+def test_map_has_blue_dot_and_red_plus():
+    """v8 (PSY-F1): minftok = exactly one blue <circle> (dot); maxftok = exactly
+    one red <path> (plus). Shape, not just colour, distinguishes them."""
     svg = _doc(render(FIXTURE))
     g = _map_group(svg)[0]
-    fills = [c.get("fill") for c in _circles(g)]
-    assert fills.count(RED) == 1
-    assert fills.count(BLUE) == 1
+    dots = [c for c in _circles(g) if c.get("fill") == BLUE]
+    plusses = [p for p in _paths(g) if p.get("stroke") == RED]
+    assert len(dots) == 1, "exactly one blue dot (minftok)"
+    assert len(plusses) == 1, "exactly one red plus (maxftok)"
+    # The blue dot carries data-blank-map-min; the red plus carries -max.
+    assert dots[0].get("data-blank-map-min") is not None
+    assert plusses[0].get("data-blank-map-max") is not None
+    # The plus path is a crossed pair of strokes through its centre.
+    d = plusses[0].get("d")
+    assert d.count("M") == 2 and "H" in d and "V" in d
 
 
 def test_dot_radius_is_fixed_regardless_of_grid():
-    """The red/blue dots have a fixed radius (nucleus_height / 8 + font_size_px
-    / 16 = 3.5 at 12pt), independent of grid dimensions — so dot size is
-    consistent across entvizes rather than shrinking on denser grids."""
-    # Two inputs with different grids (and thus different sub-cell sizes):
-    # a small 2x3-ish grid vs a dense large-input grid.
+    """The blue minftok dot has a fixed radius (nucleus_height / 8 +
+    font_size_px / 16 = 3.5 at 12pt), independent of grid dimensions — so
+    marker size is consistent across entvizes rather than shrinking on denser
+    grids."""
     for inp in [FIXTURE, "deadbeef", "0123456789abcdef" * 16]:
         svg = _doc(render(inp))
         maps = _map_group(svg)
         if not maps:
             continue
         for c in _circles(maps[0]):
-            if c.get("fill") in (RED, BLUE):
+            if c.get("fill") == BLUE:
                 assert float(c.get("r")) == 3.5, (
                     f"{inp!r}: dot r={c.get('r')} (expected fixed 3.5)"
                 )
@@ -190,24 +210,29 @@ def _recompute_min_max_cells(input_):
     return grid, min_cell, max_cell
 
 
-def test_red_dot_at_maxftok_blue_dot_at_minftok():
-    """The red dot sits in the sub-cell matching the maxftok cell's
-    (row, col); the blue dot matches the minftok cell's."""
+def test_markers_carry_rowcol_attrs_at_minftok_and_maxftok():
+    """SPEC-F2: data-blank-map-min/max carry the cell's literal "row,col", so
+    the position is recoverable from the named attribute (not pixel geometry).
+    PSY-F1: the blue dot marks minftok, the red plus marks maxftok."""
     svg = _doc(render(FIXTURE))
     grid, min_cell, max_cell = _recompute_min_max_cells(FIXTURE)
     assert min_cell != max_cell, "fixture should have distinct min/max cells"
 
     g = _map_group(svg)[0]
+    blue = next(c for c in _circles(g) if c.get("fill") == BLUE)
+    red = next(p for p in _paths(g) if p.get("stroke") == RED)
+
+    # The attribute carries the literal row,col.
+    assert blue.get("data-blank-map-min") == \
+        f"{min_cell // grid.cols},{min_cell % grid.cols}"
+    assert red.get("data-blank-map-max") == \
+        f"{max_cell // grid.cols},{max_cell % grid.cols}"
+
+    # And the rendered geometry still agrees: the blue dot's centre lands in the
+    # minftok sub-cell of the scale-model rect.
     rect = _children(g, "rect")[0]
     rx0, ry0 = float(rect.get("x")), float(rect.get("y"))
-    sub_w = 48 / grid.cols
-    sub_h = 20 / grid.rows
-
-    def sub_of(circle):
-        cx, cy = float(circle.get("cx")), float(circle.get("cy"))
-        return (int((cy - ry0) / sub_h), int((cx - rx0) / sub_w))  # (row, col)
-
-    red = next(c for c in _circles(g) if c.get("fill") == RED)
-    blue = next(c for c in _circles(g) if c.get("fill") == BLUE)
-    assert sub_of(red) == (max_cell // grid.cols, max_cell % grid.cols)
-    assert sub_of(blue) == (min_cell // grid.cols, min_cell % grid.cols)
+    sub_w, sub_h = 48 / grid.cols, 20 / grid.rows
+    bx, by = float(blue.get("cx")), float(blue.get("cy"))
+    assert (int((by - ry0) / sub_h), int((bx - rx0) / sub_w)) == \
+        (min_cell // grid.cols, min_cell % grid.cols)
