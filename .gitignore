@@ -140,5 +140,20 @@ dmypy.json
 
 # Claude Code agent worktrees (never track these)
 .claude/worktrees/
+
+# Check in the review-board review-panel tooling, which lives under the
+# otherwise-ignored .claude/ above. We re-include only these two paths (the
+# skill and its workflow); everything else under .claude/ — settings.local.json,
+# worktrees, transcripts — stays ignored. To track a file inside an ignored
+# directory, each parent level must be un-ignored first, then re-narrowed.
+!.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/review-board/
+!.claude/workflows/
+.claude/workflows/*
+!.claude/workflows/review-panel.js
+
 /.tick
 .tick.lock
