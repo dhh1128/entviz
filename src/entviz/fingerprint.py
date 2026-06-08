@@ -8,6 +8,19 @@ two inputs that differ by a single bit look almost identical. Hashing first
 guarantees that any input difference explodes across every fingerprint-
 driven channel of the entviz.
 
+The hash input is the UTF-8 bytes of the normalized core *text* — the
+characters as written in the core's declared alphabet — and is deliberately
+NOT the value decoded to its underlying raw bytes. This is load-bearing, not
+incidental: decoding before hashing would (a) insert a parser ahead of the
+hash, where several text encodings are malleable (distinct strings decoding to
+identical bytes are attacker-manufacturable collisions), and (b) require every
+certified implementation to decode every alphabet byte-for-byte identically, so
+any divergence would fingerprint the same input differently across
+implementations. "Optimizing" compute_fingerprint() to hash decoded bytes is a
+silent break of the spec's central security property — do not. See
+this.i:h4shtext and docs/spec.md "Why the fingerprint hashes text, not decoded
+bytes".
+
 The 64-byte digest is encoded as base64url (no padding) and tokenized by
 the same routine that tokenizes entropy. This always yields exactly 22
 ftoks: 21 full ftoks of 4 base64 characters each, plus one partial ftok

@@ -43,9 +43,17 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Install libcairo (conformance Tier B rasterizes via cairosvg)
+        # cairosvg loads libcairo.so.2 at import; without it the Tier B
+        # golden-raster tests would importorskip and silently pass. Install it
+        # explicitly so Tier B actually runs in CI rather than skipping.
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libcairo2
+
       - name: Run tests
         # --locked fails if uv.lock is out of date with pyproject.toml, so CI
         # also proves the lockfile is current. --python pins the matrix version
         # (uv fetches a standalone interpreter as needed), so this is the proof
-        # that the >=3.10 floor actually holds.
-        run: uv run --locked --python ${{ matrix.python-version }} pytest
+        # that the >=3.10 floor actually holds. --group render installs the
+        # cairosvg/numpy/pillow rasterizer stack so the conformance suite's
+        # Tier B (golden-raster) comparison runs in CI instead of skipping.
+        run: uv run --locked --group render --python ${{ matrix.python-version }} pytest
