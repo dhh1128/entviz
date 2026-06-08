@@ -51,7 +51,7 @@ This is a deliberate departure from the stochastic, artistic generation of first
 
 The thesis is that entviz advances human-centric hash visualization by applying psychophysics and cognitive psychology systematically to the goal of amplifying difference, and that this principled approach improves on the machine-optimized representation of QR codes and on the earlier human-centric attempt of SSH randomart. We defend the claim with an explicit, channel-by-channel perceptual-entropy budget, and we are candid that the budget is an analytic estimate awaiting empirical test.
 
-Section 2 builds the perceptual and cognitive framework. Section 3 draws the distinction between visual hashes built for machine similarity detection and those built for human difference detection — a distinction that, when ignored, leads to critical security errors. Section 4 compares SSH randomart, QR codes, and entviz against that framework, and contains the bulk of the new analysis: the v7 channel design, a per-channel perceptual-entropy budget, a frank treatment of color-vision deficiency, and the security argument for large inputs. Section 5 distills design principles and states the open empirical questions. Section 6 concludes.
+Section 2 builds the perceptual and cognitive framework. Section 3 draws the distinction between visual hashes built for machine similarity detection and those built for human difference detection — a distinction that, when ignored, leads to critical security errors. Section 4 compares SSH randomart, QR codes, and entviz against that framework, and contains the bulk of the new analysis: the v8 channel design, a per-channel perceptual-entropy budget, a frank treatment of color-vision deficiency, and the security argument for large inputs. Section 5 distills design principles and states the open empirical questions. Section 6 concludes.
 
 # 2. The Perceptual and Cognitive Framework for Visual Comparison
 
@@ -91,22 +91,22 @@ The JND is the smallest change in a stimulus an observer detects at least half t
 
 ### 2.2.2. JND Thresholds Mapped to Entviz Features
 
-The original paper tabulated JND thresholds for generic visual primitives. Because v7 uses specific primitives, we map each threshold to the channel it governs. The raw numbers are stable, cited results; the table's contribution is the rightmost column, which says which design decision each threshold constrains.
+The original paper tabulated JND thresholds for generic visual primitives. Because v8 uses specific primitives, we map each threshold to the channel it governs. The raw numbers are stable, cited results; the table's contribution is the rightmost column, which says which design decision each threshold constrains.
 
 | Visual feature | JND threshold | Entviz channel governed | Source |
 | :---- | :---- | :---- | :---- |
 | **Size (length)** | Weber fraction ≈ 0.025–0.036 | Ellipse semi-axes `rx`, `ry` (16 discrete steps each); cell and box geometry | [16] |
 | **Size (area)** | Weber fraction ≈ 0.13–0.16 | Ellipse **coverage fraction** (darkened share of the grid) | [16] |
 | **Shape (aspect ratio)** | as low as 0.016 | Ellipse **elongation**, `rx : ry` | [16] |
-| **Shape (curvature / contour)** | Weber fraction ≈ 0.11–0.14 | Ellipse **silhouette** (the clipped arc) — the only curved primitive in v7 | [16] |
+| **Shape (curvature / contour)** | Weber fraction ≈ 0.11–0.14 | Ellipse **silhouette** (the clipped arc) — the only curved primitive in v8 | [16] |
 | **Angle / orientation** | lowest near 90°/180°, highest near 45°/135° | Quartile-mark **corner orientation** (4 corners); ellipse **rotation** (16 steps over 180°) | [17] |
 | **Luminance contrast** | Weber fraction ≈ 0.08 | **Surround box** detection (filled vs. empty); palette lightness spacing | [14] |
 | **Chromaticity (normal vision)** | ΔE ≈ 1 at the JND (MacAdam ellipses) | Nucleus background color; per-cell edge color; color-bar bands | [18, 19] |
 | **Chromaticity (CVD)** | far larger and direction-dependent | Palette **lightness** separation; the honest CVD limits of §4.3 | [20, 21] |
 
-*Table 2. JND thresholds and the v7 channel each constrains.*
+*Table 2. JND thresholds and the v8 channel each constrains.*
 
-Two assignments deserve emphasis because they correct a misreading in the prior paper. First, the **surround is not a shape channel**; it is a *luminance-contrast* channel. Each box is either filled with the edge color or left empty, so the perceptual task is detecting the presence of a small high-contrast rectangle, governed by the luminance Weber fraction, not by shape discrimination. Second, the **curvature and aspect-ratio rows now point at the ellipse**, the only curved primitive in v7. In the v1 design they justified a set of edge "shapes" that no longer exists (§4.3).
+Two assignments deserve emphasis because they correct a misreading in the prior paper. First, the **surround is not a shape channel**; it is a *luminance-contrast* channel. Each box is either filled with the edge color or left empty, so the perceptual task is detecting the presence of a small high-contrast rectangle, governed by the luminance Weber fraction, not by shape discrimination. Second, the **curvature and aspect-ratio rows now point at the ellipse**, the only curved primitive in v8. In the v1 design they justified a set of edge "shapes" that no longer exists (§4.3).
 
 ### 2.2.3. Ordinary Vision: Acuity and Color-Vision Deficiency
 
@@ -150,15 +150,15 @@ QR codes optimize for machine reading — data density, fast acquisition, error 
 
 ## 4.3. Entviz: A Fingerprint-Driven, Human-Cognition-Aware Design
 
-This section describes v7 as specified [8] and justifies each design choice against §2. (v7 refines v6 by making the fingerprint's text-not-bytes rule explicit and by binding identity-bearing prefixes; neither touches the channels analyzed here, so where this section dates a feature it names the version that introduced it.) It supersedes the v1 description in the original paper, which credited entviz with an edge-shape channel that no later version contained.
+This section describes v8 as specified [8] and justifies each design choice against §2. (Since v7, entviz has changed only in details that do not disturb this analysis: v8 made snowflake detection deterministic and corrected a base32 case-normalization rule — neither a channel discussed here — and gave the blank-cell map a non-colour shape cue, which only strengthens the colour-vision argument below; v7 itself had refined v6 by making the fingerprint's text-not-bytes rule explicit and binding identity-bearing prefixes. Where this section dates a feature it names the version that introduced it.) It supersedes the v1 description in the original paper, which credited entviz with an edge-shape channel that no later version contained.
 
 ### 4.3.1. Algorithm and goal
 
 Entviz normalizes the input (stripping *presentation* prefixes such as Ethereum's `0x` and canonicalizing case, while keeping and binding any *identity*-bearing prefix such as a CESR derivation code), then computes the SHA-512 **fingerprint** of the normalized core **text** — the UTF-8 bytes of the characters as written, hashed *as text* and never decoded to the value's raw bytes. (Hashing text rather than decoded bytes is deliberate: it keeps every channel agreeing on identity — the text channel is verbatim and cannot be made encoding-invariant — and it closes a collision surface, since distinct malleable encodings can decode to identical bytes. The cost is that two encodings of the same value render differently, a fail-safe false negative rather than a false match.) Entviz then splits the input into 24-bit **tokens** and lays the tokens out in a grid. Each token drives one cell. The text and nucleus-color channels read from the input, so for inputs of 512 bits or fewer the visualization is **lossless**: the text alone, read aloud with case, transmits every bit. Every other channel reads from the fingerprint. This is the entropy/fingerprint split of §1.3, and it is what lets entviz amplify difference for inputs that have no avalanche of their own.
 
-> ![Anatomy of a v7 cell, with nucleus, surround, edge color, and quartile mark labeled](assets/paper/fig-4a-cell-anatomy.svg)
+> ![Anatomy of a v8 cell, with nucleus, surround, edge color, and quartile mark labeled](assets/paper/fig-4a-cell-anatomy.svg)
 >
-> **Figure 4a. Anatomy of a v7 cell.** Nucleus (text on its background color), the 24-box surround in the per-cell edge color, and an optional quartile triangle, labeled.
+> **Figure 4a. Anatomy of a v8 cell.** Nucleus (text on its background color), the 24-box surround in the per-cell edge color, and an optional quartile triangle, labeled.
 
 ### 4.3.2. Text channel — Proximity and chunking
 
@@ -166,7 +166,7 @@ Breaking a long string into a grid of short tokens applies Proximity directly: t
 
 ### 4.3.3. Surround channel — luminance-contrast pattern, not shape
 
-Around each nucleus, v7 draws 24 small rectangles in a ring — 10 above, 10 below, 2 on each side. Bit *i* of the cell's fingerprint token fills box *i* or leaves it empty; filled boxes all take a single per-cell **edge color** [8]. There are no shapes, no per-edge palette, and no corner rectangles. This replaces the v1–v3 "edge shapes" the original paper built its Continuity/Closure argument on — a channel removed in v4.
+Around each nucleus, v8 draws 24 small rectangles in a ring — 10 above, 10 below, 2 on each side. Bit *i* of the cell's fingerprint token fills box *i* or leaves it empty; filled boxes all take a single per-cell **edge color** [8]. There are no shapes, no per-edge palette, and no corner rectangles. This replaces the v1–v3 "edge shapes" the original paper built its Continuity/Closure argument on — a channel removed in v4.
 
 The Gestalt argument is rebuilt, and is in fact cleaner. The edge color is chosen as the palette entry perceptually nearest the cell's nucleus background (§4.3.4), so the filled boxes read as the nucleus color *leaking outward* through a fingerprint-controlled pixel pattern. By Similarity, ring and nucleus bind into one perceived object; the on/off pattern gives that object a texture that avalanches with the fingerprint. Larger structure emerges across cells and, above all, from the ellipse overlay (§4.3.6), not from any single cell's shape. The perceptual task here is **luminance-contrast detection** of a small filled rectangle, governed by the luminance Weber fraction (≈ 0.08, [14]) rather than shape discrimination. That is why the channel keeps working at reduced acuity and under CVD, where lightness survives.
 
@@ -213,11 +213,11 @@ Each band carries a lowercase letter naming its color (`w`, `g`, `r`, `b`, `k`) 
 
 > ![The color bar's skewed bands with letters, beside a protanopia-simulated copy in which the letters remain legible](assets/paper/fig-4d-color-bar.svg)
 >
-> **Figure 4d. The v7 color bar.** The skewed bands with their `w/g/r/b/k` letters, beside a protanopia-simulated copy showing the letters survive.
+> **Figure 4d. The v8 color bar.** The skewed bands with their `w/g/r/b/k` letters, beside a protanopia-simulated copy showing the letters survive.
 
 ### 4.3.6. Ellipse overlay — emergent shape within bounds
 
-On every entviz, regardless of input size, a translucent **ellipse** anchored and sized from the fingerprint darkens (or, on a blue background, lightens) the surround and grid beneath it without touching the nuclei or text [8]. (Earlier drafts skipped the overlay below 256 bits; v4 dropped that rule because the adaptive anchor keeps even the smallest grid's silhouette readable.) The anchor is chosen from the grid's interior corners on larger grids and its outer corners on small ones, so the silhouette is a centered blob on big grids and a clipped quarter- or half-ellipse on small ones. Semi-axes, rotation, and anchor each take one of 16 fingerprint-driven steps. The overlay gives the whole entviz a large organic shape that a glance can compare; it is the v7 channel that most directly engages Continuity (a smooth contour) and area/aspect discrimination ([16], Table 2).
+On every entviz, regardless of input size, a translucent **ellipse** anchored and sized from the fingerprint darkens (or, on a blue background, lightens) the surround and grid beneath it without touching the nuclei or text [8]. (Earlier drafts skipped the overlay below 256 bits; v4 dropped that rule because the adaptive anchor keeps even the smallest grid's silhouette readable.) The anchor is chosen from the grid's interior corners on larger grids and its outer corners on small ones, so the silhouette is a centered blob on big grids and a clipped quarter- or half-ellipse on small ones. Semi-axes, rotation, and anchor each take one of 16 fingerprint-driven steps. The overlay gives the whole entviz a large organic shape that a glance can compare; it is the v8 channel that most directly engages Continuity (a smooth contour) and area/aspect discrimination ([16], Table 2).
 
 The design choice worth recording is the **coverage clamp**. The semi-axes are bounded to `[0.22·d_far, 0.58·d_far]`, where `d_far` is the distance from the anchor to the farthest grid corner. An internal audit drove the real implementation across every grid the algorithm produces and found that the prior bounds let the overlay degenerate at both extremes: on 3–11% of inputs it darkened under 8% of the grid (an invisible sliver) and on up to 10% of large near-square grids it darkened over 80% (swamping the grid and erasing the covered-vs-uncovered contrast that is the overlay's entire value). The clamp scales both bounds with the grid, holding coverage in roughly the 8–70% band with a median near 32%, noticeable but partial on every grid. The same audit confirmed the overlay's discriminative value under the right model: two overlays are distinguishable if their coverage, location, *or* aspect differs (a disjunction), and under that model two random overlays collide only about 0.5–2.2% of the time. v6 also splits the rendering into a low-opacity interior fill plus a higher-opacity 2-px edge stroke, so the silhouette stays crisp while the cells beneath remain legible.
 
@@ -237,7 +237,7 @@ Four cells also carry a **quartile mark**: a small right triangle in one nucleus
 
 ### 4.3.8. Large inputs — head, fingerprint-middle, tail, and a 96-bit barrier
 
-Inputs over 512 bits cannot be shown losslessly in a 22-cell grid, and how entviz truncates is where its threat model is most interesting. v7 shows the **head** (first 8 tokens) and **tail** (last 8 tokens) as real input entropy, the parts a user recognizes and can check against a known value, and fills the four **middle** cells with a *fingerprint readout* rather than input bytes [8]. A bold dark-red `fingerprint of` marker on the top label warns that the text is no longer a linear scan of the input, and the type parenthetical (`hex(200)`, `b64(1024)`) carries the original byte length.
+Inputs over 512 bits cannot be shown losslessly in a 22-cell grid, and how entviz truncates is where its threat model is most interesting. v8 shows the **head** (first 8 tokens) and **tail** (last 8 tokens) as real input entropy, the parts a user recognizes and can check against a known value, and fills the four **middle** cells with a *fingerprint readout* rather than input bytes [8]. A bold dark-red `fingerprint of` marker on the top label warns that the text is no longer a linear scan of the input, and the type parenthetical (`hex(200)`, `b64(1024)`) carries the original byte length.
 
 The middle's design is the substantive v6 change, and it is instructive because it was refined under adversarial review. The requirement is that the middle text must avalanche on *any* input change, so that even a screen-reader comparison — which cannot see the gestalt — catches a difference. v5 filled the middle with input *body* slices, which only avalanche probabilistically: a low-entropy or structured body can render identical middle cells for two different inputs. v6 fills the middle from a hash instead, so it avalanches by construction. Two refinements made the guarantee literally hold:
 
@@ -277,7 +277,7 @@ Two conclusions follow, and the second is the one that matters. Under **careful*
 
 ### 4.3.10. Summary comparison
 
-| Dimension | Perceptual hashing (machines) | SSH randomart | QR codes | Entviz (v7) |
+| Dimension | Perceptual hashing (machines) | SSH randomart | QR codes | Entviz (v8) |
 | :---- | :---- | :---- | :---- | :---- |
 | **Primary goal** | similarity detection | distinguishability | data storage & retrieval | difference amplification |
 | **Target user** | automated systems | human (security-aware) | machine vision | human (untrained adult) |
@@ -318,7 +318,7 @@ Until these are settled, the right characterization of entviz is *theoretically 
 
 # 6. Conclusion
 
-This paper analyzed entviz against a framework drawn from Gestalt psychology, the psychophysics of the just-noticeable difference, and the security notion of near-collision resistance. Its contributions are three. First, it sets out a framework for evaluating human-centric visual hashes and maps each perceptual threshold to the entviz channel it constrains. Second, it draws the distinction between machine-centric perceptual hashing, which prizes robustness to similarity, and human-centric authentication visualization, which must prize sensitivity to difference — a distinction whose violation is a security bug. Third, it describes and justifies the v7 design channel by channel: the entropy/fingerprint split that preserves the input while amplifying difference; the luminance-contrast surround that replaced the earlier shape channel; the lightness-spaced palette with its honestly stated CVD limits; the salient visual CRCs; and the domain-separated fingerprint-middle that gives large inputs a guaranteed, injective avalanche behind a 96-bit barrier.
+This paper analyzed entviz against a framework drawn from Gestalt psychology, the psychophysics of the just-noticeable difference, and the security notion of near-collision resistance. Its contributions are three. First, it sets out a framework for evaluating human-centric visual hashes and maps each perceptual threshold to the entviz channel it constrains. Second, it draws the distinction between machine-centric perceptual hashing, which prizes robustness to similarity, and human-centric authentication visualization, which must prize sensitivity to difference — a distinction whose violation is a security bug. Third, it describes and justifies the v8 design channel by channel: the entropy/fingerprint split that preserves the input while amplifying difference; the luminance-contrast surround that replaced the earlier shape channel; the lightness-spaced palette with its honestly stated CVD limits; the salient visual CRCs; and the domain-separated fingerprint-middle that gives large inputs a guaranteed, injective avalanche behind a 96-bit barrier.
 
 The bottom line is that entviz is a well-motivated design whose central security claim is a careful estimate, not a measurement. Under careful comparison it clears randomart comfortably; under the habituation that real attacks exploit, its advantage is plausible but unverified, and at the low end of our estimate slim. As cryptographic verification continues to land in the hands of non-experts, the value of getting this right grows. Entviz shows a productive path, design from the visual system outward, and also shows the work that remains: the user study that would turn a principled estimate into evidence.
 
@@ -337,7 +337,7 @@ The bottom line is that entviz is a well-motivated design whose central security
 
 [7] Dhamija, R. and Perrig, A. 2000. Déjà Vu: A User Study Using Images for Authentication. In *Proceedings of the 9th USENIX Security Symposium (SSYM '00)*. USENIX Association, 45–58. https://www.usenix.org/legacy/events/sec00/full_papers/dhamija/dhamija_html/
 
-[8] Hardman, D. 2026. *entviz — Algorithm Specification, Version 7 (DRAFT).* `docs/spec.md` at commit dd313ad. https://github.com/dhh1128/entviz/blob/dd313ad/docs/spec.md
+[8] Hardman, D. 2026. *entviz — Algorithm Specification, Version 8 (DRAFT).* `docs/spec.md` on the `main` branch. https://github.com/dhh1128/entviz/blob/main/docs/spec.md
 
 [9] Wagemans, J., Elder, J. H., Kubovy, M., Palmer, S. E., Peterson, M. A., Singh, M. and von der Heydt, R. 2012. A Century of Gestalt Psychology in Visual Perception: I. Perceptual Grouping and Figure-Ground Organization. *Psychological Bulletin* 138, 6 (2012), 1172–1217. https://doi.org/10.1037/a0029333
 
