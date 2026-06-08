@@ -1691,20 +1691,63 @@ Entviz = goal:
             surprise that defeats the verbatim-text guarantee
             in the spec's Guarantees section).
 
-        (2) Plausible-timestamp range check. A bare 17-20
-            digit decimal is ambiguous (bank account, phone,
-            tracking number, random integer). Detection
-            requires that the top 42 bits, interpreted as a
-            Discord-epoch timestamp (2015-01-01 UTC), decode
-            to a date in [2015-01-01, today + 5 years]. The
-            5-year future window absorbs clock skew, fake
-            future IDs, and the slow drift of "today" as the
-            codebase ages without weakening the filter
-            meaningfully. Twitter snowflakes from 2010-2014
-            (Twitter epoch is earlier) are rejected; a
-            future broadening to Twitter's epoch is possible
-            but no current entropy-comparison use case
-            warrants the wider false-positive surface.
+        (2) Deterministic structural validity check (v8,
+            SPEC-F1). A bare 17-20 digit decimal is ambiguous
+            (bank account, phone, tracking number, random
+            integer), so detection needs a second filter beyond
+            length. Through v7 that filter was a PLAUSIBLE-
+            TIMESTAMP WINDOW: the top 42 bits, read as a
+            Discord-epoch (2015-01-01 UTC) timestamp, had to
+            fall in [2015-01-01, today + 5 years]. The upper
+            bound consulted the WALL CLOCK (time.time() via
+            _now_ms), which made the SAME input render
+            DIFFERENTLY over time: a boundary decimal whose
+            implied date sits just past "now + 5y" parsed as
+            hex today and as snowflake a few years later —
+            different type label, different alphabet, different
+            SVG. That is a direct violation of the spec's
+            determinism MUST (spec.md "An implementation MUST be
+            deterministic ... No part of the output may depend
+            on wall-clock time"), and the frozen golden corpus
+            could never catch it because it was generated at one
+            instant.
+
+            v8 replaces the wall-clock window with a CLOCK-FREE
+            STRUCTURAL test: a canonical 64-bit snowflake is a
+            non-negative signed integer, i.e. bit 63 (the sign
+            bit) is clear, so n < 2**63. Reject when bit 63 is
+            set. This is not an arbitrary cutoff — it is exactly
+            the well-formedness of the layout: with the sign bit
+            clear the 41-bit timestamp field (bits 22..62)
+            decodes, by construction, to a date in
+            [2015-01-01, ~2084], so "the implied date is
+            plausible" becomes a structural property of the bit
+            pattern rather than a comparison against the moving
+            present. A truly absurd future decimal still fails,
+            because its timestamp overflows the 41-bit field and
+            sets bit 63. No clock, no pinned date, identical
+            across implementations and across time. (The old
+            n.bit_length() > 64 overflow guard is subsumed:
+            n >= 2**63 already rejects everything from 2**63 up,
+            including the >=2**64 overflow case.)
+
+            Tradeoff, recorded honestly: dropping the future
+            window WIDENS acceptance. The window admitted random
+            18-digit decimals ~3.6% of the time; the structural
+            rule admits ESSENTIALLY ALL 17-20 digit decimals
+            below 2**63. So more non-snowflake decimals now
+            classify as "snowflake". This is acceptable because
+            the consequence is confined to the TYPE LABEL and
+            tokenization (snowflake: + DECIMAL alphabet vs
+            hex(N): + HEX) — both render the verbatim digits and
+            both are deterministic, so comparison correctness is
+            unaffected in either classification. Determinism (a
+            spec MUST) outranks label precision (a cosmetic
+            nicety). A future revision MAY add a clock-free
+            tightening (e.g. rejecting all-zero machine/sequence
+            bits) if the false-positive label rate proves
+            annoying, but MUST NOT reintroduce any wall-clock
+            dependence.
 
         (3) Parser ordering: parse_snowflake must precede
             parse_hex in the dispatch chain because every
