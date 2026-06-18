@@ -162,7 +162,7 @@ Empirically, randomart is a mixed result. It supports reasonably fast comparison
 
 QR codes optimize for machine reading — data density, fast acquisition, error tolerance — and against human reading [32]. The format packs data into a grid of modules with finder and timing patterns for the scanner, a quiet zone, and Reed–Solomon error correction that tolerates damage [33]. For a human comparing two of them, a QR code is close to a worst case: a dense, high-frequency field that violates every Gestalt principle, offering no proximity grouping, no continuity, no closure, nothing to hold [32]. It is included here as the baseline that shows what happens when human factors are not a design input at all: a local maximum for machines, a global minimum for human comparison.
 
-## 4.3. entviz
+## 4.3. Entviz
 
 This section describes v9 as specified [8] and justifies each design choice against §2. (This section reflects v9. The changes since v7 that touch the channels discussed here are two: the fingerprint-middle cells now use Crockford base32 rather than hex (§4.3.8), and the color bar gains two always-present discrete markers (§4.3.5). Earlier version-to-version history lives in the change log, not here.) It supersedes the v1 description in the original paper, which credited entviz with an edge-shape channel that no later version contained.
 
