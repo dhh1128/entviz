@@ -325,7 +325,10 @@ def fig_crc():
 
 def fig_large_input():
     """Figure 4g — head / fingerprint-middle / tail layout for a >512-bit input."""
-    art = render("a" * 200, font_size_pt=14)
+    art = render(
+        hashlib.sha512(b"entviz large-input figure").hexdigest()
+        + hashlib.sha512(b"entviz v9 large-input demo").hexdigest(),
+        font_size_pt=14)
     root = parse(art)
     data = []
     for c in cells(root):
