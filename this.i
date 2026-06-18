@@ -3179,18 +3179,23 @@ Entviz = goal:
 
         (b) TWO FIXED-SLOT MARKERS. The bar's drawing height is divided into
         K = clamp(floor(bar_height / 12px), 4, 16) EQUAL FIXED slots, independent
-        of band sizes/order. A SQUARE rides the bar's LEFT gutter at slot
-        second[12] mod K; an EQUILATERAL TRIANGLE (apex up — orientation carries
-        no info, position does) rides the RIGHT gutter at slot second[13] mod K.
-        Source = the second, domain-separated digest (reused DOMAIN_TAG), bytes
-        disjoint from the middle cells' second[0..11]. `second` is now computed
-        for EVERY input (one extra SHA-512), so SHORT inputs gain this channel
-        too. bar_width is UNCHANGED (markers live in ~4px gutters inside the
-        existing 20px bar — no geometry blast radius). Left/right placement
-        means the two markers can NEVER overlap regardless of slot, and SIDE
-        encodes identity redundantly with shape (works even for a viewer who
-        cannot tell a square from a triangle) — so there is no coincident-slot
-        rule.
+        of band sizes/order. A small FILLED CIRCLE rides each gutter: LEFT at slot
+        second[12] mod K, RIGHT at second[13] mod K. Source = the second,
+        domain-separated digest (reused DOMAIN_TAG), bytes disjoint from the
+        middle cells' second[0..11]. `second` is now computed for EVERY input
+        (one extra SHA-512), so SHORT inputs gain this channel too. bar_width is
+        UNCHANGED (markers live in ~4px gutters inside the existing 20px bar — no
+        geometry blast radius). Left/right placement means the two markers can
+        NEVER overlap regardless of slot, and SIDE alone tells them apart — so
+        there is no coincident-slot rule.
+
+        CIRCLES, not distinct shapes (revised after gallery review): the first
+        cut used a SQUARE (left) + EQUILATERAL TRIANGLE (right), but shape
+        discrimination proved untenable at the bar's scale — on a dark band
+        (blue/red/black) the black halo vanishes and only a too-small inner
+        glyph reads, so the shape was not perceived consistently. Since the
+        left/right gutters already distinguish the two markers, the shape
+        distinction was redundant as well as fragile; both are now circles.
 
         Markers are drawn as OPAQUE TWO-TONE: white fill + ~0.75px black
         outline — NOT mix-blend-mode / difference compositing. This delivers the
@@ -3207,7 +3212,7 @@ Entviz = goal:
         (c) WHY IT MATTERS. The markers are discrete (slot positions),
         INDEPENDENT (second digest is domain-separated from the primary, so the
         bits add cleanly to the joint near-collision grind cost — the F2 logic),
-        CVD-safe (shape + side + lightness halo), and — decisively — ALWAYS
+        CVD-safe (side + lightness halo), and — decisively — ALWAYS
         PRESENT. This closes the coverage hole where the blank map (our other
         best discrete channel) vanishes ENTIRELY on an exactly-filled grid
         (token_count == cell_count -> no blank cell -> no map). Honest framing:
@@ -3215,8 +3220,8 @@ Entviz = goal:
         hard bits), NOT the security backbone (cell-text reads are).
 
         (d) CONFORMANCE. The render model's `color bar` field gains the two
-        marker slots; the SVG carries data-bar-marker-square /
-        data-bar-marker-triangle (slot index) and data-bar-slots (K) so a Tier-A
+        marker slots; the SVG carries data-bar-marker-left /
+        data-bar-marker-right (slot index) and data-bar-slots (K) so a Tier-A
         checker recovers them without pixel geometry, and data-color-bar-rank
         reflects the decoupled order. Relates to [[cr0ckmid]], [[d1scr3t3]], the
         colour-bar + blank-cell-map steps, and the multi-impl corpus/ports

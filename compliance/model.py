@@ -264,8 +264,8 @@ def _color_bar_markers(root):
                 return None
             return {
                 "slots": slots,
-                "square": _opt_int(g.get("data-bar-marker-square")),
-                "triangle": _opt_int(g.get("data-bar-marker-triangle")),
+                "left": _opt_int(g.get("data-bar-marker-left")),
+                "right": _opt_int(g.get("data-bar-marker-right")),
             }
     return None
 

@@ -54,45 +54,47 @@ def test_markers_present_and_in_range_on_short_input():
     _, bar = _bar(render(SHORT))
     K = int(bar.get("data-bar-slots"))
     assert 4 <= K <= 16
-    sq = int(bar.get("data-bar-marker-square"))
-    tri = int(bar.get("data-bar-marker-triangle"))
-    assert 0 <= sq < K and 0 <= tri < K
+    left = int(bar.get("data-bar-marker-left"))
+    right = int(bar.get("data-bar-marker-right"))
+    assert 0 <= left < K and 0 <= right < K
 
 
 def test_marker_slots_match_second_digest():
     second = fingerprint_middle_digest(parse(SHORT).core)
     _, bar = _bar(render(SHORT))
     K = int(bar.get("data-bar-slots"))
-    assert int(bar.get("data-bar-marker-square")) == second[12] % K
-    assert int(bar.get("data-bar-marker-triangle")) == second[13] % K
+    assert int(bar.get("data-bar-marker-left")) == second[12] % K
+    assert int(bar.get("data-bar-marker-right")) == second[13] % K
 
 
 def test_markers_present_on_large_input_too():
     _, bar = _bar(render(BIG))
     assert bar.get("data-bar-slots") is not None
-    assert bar.get("data-bar-marker-square") is not None
-    assert bar.get("data-bar-marker-triangle") is not None
+    assert bar.get("data-bar-marker-left") is not None
+    assert bar.get("data-bar-marker-right") is not None
 
 
-# --- marker shapes: opaque, haloed, no blend mode ---
+# --- markers are circles distinguished by gutter (side), not by shape ---
 
-def test_square_is_opaque_rect_with_black_halo():
+def test_both_markers_are_opaque_haloed_circles():
+    # v9: both gutter markers are circles (white fill + black halo). Identity
+    # is carried by SIDE (left/right), not shape — square-vs-triangle was
+    # unreliable on dark bands where the black halo vanishes.
     root, _ = _bar(render(SHORT))
-    sq = root.xpath('//*[@data-bar-marker="square"]')
-    assert len(sq) == 1 and sq[0].tag.endswith("rect")
-    assert sq[0].get("fill") == "#ffffff" and sq[0].get("stroke") == "#000000"
+    for side in ("left", "right"):
+        m = root.xpath(f'//*[@data-bar-marker="{side}"]')
+        assert len(m) == 1 and m[0].tag.endswith("circle"), side
+        assert m[0].get("fill") == "#ffffff" and m[0].get("stroke") == "#000000"
+        assert float(m[0].get("r")) > 0
 
 
-def test_triangle_is_opaque_polygon_apex_up():
+def test_markers_sit_in_distinct_gutters():
+    # The left marker's center is left of the right marker's, so the two can
+    # never overlap regardless of which slots they land in.
     root, _ = _bar(render(SHORT))
-    tri = root.xpath('//*[@data-bar-marker="triangle"]')
-    assert len(tri) == 1 and tri[0].tag.endswith("polygon")
-    assert tri[0].get("fill") == "#ffffff" and tri[0].get("stroke") == "#000000"
-    pts = [tuple(map(float, p.split(","))) for p in tri[0].get("points").split()]
-    assert len(pts) == 3
-    ys = sorted(p[1] for p in pts)
-    # apex up: one point above (smallest y), two on a level base below
-    assert ys[0] < ys[1] and abs(ys[1] - ys[2]) < 1e-6
+    left = root.xpath('//*[@data-bar-marker="left"]')[0]
+    right = root.xpath('//*[@data-bar-marker="right"]')[0]
+    assert float(left.get("cx")) < float(right.get("cx"))
 
 
 def test_no_mix_blend_mode_anywhere():

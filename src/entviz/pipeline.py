@@ -1095,37 +1095,32 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
             text_el.text = letter.lower()
         y += h
 
-    # v9: two fixed-slot discrete markers ride the bar's gutters (b4rm4rks).
-    # A square in the left gutter at slot second[12] mod K; an equilateral
-    # triangle (apex up) in the right gutter at slot second[13] mod K, where
-    # K = clamp(floor(bar_height/12px), 4, 16) equal slots independent of the
-    # bands. Drawn OPAQUE — white fill + ~0.75px black halo, NOT mix-blend-mode
-    # — so they render identically across rasterizers (F-A6) and stay visible
-    # where a marker straddles two bands. The two never overlap (distinct
-    # gutters). `second` is the domain-separated digest, present on every input.
+    # v9: two fixed-slot discrete CIRCLE markers ride the bar's gutters
+    # (b4rm4rks). Identity is carried by SIDE — left = second[12], right =
+    # second[13] — not by shape: a square-vs-triangle distinction proved
+    # unreliable, because on a dark band (blue/red/black) the black halo
+    # vanishes and only a too-small inner glyph reads. Circles need no shape
+    # discrimination; you check each circle's slot (height) and gutter (side).
+    # K = clamp(floor(bar_height/12px), 4, 16) equal slots, independent of the
+    # bands. Drawn OPAQUE — white fill + ~0.75px black halo, NOT a blend mode —
+    # so they render identically across rasterizers (F-A6) and stay visible
+    # where a marker straddles two bands (white core on the dark side of the
+    # cut, black halo on the light side). `second` is the domain-separated
+    # digest, present on every input. The two never overlap (distinct gutters).
     if second_digest is not None:
         K = max(4, min(16, int(bar_rect.size.height // 12)))
         bar_g.set("data-bar-slots", str(K))
         slot_h = bar_rect.size.height / K
-        msize = bar_rect.size.width * 0.28
+        radius = bar_rect.size.width * 0.17
         inset = bar_rect.size.width * 0.06
-        for name, slot, side in (
-            ("square", second_digest[12] % K, "left"),
-            ("triangle", second_digest[13] % K, "right"),
-        ):
-            bar_g.set(f"data-bar-marker-{name}", str(slot))
+        for side, slot in (("left", second_digest[12] % K),
+                           ("right", second_digest[13] % K)):
+            bar_g.set(f"data-bar-marker-{side}", str(slot))
             cy = bar_rect.top + (slot + 0.5) * slot_h
-            cx = (bar_rect.left + inset + msize / 2) if side == "left" else \
-                 (bar_rect.left + bar_rect.size.width - inset - msize / 2)
-            common = {"fill": "#ffffff", "stroke": "#000000",
-                      "stroke-width": "0.75", "data-bar-marker": name}
-            if name == "square":
-                etree.SubElement(
-                    bar_g, 'rect',
-                    x=str(cx - msize / 2), y=str(cy - msize / 2),
-                    width=str(msize), height=str(msize), **common)
-            else:
-                pts = (f"{cx},{cy - msize / 2} "
-                       f"{cx - msize / 2},{cy + msize / 2} "
-                       f"{cx + msize / 2},{cy + msize / 2}")
-                etree.SubElement(bar_g, 'polygon', points=pts, **common)
+            cx = (bar_rect.left + inset + radius) if side == "left" else \
+                 (bar_rect.left + bar_rect.size.width - inset - radius)
+            etree.SubElement(
+                bar_g, 'circle',
+                cx=str(cx), cy=str(cy), r=str(radius),
+                fill="#ffffff", stroke="#000000",
+                **{"stroke-width": "0.75", "data-bar-marker": side})

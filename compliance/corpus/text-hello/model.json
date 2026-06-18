@@ -81,9 +81,9 @@
     }
   ],
   "color_bar_markers": {
-    "slots": 9,
-    "square": 1,
-    "triangle": 3
+    "left": 1,
+    "right": 3,
+    "slots": 9
   },
   "cols": 2,
   "ellipse": {
