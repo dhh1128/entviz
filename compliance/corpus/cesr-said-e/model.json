@@ -179,21 +179,26 @@
       "rank": 0
     },
     {
+      "band": "G",
+      "letter": "g",
+      "rank": 1
+    },
+    {
       "band": "R",
       "letter": "r",
-      "rank": 1
+      "rank": 2
     },
     {
       "band": "K",
       "letter": "k",
-      "rank": 2
-    },
-    {
-      "band": "G",
-      "letter": "g",
       "rank": 3
     }
   ],
+  "color_bar_markers": {
+    "slots": 15,
+    "square": 5,
+    "triangle": 11
+  },
   "cols": 3,
   "ellipse": {
     "anchor": [
@@ -211,7 +216,7 @@
     "truncation_marker": false
   },
   "rows": 4,
-  "spec_version": "v8",
+  "spec_version": "v9",
   "truncated": false,
   "user_note": null
 }

@@ -40,8 +40,8 @@
       "quartile": null,
       "row": 2,
       "surround_bits": 10985923,
-      "text": "3897c7",
-      "text_size_px": 12.0
+      "text": "3h5y7",
+      "text_size_px": 13.333
     },
     "11": {
       "blank": false,
@@ -54,8 +54,8 @@
       "quartile": 3,
       "row": 2,
       "surround_bits": 4273812,
-      "text": "b7edbb",
-      "text_size_px": 12.0
+      "text": "bfvdv",
+      "text_size_px": 13.333
     },
     "12": {
       "blank": false,
@@ -68,8 +68,8 @@
       "quartile": null,
       "row": 3,
       "surround_bits": 7742750,
-      "text": "e0d1c6",
-      "text_size_px": 12.0
+      "text": "e1me6",
+      "text_size_px": 13.333
     },
     "13": {
       "blank": true,
@@ -318,8 +318,8 @@
       "quartile": 1,
       "row": 2,
       "surround_bits": 10352885,
-      "text": "52fb17",
-      "text_size_px": 12.0
+      "text": "55yrq",
+      "text_size_px": 13.333
     }
   },
   "color_bar": [
@@ -344,6 +344,11 @@
       "rank": 3
     }
   ],
+  "color_bar_markers": {
+    "slots": 16,
+    "square": 3,
+    "triangle": 4
+  },
   "cols": 4,
   "ellipse": {
     "anchor": [
@@ -361,7 +366,7 @@
     "truncation_marker": true
   },
   "rows": 6,
-  "spec_version": "v8",
+  "spec_version": "v9",
   "truncated": true,
   "user_note": null
 }

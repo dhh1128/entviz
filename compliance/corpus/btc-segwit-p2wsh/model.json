@@ -230,26 +230,31 @@
   },
   "color_bar": [
     {
-      "band": "B",
-      "letter": "b",
-      "rank": 0
-    },
-    {
-      "band": "K",
-      "letter": "k",
-      "rank": 1
-    },
-    {
       "band": "G",
       "letter": "g",
-      "rank": 2
+      "rank": 0
     },
     {
       "band": "W",
       "letter": "w",
+      "rank": 1
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 2
+    },
+    {
+      "band": "K",
+      "letter": "k",
       "rank": 3
     }
   ],
+  "color_bar_markers": {
+    "slots": 15,
+    "square": 4,
+    "triangle": 6
+  },
   "cols": 4,
   "ellipse": {
     "anchor": [
@@ -267,7 +272,7 @@
     "truncation_marker": false
   },
   "rows": 4,
-  "spec_version": "v8",
+  "spec_version": "v9",
   "truncated": false,
   "user_note": null
 }

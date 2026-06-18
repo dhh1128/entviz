@@ -35,9 +35,9 @@ def test_above_512_bit_hex_produces_8_head_4_middle_8_tail_tokens():
     for k in range(8):
         expected = core[len(core) - (8 - k) * 6: len(core) - (8 - k - 1) * 6]
         assert tokens[12 + k].text == expected
-    # Middle tokens 8..11 are 6 hex chars each (rendered in the input alphabet).
+    # Middle tokens 8..11 are 5 lowercase Crockford base32 chars each (v9).
     for j in range(8, 12):
-        assert len(tokens[j].text) == 6
+        assert len(tokens[j].text) == 5
 
 
 def test_head_and_tail_collision_inputs_differ_in_middle_text():

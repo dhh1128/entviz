@@ -348,7 +348,7 @@ def fig_large_input():
     nested, art_h, mp = place(art, margin, top, art_w)
     lx = margin + art_w + 60
     cap = ("Head and tail show real input; the four framed middle cells show a domain-separated "
-           "hex digest that avalanches on any change.")
+           "digest (Crockford base32) that avalanches on any change.")
     W = max(lx + 300, approx_w(cap, T_SMALL) + 2 * 30)
     H = top + art_h + 56
     s = [svg_open(W, H), nested]
@@ -361,7 +361,7 @@ def fig_large_input():
     if head_cells:
         rows.append((center(head_cells[0]), "head", "first tokens of the real input", INK))
     if framed:
-        rows.append((center(framed[0]), "fingerprint-middle", "a hex digest, framed — not the user's data", WARN))
+        rows.append((center(framed[0]), "fingerprint-middle", "a digest in Crockford base32, framed — not the user's data", WARN))
     if tail_cells:
         rows.append((center(tail_cells[-1]), "tail", "last tokens of the real input", INK))
     ys = [96, 168, 240]

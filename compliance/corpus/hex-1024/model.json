@@ -42,8 +42,8 @@
       "quartile": 1,
       "row": 2,
       "surround_bits": 12000628,
-      "text": "90e7e9",
-      "text_size_px": 12.0
+      "text": "91sz9",
+      "text_size_px": 13.333
     },
     "11": {
       "blank": false,
@@ -56,8 +56,8 @@
       "quartile": 4,
       "row": 2,
       "surround_bits": 5808034,
-      "text": "b759e4",
-      "text_size_px": 12.0
+      "text": "bepf4",
+      "text_size_px": 13.333
     },
     "12": {
       "blank": true,
@@ -78,8 +78,8 @@
       "quartile": null,
       "row": 3,
       "surround_bits": 13792129,
-      "text": "01c15b",
-      "text_size_px": 12.0
+      "text": "03gav",
+      "text_size_px": 13.333
     },
     "14": {
       "blank": false,
@@ -92,8 +92,8 @@
       "quartile": null,
       "row": 3,
       "surround_bits": 11394353,
-      "text": "3aea10",
-      "text_size_px": 12.0
+      "text": "3ntgg",
+      "text_size_px": 13.333
     },
     "15": {
       "blank": false,
@@ -324,13 +324,13 @@
   },
   "color_bar": [
     {
-      "band": "R",
-      "letter": "r",
+      "band": "G",
+      "letter": "g",
       "rank": 0
     },
     {
-      "band": "G",
-      "letter": "g",
+      "band": "R",
+      "letter": "r",
       "rank": 1
     },
     {
@@ -344,6 +344,11 @@
       "rank": 3
     }
   ],
+  "color_bar_markers": {
+    "slots": 16,
+    "square": 15,
+    "triangle": 14
+  },
   "cols": 4,
   "ellipse": {
     "anchor": [
@@ -361,7 +366,7 @@
     "truncation_marker": true
   },
   "rows": 6,
-  "spec_version": "v8",
+  "spec_version": "v9",
   "truncated": true,
   "user_note": null
 }

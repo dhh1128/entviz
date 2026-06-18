@@ -18,7 +18,7 @@ import re
 from lxml import etree
 
 from . import SPEC_VERSION, __version__
-from .entropy import parse, tokenize_entropy
+from .entropy import parse, tokenize_entropy, fingerprint_middle_digest
 from .layout import choose_grid, assign_cell_indices, Cell, Point, Rect, Size
 from .colors import select_visual_style
 from .fingerprint import (
@@ -434,11 +434,12 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     )
     cell_text_px = cell_text_pt * _DPI / 72
     label_text_px = round(font_size_pt * 0.75) * _DPI / 72
-    # The v6 fingerprint-middle cells always render 6 hex chars regardless of
-    # the input alphabet, so they use the 6-char (0.75×) rendered size even
-    # when the input's own tokens are 4 chars (5-/6-bit alphabets render at
-    # full size). Without this the 6 hex chars overflow the nucleus.
-    fp_middle_text_px = round(font_size_pt * 0.75) * _DPI / 72
+    # The v9 fingerprint-middle cells always render 5 Crockford base32 chars
+    # regardless of the input alphabet, so they use the 5-char (0.80×) rendered
+    # size (per the generalized rule max(0.75, min(1.0, 4/token_chars)) = 0.80
+    # for 5 chars) even when the input's own tokens are 4 chars. Bigger and
+    # roomier than v6's 6-hex 0.75×. Without this the glyphs overflow the nucleus.
+    fp_middle_text_px = round(font_size_pt * 0.80) * _DPI / 72
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges
     # (and on top of the future ellipse overlay).
@@ -581,6 +582,8 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         svg, color_bar_rect, gm,
         _two_bit_color_usage(digest, style.edge_colors), style.edge_colors,
         box_height=box_height, cell_text_px=cell_text_px,
+        band_order=_two_bit_first_appearance(digest, style.edge_colors),
+        second_digest=fingerprint_middle_digest(core),
     )
     # (color bar width is bar_width = 2·box_height; v6 letters render at the
     # cell-text size, bottom-anchored within each band.)
@@ -963,6 +966,26 @@ def _two_bit_color_usage(digest: bytes, edge_colors) -> dict:
     return {edge_colors[i]: counts[i] for i in range(4)}
 
 
+def _two_bit_first_appearance(digest: bytes, edge_colors) -> list:
+    """
+    v9: colors in each 2-bit pattern's FIRST-APPEARANCE order across the 256
+    disjoint slices of the digest (tie-break by pattern value). This decouples
+    the color-bar band *order* from the count^4 band *heights* — through v8 the
+    order was descending count, carrying no information beyond the heights. See
+    `this.i:b4rm4rks` / `d1scr3t3`.
+    """
+    first = {}
+    idx = 0
+    for byte in digest:
+        for shift in (0, 2, 4, 6):
+            pat = (byte >> shift) & 0x03
+            if pat not in first:
+                first[pat] = idx
+            idx += 1
+    order = sorted(range(4), key=lambda p: (first.get(p, 256 + p), p))
+    return [edge_colors[p] for p in order]
+
+
 # v5: palette → uppercase band letter mapping. Used by the color-bar
 # letter rendering; an overlay component (Idea 2) can also consume the
 # data-color-bar-band="<letter>" attribute without re-deriving this map.
@@ -976,7 +999,8 @@ _BAND_LETTER_BY_COLOR = {
 
 
 def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
-                    box_height=None, cell_text_px=None):
+                    box_height=None, cell_text_px=None,
+                    band_order=None, second_digest=None):
     """
     Draw color-bar bands inside bar_rect's drawing region.
 
@@ -1005,7 +1029,15 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
     # x^4 is monotonic for non-negative x, sorting by count or by count^4
     # produces the same order; we sort by raw count for clarity.
     color_order = {c: i for i, c in enumerate(edge_colors)}
-    used.sort(key=lambda x: (-x[1], color_order[x[0]]))
+    if band_order is not None:
+        # v9: order bands by each pattern's first appearance in the digest scan
+        # (decoupled from height), tie-break by edge-palette index.
+        order_pos = {c: i for i, c in enumerate(band_order)}
+        used.sort(key=lambda x: (order_pos.get(x[0], len(band_order)),
+                                 color_order[x[0]]))
+    else:
+        # legacy (pre-v9): descending count, edge_colors index as tiebreak.
+        used.sort(key=lambda x: (-x[1], color_order[x[0]]))
     total = sum(n ** 4 for _, n in used)
     bar_g = etree.SubElement(svg, 'g', **{"data-channel": "color-bar"})
     bar_cx = bar_rect.left + bar_rect.size.width / 2
@@ -1062,3 +1094,38 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
             )
             text_el.text = letter.lower()
         y += h
+
+    # v9: two fixed-slot discrete markers ride the bar's gutters (b4rm4rks).
+    # A square in the left gutter at slot second[12] mod K; an equilateral
+    # triangle (apex up) in the right gutter at slot second[13] mod K, where
+    # K = clamp(floor(bar_height/12px), 4, 16) equal slots independent of the
+    # bands. Drawn OPAQUE — white fill + ~0.75px black halo, NOT mix-blend-mode
+    # — so they render identically across rasterizers (F-A6) and stay visible
+    # where a marker straddles two bands. The two never overlap (distinct
+    # gutters). `second` is the domain-separated digest, present on every input.
+    if second_digest is not None:
+        K = max(4, min(16, int(bar_rect.size.height // 12)))
+        bar_g.set("data-bar-slots", str(K))
+        slot_h = bar_rect.size.height / K
+        msize = bar_rect.size.width * 0.28
+        inset = bar_rect.size.width * 0.06
+        for name, slot, side in (
+            ("square", second_digest[12] % K, "left"),
+            ("triangle", second_digest[13] % K, "right"),
+        ):
+            bar_g.set(f"data-bar-marker-{name}", str(slot))
+            cy = bar_rect.top + (slot + 0.5) * slot_h
+            cx = (bar_rect.left + inset + msize / 2) if side == "left" else \
+                 (bar_rect.left + bar_rect.size.width - inset - msize / 2)
+            common = {"fill": "#ffffff", "stroke": "#000000",
+                      "stroke-width": "0.75", "data-bar-marker": name}
+            if name == "square":
+                etree.SubElement(
+                    bar_g, 'rect',
+                    x=str(cx - msize / 2), y=str(cy - msize / 2),
+                    width=str(msize), height=str(msize), **common)
+            else:
+                pts = (f"{cx},{cy - msize / 2} "
+                       f"{cx - msize / 2},{cy + msize / 2} "
+                       f"{cx + msize / 2},{cy + msize / 2}")
+                etree.SubElement(bar_g, 'polygon', points=pts, **common)

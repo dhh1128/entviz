@@ -63,15 +63,15 @@ def test_color_bar_band_fills_are_from_edge_colors():
         )
 
 
-def test_top_band_has_highest_count():
-    # We can't easily inspect counts from outside, but we can confirm the
-    # band heights are non-increasing from top to bottom (since they're
-    # proportional to descending counts).
+def test_color_bar_bands_tile_without_gaps():
+    # v9: the band ORDER is decoupled from count (it follows each pattern's
+    # first appearance in the digest scan — see test_v9_color_bar), so band
+    # heights are no longer monotonic top-to-bottom. The invariant that
+    # survives: every band has positive height and the bands tile the bar
+    # contiguously, with no gaps or overlaps.
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    bands = _color_bar_bands(svg)
-    sorted_bands = sorted(bands, key=lambda b: float(b.get("y")))
-    heights = [float(b.get("height")) for b in sorted_bands]
-    for i in range(len(heights) - 1):
-        assert heights[i] >= heights[i + 1] - 0.01, (
-            f"band {i} height {heights[i]} < band {i+1} height {heights[i+1]}"
-        )
+    bands = sorted(_color_bar_bands(svg), key=lambda b: float(b.get("y")))
+    heights = [float(b.get("height")) for b in bands]
+    assert heights and all(h > 0 for h in heights)
+    for a, b in zip(bands, bands[1:]):
+        assert abs((float(a.get("y")) + float(a.get("height"))) - float(b.get("y"))) < 0.01

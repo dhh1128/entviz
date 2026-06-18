@@ -1342,24 +1342,52 @@ def _core_byte_length(core: str, alphabet) -> int:
 _MIDDLE_DOMAIN_TAG = b"entviz/fingerprint-middle/v6\x00"
 
 
+def fingerprint_middle_digest(core: str) -> bytes:
+    """The second, domain-separated digest: SHA-512(DOMAIN_TAG ‖ core).
+
+    v9: computed for EVERY input (not only >512-bit ones). It drives the two
+    color-bar markers on all inputs and, additionally, the 4 fingerprint-middle
+    cells on >512-bit inputs. The DOMAIN_TAG keeps it independent of the primary
+    fingerprint (F2); its ``v6`` is the construction version, fixed — not the
+    spec version (see docs/spec.md). See ``this.i:b4rm4rks`` / ``cr0ckmid``.
+    """
+    return hashlib.sha512(_MIDDLE_DOMAIN_TAG + core.encode("utf-8")).digest()
+
+
+def _crockford5(value: int) -> str:
+    """Encode a 24-bit value as 5 lowercase Crockford base32 characters (v9).
+
+    High-order zero-padded; injective since 32**5 = 2**25 ≥ 2**24. Crockford
+    omits i/l/o/u, so the readout is homoglyph-clean and single-case (no
+    read-aloud "cap" cue). Replaces v6's 6-hex middle rendering. The leading
+    character never exceeds symbol value 15 (the value uses 24 of 25 bits).
+    See ``this.i:cr0ckmid``.
+    """
+    chars = []
+    for _ in range(5):
+        chars.append(CROCKFORD32_ALPHABET[value & 0x1F])
+        value >>= 5
+    return "".join(reversed(chars)).lower()
+
+
 def _build_fingerprint_middle_tokens(core: str) -> list[Token]:
     """
-    Build the 4 middle Tokens from a SECOND, domain-separated SHA-512 digest
-    of the whole core: token i renders ``second_digest[3i : 3i+3]`` as 6
-    lowercase hex characters (a 24-bit, injective readout). Hex is used
-    regardless of the input alphabet, so each cell always carries a full 24
-    bits and the text is guaranteed to avalanche on any input change (F1);
-    the domain tag keeps it independent of the primary fingerprint (F2).
-    Token indices here are 0..3; the caller renumbers into the final 0..19
+    Build the 4 middle Tokens from the second, domain-separated digest
+    (`fingerprint_middle_digest`): token i renders ``second[3i : 3i+3]`` as
+    **5 lowercase Crockford base32 characters** (a 24-bit, injective readout).
+    Crockford is used regardless of the input alphabet, so each cell always
+    carries a full 24 bits and the text is guaranteed to avalanche on any input
+    change (F1); the domain tag keeps it independent of the primary fingerprint
+    (F2). Token indices here are 0..3; the caller renumbers into the final 0..19
     sequence. The pipeline paints these nuclei with the entviz background
     color (they carry no entropy in their bg).
     """
-    second = hashlib.sha512(_MIDDLE_DOMAIN_TAG + core.encode("utf-8")).digest()
+    second = fingerprint_middle_digest(core)
     tokens: list[Token] = []
     for i in range(_MIDDLE_TOKENS):
         b3 = second[3 * i: 3 * i + 3]
         quant = (b3[0] << 16) | (b3[1] << 8) | b3[2]
-        tokens.append(Token(b3.hex(), i, quant))
+        tokens.append(Token(_crockford5(quant), i, quant))
     return tokens
 
 

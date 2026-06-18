@@ -60,13 +60,13 @@
   },
   "color_bar": [
     {
-      "band": "R",
-      "letter": "r",
+      "band": "W",
+      "letter": "w",
       "rank": 0
     },
     {
-      "band": "W",
-      "letter": "w",
+      "band": "R",
+      "letter": "r",
       "rank": 1
     },
     {
@@ -80,6 +80,11 @@
       "rank": 3
     }
   ],
+  "color_bar_markers": {
+    "slots": 9,
+    "square": 1,
+    "triangle": 3
+  },
   "cols": 2,
   "ellipse": {
     "anchor": [
@@ -97,7 +102,7 @@
     "truncation_marker": false
   },
   "rows": 2,
-  "spec_version": "v8",
+  "spec_version": "v9",
   "truncated": false,
   "user_note": null
 }

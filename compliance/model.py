@@ -170,6 +170,7 @@ def extract_model(svg: str | bytes) -> dict:
 
     # --- color bar ---
     model["color_bar"] = _color_bar(root)
+    model["color_bar_markers"] = _color_bar_markers(root)
 
     # --- labels ---
     model["labels"] = _labels(root)
@@ -250,6 +251,23 @@ def _color_bar(root):
         })
     bands.sort(key=lambda b: b["rank"])
     return bands
+
+
+def _color_bar_markers(root):
+    """v9: the two fixed-slot color-bar markers, recovered from the color-bar
+    group's attributes (`data-bar-slots`, `data-bar-marker-square`,
+    `data-bar-marker-triangle`). Returns None on a malformed/absent bar."""
+    for g in _findall(root, "g"):
+        if g.get("data-channel") == "color-bar":
+            slots = _opt_int(g.get("data-bar-slots"))
+            if slots is None:
+                return None
+            return {
+                "slots": slots,
+                "square": _opt_int(g.get("data-bar-marker-square")),
+                "triangle": _opt_int(g.get("data-bar-marker-triangle")),
+            }
+    return None
 
 
 def _labels(root):

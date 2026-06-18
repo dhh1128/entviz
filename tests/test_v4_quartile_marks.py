@@ -20,7 +20,7 @@ def test_four_quartile_triangles_per_render():
     # Use a 16-token base64-encoded input ("Lorem ipsum..." → 16 tokens,
     # divisible by 4 so all 4 quartile ftoks are real).
     svg = _doc(render("Lorem ipsum dolor sit amet, consectetur adipiscing elit."))
-    polygons = svg.xpath('//*[local-name()="polygon"]')
+    polygons = svg.xpath('//*[local-name()="polygon"][not(@data-bar-marker)]')
     assert len(polygons) == 4, f"expected 4 quartile triangles, got {len(polygons)}"
 
 
@@ -28,7 +28,7 @@ def test_quartile_count_is_three_when_last_quartile_is_padding():
     """UUID has 6 tokens → padded to 8 for the quartile divide → last
     quartile's first entry is a padding blank → only 3 triangles drawn."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    polygons = svg.xpath('//*[local-name()="polygon"]')
+    polygons = svg.xpath('//*[local-name()="polygon"][not(@data-bar-marker)]')
     assert len(polygons) == 3
 
 
@@ -36,7 +36,7 @@ def test_quartile_triangle_color_is_fg_color():
     """Each triangle's fill is either #ffffff (white) or #000000 (black) —
     the cell text's foreground color."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    polygons = svg.xpath('//*[local-name()="polygon"]')
+    polygons = svg.xpath('//*[local-name()="polygon"][not(@data-bar-marker)]')
     for p in polygons:
         assert p.get("fill") in ("#ffffff", "#000000")
 
@@ -44,7 +44,7 @@ def test_quartile_triangle_color_is_fg_color():
 def test_quartile_triangle_has_three_vertices():
     """A right triangle has 3 vertices, expressed as 3 'x,y' points."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    polygons = svg.xpath('//*[local-name()="polygon"]')
+    polygons = svg.xpath('//*[local-name()="polygon"][not(@data-bar-marker)]')
     for p in polygons:
         points = p.get("points", "")
         # 3 'x,y' tokens
@@ -57,7 +57,7 @@ def test_quartile_triangle_legs_equal_nucleus_height_over_2():
     is 10 px. Inspecting one polygon should show the two legs aligning
     along axes with length 10."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    polygons = svg.xpath('//*[local-name()="polygon"]')
+    polygons = svg.xpath('//*[local-name()="polygon"][not(@data-bar-marker)]')
     for p in polygons:
         pts = [tuple(map(float, pair.split(",")))
                for pair in p.get("points").split()]

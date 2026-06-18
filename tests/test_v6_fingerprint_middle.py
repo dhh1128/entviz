@@ -2,10 +2,10 @@
 v6 long-input middle (adversarial-2026-06-02 F1 + F2 fix).
 
 For >512-bit inputs the 4 middle tokens render a SECOND, domain-separated
-SHA-512 digest of the whole normalized core, as HEX:
+SHA-512 digest of the whole normalized core, as CROCKFORD BASE32 (v9):
 
     second = SHA-512(b"entviz/fingerprint-middle/v6\\0" || core)
-    middle[i] = second[3i : 3i+3].hex()        # 6 lowercase hex chars = 24 bits
+    middle[i] = crockford5(second[3i : 3i+3])  # 5 lowercase chars = 24 bits
 
 This replaces v6.0's "primary-digest bytes 24-35 rendered in the input's
 alphabet", which (F1) dropped 4 bits/cell on 5-bit alphabets and mod-aliased
@@ -26,7 +26,7 @@ import re
 
 from lxml import etree
 
-from entviz.entropy import parse, _MIDDLE_DOMAIN_TAG
+from entviz.entropy import parse, _MIDDLE_DOMAIN_TAG, _crockford5
 from entviz.pipeline import render
 
 _FONT_SIZE_RE = re.compile(r"font-size:\s*([\d.]+)px")
@@ -101,13 +101,15 @@ def _middle_in_order(raw):
 def _expected_middle(raw):
     core = parse(raw).core
     second = hashlib.sha512(_MIDDLE_DOMAIN_TAG + core.encode("utf-8")).digest()
-    return [second[3 * i: 3 * i + 3].hex() for i in range(4)]
+    return [_crockford5((second[3 * i] << 16) | (second[3 * i + 1] << 8) | second[3 * i + 2])
+            for i in range(4)]
 
 
 def _primary_middle_bytes(raw):
     core = parse(raw).core
     d = hashlib.sha512(core.encode("utf-8")).digest()
-    return [d[24 + 3 * i: 27 + 3 * i].hex() for i in range(4)]
+    return [_crockford5((d[24 + 3 * i] << 16) | (d[25 + 3 * i] << 8) | d[26 + 3 * i])
+            for i in range(4)]
 
 
 # --- fixtures are actually large / truncated ---
@@ -128,26 +130,26 @@ def test_exactly_four_fingerprint_cells_at_token_positions_8_to_11():
 # --- F1: 24-bit injective hex, regardless of input alphabet ---
 
 def test_middle_renders_domain_separated_second_digest():
-    """Pins the exact algorithm: each middle cell is 6 hex chars of the
-    domain-separated second SHA-512 of the whole core."""
+    """Pins the exact algorithm: each middle cell is 5 lowercase Crockford
+    base32 chars of the domain-separated second SHA-512 of the whole core."""
     for raw in (BASE, B32, B64):
         assert _middle_in_order(raw) == _expected_middle(raw), raw
 
 
-def test_middle_is_hex_regardless_of_input_alphabet():
-    """base32 (5-bit) and base64url (6-bit) inputs still render a HEX middle —
-    6 lowercase hex chars per cell — not their own alphabet."""
-    hexcell = re.compile(r"^[0-9a-f]{6}$")
+def test_middle_is_crockford_regardless_of_input_alphabet():
+    """v9: base32 (5-bit) and base64url (6-bit) inputs still render a Crockford
+    base32 middle — 5 lowercase chars per cell — not their own alphabet."""
+    crockcell = re.compile(r"^[0-9abcdefghjkmnpqrstvwxyz]{5}$")
     for raw in (B32, B64):
         mid = _middle_in_order(raw)
-        assert len(mid) == 4 and all(hexcell.match(t) for t in mid), (raw, mid)
+        assert len(mid) == 4 and all(crockcell.match(t) for t in mid), (raw, mid)
 
 
-def test_middle_is_lowercase_hex_even_for_uppercase_core():
-    """B32's core is uppercase; the middle is still lowercase hex (it is the
-    second digest, not a case-matched slice of the core)."""
+def test_middle_is_lowercase_crockford_even_for_uppercase_core():
+    """B32's core is uppercase; the middle is still lowercase Crockford (it is
+    the second digest, not a case-matched slice of the core)."""
     for t in _middle_in_order(B32):
-        assert t == t.lower() and len(t) == 6, t
+        assert t == t.lower() and len(t) == 5, t
 
 
 def test_five_bit_alphabet_middle_is_injective_and_avalanches():
@@ -173,41 +175,45 @@ def test_middle_is_independent_of_primary_digest():
         assert _middle_in_order(raw) != _primary_middle_bytes(raw), raw
 
 
-def test_middle_text_is_downsized_to_fit_six_chars_for_nonhex_alphabet():
-    """The 6-char hex middle must use the 6-char (0.75x) rendered font size
-    even when the input alphabet's own tokens are 4 chars (5-/6-bit alphabets
-    render at full size). Otherwise the 6 hex chars overflow the nucleus — the
-    Cardano-Shelley gallery bug. B32 is a 5-bit alphabet: head/tail are 4-char
-    full-size cells; the middle is 6-char and must be smaller."""
+def test_middle_text_is_downsized_to_fit_five_chars_for_nonhex_alphabet():
+    """v9: the 5-char Crockford middle uses the 5-char (0.80x) rendered font
+    size even when the input alphabet's own tokens are 4 chars (5-/6-bit
+    alphabets render at full size). Otherwise the glyphs overflow the nucleus.
+    B32 is a 5-bit alphabet: head/tail are 4-char full-size cells; the middle is
+    5-char and must be smaller."""
     svg, g = _parse(render(B32))
     fp = set(_fp_indices(svg))
     head = [ci for ci in sorted(g)
             if ci not in fp and g[ci].get("data-cell-blank") is None]
     head_px = _cell_font_px(g[head[0]])
+    expected = round(12 * 0.80) * 96 / 72   # 0.80x of the 12pt reference
     for ci in fp:
         mid_px = _cell_font_px(g[ci])
         assert mid_px < head_px, (
             f"fp cell {ci} font {mid_px}px not downsized below head {head_px}px")
-        # 6-char size is 0.75x the reference (12pt -> 9pt -> 12px at 96dpi).
-        assert mid_px == 12.0, mid_px
+        assert abs(mid_px - expected) < 1e-6, mid_px
 
 
-def test_hex_input_middle_font_matches_six_char_head():
-    """For a hex input the head/tail are already 6-char (0.75x) cells, so the
-    6-char middle uses the same size — no regression."""
+def test_hex_input_middle_font_is_crockford_080x_not_head_075x():
+    """v9: on a hex input the head/tail are 6-char (0.75x = 12px) cells, but the
+    middle is now 5-char Crockford at 0.80x (= 13.33px), so the middle is
+    slightly LARGER than the head — a deliberate change from v6, where both were
+    6-char hex at 0.75x."""
     svg, g = _parse(render(BASE))
     fp = _fp_indices(svg)
     head = [ci for ci in sorted(g)
             if ci not in set(fp) and g[ci].get("data-cell-blank") is None]
-    assert {_cell_font_px(g[ci]) for ci in fp} == {_cell_font_px(g[head[0]])} == {12.0}
+    head_px = _cell_font_px(g[head[0]])
+    assert head_px == 12.0
+    assert {_cell_font_px(g[ci]) for ci in fp} == {round(12 * 0.80) * 96 / 72}
 
 
-def test_middle_token_length_is_six_hex_chars():
+def test_middle_token_length_is_five_crockford_chars():
     svg, g = _parse(render(BASE))
     used = _used_texts_in_order(svg, g)
-    assert len(used[0]) == 6        # hex head token
+    assert len(used[0]) == 6        # hex head token (6 chars)
     for t in used[8:12]:
-        assert len(t) == 6
+        assert len(t) == 5          # v9 Crockford middle (5 chars)
 
 
 def test_head_and_tail_text_unchanged_entropy():
