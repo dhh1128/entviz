@@ -36,6 +36,14 @@ BLUE = "#1d4ed8"
 GOLD = "#e7be00"
 WHITE = "#ffffff"
 
+# v10: the map blank's fill/markers are hybrid — fingerprint-coloured (markers
+# recoloured to luminance contrast) when it is the SOLE blank, but the v9
+# white/gold anchor + red/blue markers when there are siblings. The sole-blank
+# hybrid is covered in test_v10_casual_avalanche.py; the tests below that assert
+# the anchor + red/blue behaviour use a MULTI-blank input. 128 hex (512 bit,
+# non-truncated) → 22 tokens → 24-cell grid → 2 blanks.
+MULTI = "0123456789abcdef" * 8
+
 
 def _doc(svg_str):
     return etree.fromstring(svg_str.encode())
@@ -132,8 +140,10 @@ def test_non_map_blanks_have_no_markers():
 
 def test_map_has_blue_dot_and_red_plus():
     """v8 (PSY-F1): minftok = exactly one blue <circle> (dot); maxftok = exactly
-    one red <path> (plus). Shape, not just colour, distinguishes them."""
-    svg = _doc(render(FIXTURE))
+    one red <path> (plus). Shape, not just colour, distinguishes them.
+    Uses a multi-blank input so the map blank is the v9 white/gold anchor with
+    red/blue markers (the sole-blank hybrid is in test_v10_casual_avalanche)."""
+    svg = _doc(render(MULTI))
     g = _map_group(svg)[0]
     dots = [c for c in _circles(g) if c.get("fill") == BLUE]
     plusses = [p for p in _paths(g) if p.get("stroke") == RED]
@@ -168,7 +178,11 @@ def test_map_fill_contrasts_with_entviz_background():
     """Map rect fill = gold when the entviz background is white, else white."""
     saw_white_bg = saw_nonwhite_bg = False
     for n in range(40):
-        svg = _doc(render(f"deadbeef{n:02d}" * 3))
+        # v10: use MULTI-blank inputs (128 hex → 22 tokens → 2 blanks) so the
+        # map blank is the white/gold anchor; vary the leading bytes to span both
+        # white and non-white backgrounds. (A sole-blank map is fingerprint-filled
+        # in v10, which test_v10_casual_avalanche covers.)
+        svg = _doc(render((f"{n:08x}" + "0123456789abcdef" * 8)[:128]))
         maps = _map_group(svg)
         if not maps:
             continue
@@ -214,8 +228,8 @@ def test_markers_carry_rowcol_attrs_at_minftok_and_maxftok():
     """SPEC-F2: data-blank-map-min/max carry the cell's literal "row,col", so
     the position is recoverable from the named attribute (not pixel geometry).
     PSY-F1: the blue dot marks minftok, the red plus marks maxftok."""
-    svg = _doc(render(FIXTURE))
-    grid, min_cell, max_cell = _recompute_min_max_cells(FIXTURE)
+    svg = _doc(render(MULTI))
+    grid, min_cell, max_cell = _recompute_min_max_cells(MULTI)
     assert min_cell != max_cell, "fixture should have distinct min/max cells"
 
     g = _map_group(svg)[0]
