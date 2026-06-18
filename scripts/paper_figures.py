@@ -35,7 +35,7 @@ OUT = os.path.join(figlib.REPO_ROOT, "docs", "assets", "paper")
 
 def fig_cell_anatomy():
     """Figure 4a — labelled anatomy of one cell."""
-    art = render("0123456789abcdef0123456789abcdef", font_size_pt=24)
+    art = render("9b101a0b3eeb00f31b024098e10ed5de", font_size_pt=24)  # white-bg cell
     root = parse(art)
     c0 = cells(root)[0]
     nuc = nucleus(c0)
@@ -91,10 +91,21 @@ def fig_cell_anatomy():
     s.append(gridline(cx0, cy0 + 2 * bh_, cx0 + bw_, cy0 + 2 * bh_))
     s.append(gridline(cx0 + 9 * bw_, cy0 + 2 * bh_, cx0 + 10 * bw_, cy0 + 2 * bh_))
 
+    # Faint index 0..23 in each box, matching the algorithm's numbering
+    # (clockwise from the top-left; bit i fills box i). The interior 8x2 is the
+    # nucleus and carries no number.
+    box_centers = [(cx0 + (k + 0.5) * bw_, cy0 + 0.5 * bh_) for k in range(10)]  # top 0..9
+    box_centers += [(cx0 + 9.5 * bw_, cy0 + 1.5 * bh_), (cx0 + 9.5 * bw_, cy0 + 2.5 * bh_)]  # right 10,11
+    box_centers += [(cx0 + (9.5 - j) * bw_, cy0 + 3.5 * bh_) for j in range(10)]  # bottom 12..21 R->L
+    box_centers += [(cx0 + 0.5 * bw_, cy0 + 2.5 * bh_), (cx0 + 0.5 * bw_, cy0 + 1.5 * bh_)]  # left 22,23
+    for i, (acx, acy) in enumerate(box_centers):
+        nx_, ny_ = mp(acx, acy)
+        s.append(text(nx_, ny_ + 3, str(i), size=8, anchor="middle", fill="#9aa0a6"))
+
     items = [
         (mp(nx + nw / 2, ny + 3), "nucleus background", "24-bit token read as an RGB color"),
         (mp(tx, ty - 4), "cell text", "the token in monospace; white/black by Oklab L*"),
-        (mp(bx + bw / 2, by + bh / 2), "surround box (1 of 24)", "fingerprint bit i fills box i, or leaves it empty"),
+        (mp(cx0 + 9.5 * bw_, cy0 + 0.5 * bh_), "surround box (9 of 24)", "fingerprint bit i fills box i, or leaves it empty"),
         (mp(bx + bw / 2, by + bh / 2), "per-cell edge color", "the palette entry nearest the nucleus color"),
         (mp(pcx, pcy), "quartile mark", "corner orientation encodes the token's rank"),
     ]
