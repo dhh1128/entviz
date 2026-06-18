@@ -107,6 +107,32 @@ Entviz = goal:
         fill color are indexed by quartile order (1st=top-left, 2nd=top-right,
         3rd=bottom-right, 4th=bottom-left), using the edge_colors array.
 
+    Casual Avalanche Levers = decision:
+      id: c4sav1nc
+      why: >
+        v10 (DRAFT, docs/spec-v10-draft.md). Comparison has two modes —
+        casual (a glance, reading the colour gestalt) and careful (cell by
+        cell). Bandwidth is mode-dependent: the surround PATTERN avalanches
+        for careful comparison but is casually invisible (Fig 4b), and the
+        colour gestalt — the channel a glance actually uses — barely moves on
+        a one-char change (nucleus = entropy, surround echoes it, background
+        is only 2 bits). Measured: 27.1% of background-unchanged neighbours
+        are casually colour-identical (n=100k; experiments/casual-avalanche).
+        Fix: put fingerprint signal into colour, as a few discordant colour
+        SINGLETONS that pop out pre-attentively. Top-left cell (first
+        fixation) + 1st/2nd quartile cells (already fingerprint-positioned,
+        and they move) take their surround edge colour from 2 ftok bits
+        instead of nearest-to-nucleus; blanks fill from the fingerprint with
+        a HYBRID map-blank rule (colour the map blank iff it is the sole
+        blank — markers stay legible by shape, not hue — else keep it a white
+        anchor and colour its siblings). Partiality is REQUIRED: singletons
+        must stay rare to pop, which also scales down to small inputs.
+        Locked result: hard-quarter colour-miss 27.1% -> ~0.5%, every type
+        <= ~2%. Adds casual salience only, NOT collision resistance. The four
+        >512-bit fingerprint cells are deliberately left neutral: they
+        avalanche in their text, large inputs already discriminate casually,
+        and they anchor the coherent field the singletons pop against.
+
     Full Pipeline = decision:
       id: f4llpipe
       why: >
