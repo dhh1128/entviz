@@ -3080,3 +3080,144 @@ Entviz = goal:
         certified TS) + cargo unit tests, but UNVERIFIED (uncompiled). Needs
         rustup to build/test and to port the renderer + certify. Tracked by
         tick 77ua / 3t6v.
+
+    Discrete-vs-Analog Verification Bits = decision:
+      id: d1scr3t3
+      why: >
+        Record (2026-06-17): the load-bearing principle behind the v9
+        comparison-channel work, surfaced while brainstorming a recommended
+        comparison algorithm (the Comparison Procedures spec section is the
+        next design target; not yet locked). PRINCIPLE: reliable,
+        attacker-resistant human verification bits come only from DISCRETE-
+        symbol decoding (reading a character, naming a color letter, checking
+        whether a marker sits in the same slot/cell). ANALOG visual variables —
+        colour shade, size, aspect ratio, position-on-a-continuum, organic
+        shape — contribute RECOGNITION and DIFFERENCE-DETECTION but not hard
+        bits: they are read with perceptual tolerance, which both caps reliable
+        bits at the JND and hands a near-collision attacker (T1+T6) a tolerance
+        band to hide in.
+
+        Consequences that decided several design questions: (1) text "dominates"
+        the adversarial bit budget not because it is text but because it is the
+        most familiar zero-tolerance discrete channel — so the way to make
+        comparison LESS text-centric is to enrich the OTHER discrete channels
+        (blank-map cell positions, colour-bar letter order, quartile positions,
+        the new bar markers), NOT to add analog flourish. (2) A drunken-bishop
+        walk was REJECTED: it is a holistic/analog generator, and entviz is
+        already a saturated holistic-gestalt object, so it would add a
+        correlated impression + visual mess, not the scarce discrete bits.
+        (3) A "fat vs thin" colour-bar encoding was REJECTED: aspect ratio is
+        among the least reliably-read visual variables and is continuous
+        (gameable). (4) The blank map is the best non-text channel precisely
+        because it is DISCRETE (positions), not analog. Two comparison MODES
+        follow: a casual mode (gestalt-first; avalanche lights up every channel
+        on any honest single-char error, so a glance suffices) and an
+        adversarial mode (discrete-symbol-backed; the randomized/seeded walk
+        forces unpredictable coverage so a T1+T6 attacker cannot pre-match the
+        check-set). Drives [[cr0ckmid]] and [[b4rm4rks]].
+
+    Crockford Middle Cells = decision:
+      id: cr0ckmid
+      why: >
+        Record (2026-06-17): v9 (pending implementation). For >512-bit inputs
+        the 4 middle ("fingerprint") cells render the second, domain-separated
+        digest as 5 LOWERCASE CROCKFORD base32 characters per cell, replacing
+        v6's 6 lowercase hex. Motivation: reading effort scales with character
+        count AND syllables, and the middle cells are the read-aloud bottleneck
+        on a base64-alphabet input (4-char head/tail tokens flanking 6-char hex
+        middles). Breaking change accepted — nobody is using entviz yet.
+
+        Crockford-5 is the PROVABLE OPTIMUM of {fewest chars that is injective
+        on 24 bits, single-case, homoglyph-clean}: 4 chars would need a >=64-
+        symbol (6-bit) alphabet, forcing mixed case or -/_ (which re-imports the
+        "cap" read-aloud syllable AND homoglyph cost — so base64url is a wash on
+        syllables and worse on safety/signal); no single-case homoglyph-clean
+        alphabet reaches 64 symbols (digits + one letter case = 36 max). 5 chars
+        over a 32-symbol disambiguated alphabet is therefore the floor.
+        32^5 = 2^25 >= 2^24, so the encoding is injective (24-bit big-endian
+        value, high-order zero-padded; the leading char never exceeds symbol
+        value 15 — harmless). Crockford excludes i/l/o/u, so it kills the 0/o,
+        1/l, 1/i confusions — strictly safer than hex. base58 was REJECTED
+        outright: 58^4 = 11,316,496 < 2^24, so 4 base58 chars cannot injectively
+        carry 24 bits and a 4-char rendering re-opens exactly the F1 mod-fallback
+        aliasing this construction was created to kill.
+
+        Font: NO rule change needed. The existing per-cell size rule
+        round(ref x max(0.75, min(1.0, 4/token_chars))) yields 5-char -> 0.80x
+        (10pt at the 12pt reference) automatically, vs hex's clamped-to-floor
+        0.75x (9pt) — bigger and roomier (~9.6px horizontal slack vs ~4.8px).
+        Full size is impossible: 5 glyphs overflow the ~4-glyph nucleus, which
+        is the same wall that forced hex to 0.75x.
+
+        Signal preserved and improved: the "this is a digest, not your data" cue
+        rested partly on hex looking unlike the input alphabet. On a HEX input
+        that cue was weakest (all-hex; only the neutral bg + gold/white frame
+        distinguished the middle). With crockford the head/tail (6-char hex) and
+        middle (5-char crockford) now differ by alphabet AND size even on a hex
+        input — the F1 "hex signals digest" rationale is reworded, not lost.
+        Reuses the existing second digest + DOMAIN_TAG (no new hash). Relates to
+        the Large-input handling subsection, the cell-text rendered-size rule,
+        and [[d1scr3t3]].
+
+    Color-Bar Decouple + Discrete Markers = decision:
+      id: b4rm4rks
+      why: >
+        Record (2026-06-17): v9 (pending implementation). Three coordinated
+        colour-bar changes that add DISCRETE (hard) bits to a non-text channel
+        per [[d1scr3t3]].
+
+        (a) ORDER-DECOUPLE. The bands' vertical order is now set by each 2-bit
+        pattern's FIRST-APPEARANCE order while scanning the primary SHA-512
+        digest's 256 disjoint 2-bit slices (tie-break by pattern value,
+        00<01<10<11), INDEPENDENT of band heights (still count^4 of the primary
+        histogram). Today order == argsort(heights), so it carries ~0 extra
+        bits; decoupling adds ~3 reliable discrete bits (read the letters top to
+        bottom) at zero extra glance and zero CVD cost. It does not hurt the
+        COMPARISON task — sorted-vs-unsorted only matters for reading a trend in
+        isolation, not for "do these two bars match". data-color-bar-rank now
+        reflects the independent order.
+
+        (b) TWO FIXED-SLOT MARKERS. The bar's drawing height is divided into
+        K = clamp(floor(bar_height / 12px), 4, 16) EQUAL FIXED slots, independent
+        of band sizes/order. A SQUARE rides the bar's LEFT gutter at slot
+        second[12] mod K; an EQUILATERAL TRIANGLE (apex up — orientation carries
+        no info, position does) rides the RIGHT gutter at slot second[13] mod K.
+        Source = the second, domain-separated digest (reused DOMAIN_TAG), bytes
+        disjoint from the middle cells' second[0..11]. `second` is now computed
+        for EVERY input (one extra SHA-512), so SHORT inputs gain this channel
+        too. bar_width is UNCHANGED (markers live in ~4px gutters inside the
+        existing 20px bar — no geometry blast radius). Left/right placement
+        means the two markers can NEVER overlap regardless of slot, and SIDE
+        encodes identity redundantly with shape (works even for a viewer who
+        cannot tell a square from a triangle) — so there is no coincident-slot
+        rule.
+
+        Markers are drawn as OPAQUE TWO-TONE: white fill + ~0.75px black
+        outline — NOT mix-blend-mode / difference compositing. This delivers the
+        "visible against anything, including a marker that straddles a band
+        boundary" goal PORTABLY: pure lightness contrast (CVD/grayscale-safe),
+        bit-identical across rasterizers. mix-blend-mode or an invert filter
+        would re-open adversarial finding F-A6 (the v5 marker was invisible
+        outside browsers; the blank map deliberately avoids blend modes for
+        exactly this) and break Tier-B (the non-browser reference rasterizer).
+        A statically-computed colour inverse does NOT solve the band-spanning
+        case (two backdrops, one inverse); the halo does — the white core shows
+        on the dark side of the cut, the black halo on the light side.
+
+        (c) WHY IT MATTERS. The markers are discrete (slot positions),
+        INDEPENDENT (second digest is domain-separated from the primary, so the
+        bits add cleanly to the joint near-collision grind cost — the F2 logic),
+        CVD-safe (shape + side + lightness halo), and — decisively — ALWAYS
+        PRESENT. This closes the coverage hole where the blank map (our other
+        best discrete channel) vanishes ENTIRELY on an exactly-filled grid
+        (token_count == cell_count -> no blank cell -> no map). Honest framing:
+        still a tripwire-tier contributor (2 markers x ~3 bits ~= 6 independent
+        hard bits), NOT the security backbone (cell-text reads are).
+
+        (d) CONFORMANCE. The render model's `color bar` field gains the two
+        marker slots; the SVG carries data-bar-marker-square /
+        data-bar-marker-triangle (slot index) and data-bar-slots (K) so a Tier-A
+        checker recovers them without pixel geometry, and data-color-bar-rank
+        reflects the decoupled order. Relates to [[cr0ckmid]], [[d1scr3t3]], the
+        colour-bar + blank-cell-map steps, and the multi-impl corpus/ports
+        ([[entviz-multiimpl-plan]] — Rust/TS/React + golden corpus regen).

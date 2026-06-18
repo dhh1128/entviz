@@ -105,7 +105,7 @@ files — do **not** use an external API for task tracking.
 ## 7. Navigation
 
 - [README.md](README.md) - Developer onboarding.
-- [docs/spec.md](docs/spec.md) - Algorithm specification (current: v6).
+- [docs/spec.md](docs/spec.md) - Algorithm specification (current: v9).
 - [this.i](this.i) - The "Why" behind the project.
 - [CLAUDE.md](CLAUDE.md) - Summary for Claude.
 - [GEMINI.md](GEMINI.md) - Summary for Gemini.
