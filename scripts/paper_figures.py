@@ -389,7 +389,7 @@ def fig_comparison():
 
     s = [svg_open(W, H)]
     labels = ["(a) SSH randomart", "(b) QR code", "(c) entviz"]
-    subs = ["emergent path; ~20–24 bits", "dense matrix; for machines", "designed; built for the eye"]
+    subs = ["emergent path; low perceptual entropy", "dense matrix; for machines", "designed; built for the eye"]
     xs = [margin, margin + panel_w + gap, margin + 2 * (panel_w + gap)]
 
     # (a) randomart
