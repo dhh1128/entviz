@@ -34,30 +34,44 @@ OUT = os.path.join(figlib.REPO_ROOT, "docs", "assets", "paper")
 # ===========================================================================
 
 def fig_cell_anatomy():
-    """Figure 4a — labelled anatomy of one cell."""
-    art = render("9b101a0b3eeb00f31b024098e10ed5de", font_size_pt=24)  # white-bg cell
-    root = parse(art)
-    c0 = cells(root)[0]
-    nuc = nucleus(c0)
-    nx, ny, nw, nh = rect_box(nuc)
-    txt_el = next(c0.iter(SVGNS + "text"))
-    tx, ty = float(txt_el.get("x")), float(txt_el.get("y"))
-    poly = next(c0.iter(SVGNS + "polygon"))
-    pts = [tuple(map(float, p.split(","))) for p in poly.get("points").split()]
-    pcx = sum(p[0] for p in pts) / 3
-    pcy = sum(p[1] for p in pts) / 3
-    # crop tightly to cell 0's exact extent (cell = 10x4 boxes)
-    cx0, cy0, cw, ch = 52.0, 51.0, 120.0, 80.0
-    boxes = [b for b in surround_boxes(root)
-             if cx0 <= float(b.get("x")) < cx0 + cw and cy0 <= float(b.get("y")) < cy0 + ch
-             and b.get("fill") != "#e7be00"]
-    boxes = boxes or surround_boxes(root)
-    topbox = min(boxes, key=lambda b: float(b.get("y")))
-    bx, by = float(topbox.get("x")), float(topbox.get("y"))
-    bw, bh = float(topbox.get("width")), float(topbox.get("height"))
+    """Figure 4a — labelled anatomy of one cell.
+
+    Constructed rather than scraped from a full entviz: we *posit* the cell's
+    properties and draw it with the real per-cell renderer, so the geometry is
+    faithful to the algorithm while the appearance is under our control — a
+    white background, a cream nucleus (so the nearest-palette edge resolves to
+    gold), a chosen 24-bit surround pattern, and a quartile mark. No ellipse,
+    colour bar, or grid-background tint, so the leader lines stay crisp.
+    """
+    from lxml import etree
+    from entviz.layout import Cell, Point, Size
+    from entviz.colors import VisualStyle, POSSIBLE_EDGE_COLORS, get_nucleus_colors
+    from entviz.entropy import Token
+    from entviz.renderer import Renderer
+
+    # quant byte order is red-in-low-byte, so 0xc8e6f5 renders as nucleus
+    # #f5e6c8 (cream) -> black text and a gold nearest-palette edge. The cell
+    # text is the matching hex, exactly as a real cell shows its own token.
+    NUCLEUS_QUANT = 0xc8e6f5
+    SURROUND_QUANT = 0x962a4d    # a posited, balanced 24-bit pattern (boxes 0,9,11 set)
+    fs = 24 * 96 / 72            # 24 pt at 96 dpi
+    cw, ch = 3.75 * fs, 2.5 * fs            # the spec cell dimensions (10x4 boxes)
+    cell = Cell(Point(0, 0), Size(cw, ch))  # build at the origin; place() scales it
+    bw, bh = cell.box_width, cell.box_height
+    nuc = cell.nucleus
+    style = VisualStyle(bg_color="#ffffff", edge_colors=POSSIBLE_EDGE_COLORS[1:])  # gold/red/blue/black
+    nucleus_bg, fg = get_nucleus_colors(NUCLEUS_QUANT)
+    r = Renderer(style, grid=None)
+    g = etree.Element("g")
+    r.render_edges(g, Token("", 0, SURROUND_QUANT), cell, nucleus_bg)
+    r.render_nucleus(g, Token("c8e6f5", 0, NUCLEUS_QUANT), cell,
+                     text_size_px=round(24 * 0.75) * 96 / 72)   # 6-char (0.75x) size
+    r.draw_quartile_mark(g, cell, 2, fg)                        # 2 = bottom-right (any is fine)
+    cell_svg = (f'<svg xmlns="http://www.w3.org/2000/svg" width="{cw}" height="{ch}" '
+                f'viewBox="0 0 {cw} {ch}">{etree.tostring(g, encoding="unicode")}</svg>')
 
     art_x, art_y, art_w = 40, 48, 300
-    nested, art_h, mp = place(art, art_x, art_y, art_w, crop=(cx0, cy0, cw, ch))
+    nested, art_h, mp = place(cell_svg, art_x, art_y, art_w)
 
     lx = art_x + art_w + 70
     W, H = lx + 360, art_y + art_h + 24
@@ -65,49 +79,29 @@ def fig_cell_anatomy():
     s.append(rect(art_x, art_y, art_w, art_h, stroke=HAIR, sw=1))
     s.append(text(art_x, art_y - 12, "one cell, enlarged", size=T_SMALL, fill=INK2, italic=True))
 
-    # Overlay the 24-box surround grid so the reader can see where the boxes
-    # live. The 24 boxes tile the perimeter ring of a 10x4 box grid; the
-    # interior 8x2 is the nucleus. Each boundary is a black dashed line over a
-    # white underlay (an "ants" line), so it reads on any box color.
-    bw_, bh_ = cw / 10.0, ch / 4.0
+    # Outline all 24 surround boxes (black dashed over a white underlay — an
+    # "ants" line, legible on any box colour) and number them 0..23 in the
+    # algorithm's clockwise order: bit i fills box i. The interior 8x2 is the
+    # nucleus and is not a box.
+    for i in range(24):
+        o = cell.box_origin(i)
+        (x1, y1), (x2, y2) = mp(o.x, o.y), mp(o.x + bw, o.y + bh)
+        s.append(rect(x1, y1, x2 - x1, y2 - y1, stroke="#ffffff", sw=1.3))
+        s.append(rect(x1, y1, x2 - x1, y2 - y1, stroke="#000000", sw=0.6, dash="2 2"))
+        cxn, cyn = mp(o.x + bw / 2, o.y + bh / 2)
+        s.append(text(cxn, cyn + 3, str(i), size=9, anchor="middle", fill="#9aa0a6"))
 
-    def gridline(ax1, ay1, ax2, ay2):
-        (gx1, gy1), (gx2, gy2) = mp(ax1, ay1), mp(ax2, ay2)
-        return (line(gx1, gy1, gx2, gy2, stroke="#ffffff", w=1.3)
-                + line(gx1, gy1, gx2, gy2, stroke="#000000", w=0.6, dash="2 2"))
+    def bc(i):  # figure-space center of box i
+        o = cell.box_origin(i)
+        return mp(o.x + bw / 2, o.y + bh / 2)
 
-    # full-height verticals at the nucleus side edges (box boundaries throughout)
-    for ax in (cx0 + bw_, cx0 + 9 * bw_):
-        s.append(gridline(ax, cy0, ax, cy0 + ch))
-    # top- and bottom-row internal verticals (skip the nucleus middle band)
-    for k in range(2, 9):
-        ax = cx0 + k * bw_
-        s.append(gridline(ax, cy0, ax, cy0 + bh_))
-        s.append(gridline(ax, cy0 + 3 * bh_, ax, cy0 + ch))
-    # horizontals dividing the top and bottom rows from the middle band
-    for ay in (cy0 + bh_, cy0 + 3 * bh_):
-        s.append(gridline(cx0, ay, cx0 + cw, ay))
-    # dividers splitting the two stacked boxes in each side column
-    s.append(gridline(cx0, cy0 + 2 * bh_, cx0 + bw_, cy0 + 2 * bh_))
-    s.append(gridline(cx0 + 9 * bw_, cy0 + 2 * bh_, cx0 + 10 * bw_, cy0 + 2 * bh_))
-
-    # Faint index 0..23 in each box, matching the algorithm's numbering
-    # (clockwise from the top-left; bit i fills box i). The interior 8x2 is the
-    # nucleus and carries no number.
-    box_centers = [(cx0 + (k + 0.5) * bw_, cy0 + 0.5 * bh_) for k in range(10)]  # top 0..9
-    box_centers += [(cx0 + 9.5 * bw_, cy0 + 1.5 * bh_), (cx0 + 9.5 * bw_, cy0 + 2.5 * bh_)]  # right 10,11
-    box_centers += [(cx0 + (9.5 - j) * bw_, cy0 + 3.5 * bh_) for j in range(10)]  # bottom 12..21 R->L
-    box_centers += [(cx0 + 0.5 * bw_, cy0 + 2.5 * bh_), (cx0 + 0.5 * bw_, cy0 + 1.5 * bh_)]  # left 22,23
-    for i, (acx, acy) in enumerate(box_centers):
-        nx_, ny_ = mp(acx, acy)
-        s.append(text(nx_, ny_ + 3, str(i), size=8, anchor="middle", fill="#9aa0a6"))
-
+    leg = nuc.size.height / 2
     items = [
-        (mp(nx + nw / 2, ny + 3), "nucleus background", "24-bit token read as an RGB color"),
-        (mp(tx, ty - 4), "cell text", "the token in monospace; white/black by Oklab L*"),
-        (mp(cx0 + 9.5 * bw_, cy0 + 0.5 * bh_), "surround box (9 of 24)", "fingerprint bit i fills box i, or leaves it empty"),
-        (mp(bx + bw / 2, by + bh / 2), "per-cell edge color", "the palette entry nearest the nucleus color"),
-        (mp(pcx, pcy), "quartile mark", "corner orientation encodes the token's rank"),
+        (mp(nuc.center.x, nuc.top + bh * 0.4), "nucleus background", "24-bit token read as an RGB color"),
+        (mp(nuc.center.x, nuc.center.y), "cell text", "the token in monospace; white/black by Oklab L*"),
+        (bc(9), "surround box (9 of 24)", "fingerprint bit i fills box i, or leaves it empty"),
+        (bc(11), "per-cell edge color", "the palette entry nearest the nucleus color"),
+        (mp(nuc.right - leg / 3, nuc.bottom - leg / 3), "quartile mark", "corner orientation encodes the token's rank"),
     ]
     # Sort by target y so the leader lines to the stacked labels never cross.
     items = order_by_target_y(items, lambda it: it[0][1])
