@@ -34,7 +34,7 @@ OUT = os.path.join(figlib.REPO_ROOT, "docs", "assets", "paper")
 # ===========================================================================
 
 def fig_cell_anatomy():
-    """Figure 4a — labelled anatomy of one v7 cell."""
+    """Figure 4a — labelled anatomy of one cell."""
     art = render("0123456789abcdef0123456789abcdef", font_size_pt=24)
     root = parse(art)
     c0 = cells(root)[0]
@@ -64,6 +64,32 @@ def fig_cell_anatomy():
     s = [svg_open(W, H), nested]
     s.append(rect(art_x, art_y, art_w, art_h, stroke=HAIR, sw=1))
     s.append(text(art_x, art_y - 12, "one cell, enlarged", size=T_SMALL, fill=INK2, italic=True))
+
+    # Overlay the 24-box surround grid so the reader can see where the boxes
+    # live. The 24 boxes tile the perimeter ring of a 10x4 box grid; the
+    # interior 8x2 is the nucleus. Each boundary is a black dashed line over a
+    # white underlay (an "ants" line), so it reads on any box color.
+    bw_, bh_ = cw / 10.0, ch / 4.0
+
+    def gridline(ax1, ay1, ax2, ay2):
+        (gx1, gy1), (gx2, gy2) = mp(ax1, ay1), mp(ax2, ay2)
+        return (line(gx1, gy1, gx2, gy2, stroke="#ffffff", w=1.3)
+                + line(gx1, gy1, gx2, gy2, stroke="#000000", w=0.6, dash="2 2"))
+
+    # full-height verticals at the nucleus side edges (box boundaries throughout)
+    for ax in (cx0 + bw_, cx0 + 9 * bw_):
+        s.append(gridline(ax, cy0, ax, cy0 + ch))
+    # top- and bottom-row internal verticals (skip the nucleus middle band)
+    for k in range(2, 9):
+        ax = cx0 + k * bw_
+        s.append(gridline(ax, cy0, ax, cy0 + bh_))
+        s.append(gridline(ax, cy0 + 3 * bh_, ax, cy0 + ch))
+    # horizontals dividing the top and bottom rows from the middle band
+    for ay in (cy0 + bh_, cy0 + 3 * bh_):
+        s.append(gridline(cx0, ay, cx0 + cw, ay))
+    # dividers splitting the two stacked boxes in each side column
+    s.append(gridline(cx0, cy0 + 2 * bh_, cx0 + bw_, cy0 + 2 * bh_))
+    s.append(gridline(cx0 + 9 * bw_, cy0 + 2 * bh_, cx0 + 10 * bw_, cy0 + 2 * bh_))
 
     items = [
         (mp(nx + nw / 2, ny + 3), "nucleus background", "24-bit token read as an RGB color"),
