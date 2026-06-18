@@ -5,7 +5,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#ff3f2f",
+      "edge_color": "#000000",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#726f4c",
@@ -119,7 +119,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#2f3fbf",
+      "edge_color": "#000000",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#696373",
@@ -231,7 +231,7 @@
       "blank": false,
       "blank_map": false,
       "col": 2,
-      "edge_color": "#2f3fbf",
+      "edge_color": "#ff3f2f",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#746973",
@@ -328,7 +328,7 @@
     "truncation_marker": false
   },
   "rows": 5,
-  "spec_version": "v9",
+  "spec_version": "v10",
   "truncated": false,
   "user_note": null
 }

@@ -5,7 +5,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#ff3f2f",
+      "edge_color": "#000000",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#dd1710",
@@ -75,7 +75,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#e7be00",
+      "edge_color": "#2f3fbf",
       "fg": "#000000",
       "fingerprint": false,
       "nucleus_bg": "#a1f7c7",
@@ -216,7 +216,7 @@
     "truncation_marker": false
   },
   "rows": 4,
-  "spec_version": "v9",
+  "spec_version": "v10",
   "truncated": false,
   "user_note": null
 }
