@@ -25,7 +25,10 @@ sync is guaranteed transitively: regenerate after any SVG change.
 """
 import os
 import struct
+import subprocess
 import sys
+
+import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "src"))
@@ -36,8 +39,26 @@ import social_card as sc  # noqa: E402
 REGEN = "re-run scripts/social_card.py and commit the result"
 
 
+def _require_full_history():
+    """root_commit_sha() walks to the repo's root commit (git rev-list
+    --max-parents=0); a shallow clone — the CI default — cannot reach it and
+    would resolve the wrong SHA, surfacing as a misleading 'renderer changed'
+    diff. Fail loudly with the real cause instead. CI checks out with
+    fetch-depth: 0 (see .github/workflows/); local clones are already full."""
+    shallow = subprocess.run(
+        ["git", "-C", ROOT, "rev-parse", "--is-shallow-repository"],
+        capture_output=True, text=True,
+    ).stdout.strip()
+    if shallow == "true":
+        pytest.fail(
+            "shallow clone: root_commit_sha() cannot resolve the repo's root "
+            "commit, so the regenerated mark won't match. Check out with "
+            "fetch-depth: 0 (see .github/workflows/).")
+
+
 def test_root_commit_entviz_matches_renderer():
     """root-commit-entviz.svg must be the current render of the root commit."""
+    _require_full_history()
     sha = sc.root_commit_sha()
     expected = sc.entviz_svg(sha)
     with open(sc.ENTVIZ_SVG, encoding="utf-8") as fh:
@@ -49,6 +70,7 @@ def test_root_commit_entviz_matches_renderer():
 
 def test_social_card_svg_matches_generator():
     """social-card.svg must match the composed card the generator builds now."""
+    _require_full_history()
     sha = sc.root_commit_sha()
     mark = sc.entviz_svg(sha)
     caption = sc.CAPTION.format(sha7=sha[:7])

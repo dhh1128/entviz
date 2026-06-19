@@ -1,22 +1,25 @@
-# Build entviz and publish a GitHub Release when a v<x.y.z> tag is pushed.
+# Build entviz, publish it to PyPI, and cut a GitHub Release when a v<x.y.z>
+# tag is pushed.
 #
 # Cut releases with `uv run python scripts/release.py` (which bumps the version,
 # regenerates the gallery, commits, tags, and pushes the tag). The pushed tag
 # triggers this workflow.
 #
-# PyPI publishing is intentionally NOT wired up yet. When we are ready, add a
-# second job using PyPI Trusted Publishing (OIDC) — mirror confer's publish.yml:
-# pypa/gh-action-pypi-publish@release/v1 with `permissions: id-token: write` and
-# a `pypi` environment, after registering the trusted publisher on PyPI.
+# PyPI upload uses Trusted Publishing (OIDC) — no API token or stored secret.
+# It requires a one-time registration on PyPI: the project's "pending publisher"
+# must name owner=dhh1128, repository=entviz, workflow=release.yml,
+# environment=pypi (matching the `environment:` on the pypi-publish job below).
+# See https://docs.pypi.org/trusted-publishers/.
 name: Release
 
 on:
   push:
     tags: ["v*"]
 
-# Default to read-only; the release job opts up to contents: write below.
-# Per-job permissions (not top-level write) keep the test gate from holding a
-# write token it never needs.
+# Default to read-only; each job opts up to exactly the scope it needs. Notably
+# the OIDC `id-token: write` lives only on pypi-publish, and `contents: write`
+# only on github-release — neither the test gate nor the build holds a token it
+# does not use.
 permissions:
   contents: read
 
@@ -40,6 +43,10 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           persist-credentials: false
+          # Full history: tests/test_social_card.py resolves the repo's root
+          # commit via `git rev-list --max-parents=0 HEAD`, unreachable in a
+          # shallow clone. Without this the release's own test gate would fail.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
@@ -49,8 +56,58 @@ jobs:
       - name: Run tests
         run: uv run --locked --python ${{ matrix.python-version }} pytest
 
-  release:
+  # Build the sdist + wheel ONCE and hand the exact same artifacts to both the
+  # PyPI upload and the GitHub Release, so the file users `pip install` is
+  # byte-for-byte the file attached to the release.
+  build:
     needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # Publish to PyPI via Trusted Publishing. The OIDC token minted here is the
+  # ONLY credential — there is no stored PyPI secret. `environment: pypi` must
+  # match the environment named in the PyPI pending-publisher registration.
+  pypi-publish:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/entviz
+    permissions:
+      id-token: write  # mint the OIDC token PyPI exchanges for an upload grant
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b  # v1.14.0
+
+  # Only after PyPI has the release: cut the GitHub Release with the same
+  # artifacts. Sequencing release-after-publish means a failed PyPI upload does
+  # not leave a GitHub Release pointing at a version that never shipped.
+  github-release:
+    needs: pypi-publish
     runs-on: ubuntu-latest
     permissions:
       contents: write  # create the GitHub Release and upload assets
@@ -63,11 +120,11 @@ jobs:
           # gh below authenticates via GH_TOKEN, not the persisted git token.
           persist-credentials: false
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39  # v8.2.0
-
-      - name: Build sdist and wheel
-        run: uv build
+      - name: Download dist artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: dist
+          path: dist/
 
       - name: Create GitHub Release
         # Pass the ref through env and reference "$TAG" rather than splicing
