@@ -2,19 +2,27 @@
 """Cut an entviz release: bump version, regenerate the gallery, commit, tag, push.
 
 Usage:
-    uv run python scripts/release.py                     # patch bump, default message
-    uv run python scripts/release.py -m "fix overlay"    # patch bump, custom message
-    uv run python scripts/release.py --minor -m "spec v6" # minor bump
-    uv run python scripts/release.py --major -m "1.0"    # major bump
-    uv run python scripts/release.py --set 0.6.0 -m "..." # set an explicit version
+    python3 scripts/release.py                     # patch bump, default message
+    python3 scripts/release.py -m "fix overlay"    # patch bump, custom message
+    python3 scripts/release.py --minor -m "spec v6" # minor bump
+    python3 scripts/release.py --major -m "1.0"    # major bump
+    python3 scripts/release.py --set 0.6.0 -m "..." # set an explicit version
                                                           #   (must be > current; a
                                                           #    major jump > 1 needs
                                                           #    --allow-major-jump)
-    uv run python scripts/release.py --no-bump            # tag the CURRENT version
+    python3 scripts/release.py --no-bump            # tag the CURRENT version
                                                           #   as-is (no bump, no
                                                           #    commit) — for the first
                                                           #    release of a version
                                                           #    already on main
+
+Self-guarding: the script establishes the right state instead of demanding you
+set it up first. It refuses a dirty working tree, switches to main if you are
+on another branch, and fast-forwards main to origin/main (failing only if local
+main has unpushed/diverged commits a human must resolve). It is pure-stdlib and
+operates on the repo root regardless of cwd, so `python3 /path/to/scripts/release.py`
+works from anywhere — no `cd` needed. (`uv` must be on PATH: the script shells
+out to `uv run` for the test suite and the gallery regeneration.)
 
 The library version is single-sourced in src/entviz/__init__.py (`__version__`);
 this script edits that one line and hatch derives the package version from it.
@@ -25,9 +33,10 @@ SPEC_VERSION bumps to `v6`, cut a --minor release so the lib lands on `0.6.0`.
 This script prints a reminder if the new minor and SPEC_VERSION disagree, but
 does not block (the coupling is a convention, not a hard rule).
 
-The pushed `v<x.y.z>` tag triggers .github/workflows/release.yml, which builds
-the sdist + wheel with `uv build` and creates a GitHub Release with them
-attached. (PyPI publishing is intended for later; it is not wired up yet.)
+The pushed `v<x.y.z>` tag triggers .github/workflows/release.yml, which re-runs
+the tests on the tagged commit, builds the sdist + wheel with `uv build`,
+publishes them to PyPI via Trusted Publishing (OIDC — no API token), and
+creates a GitHub Release with the same artifacts attached.
 """
 
 import argparse
@@ -97,23 +106,34 @@ def check_clean():
         sys.exit("Working tree is not clean. Commit or stash changes first.")
 
 
-def check_branch():
+def ensure_on_main():
+    """Switch to main if we are not already there. check_clean() must run first,
+    so a clean working tree guarantees the checkout cannot lose local edits."""
     branch = get(["git", "rev-parse", "--abbrev-ref", "HEAD"])
     if branch != "main":
-        sys.exit(f"Must be on main branch (currently on {branch!r}).")
+        print(f"On {branch!r}; switching to main...")
+        run(["git", "checkout", "main"])
 
 
-def check_in_sync():
-    run(["git", "fetch", "--quiet"])
+def sync_main():
+    """Fast-forward local main to origin/main so the release reflects what is
+    actually published. Fails (rather than guessing) if local main has unpushed
+    commits or has diverged — those need a human decision, not an auto-merge."""
+    run(["git", "fetch", "--quiet", "origin"])
     local = get(["git", "rev-parse", "HEAD"])
     remote = get(["git", "rev-parse", "origin/main"])
-    if local != remote:
-        behind = get(["git", "rev-list", "--count", "HEAD..origin/main"])
-        ahead = get(["git", "rev-list", "--count", "origin/main..HEAD"])
+    if local == remote:
+        return
+    ahead = get(["git", "rev-list", "--count", "origin/main..HEAD"])
+    behind = get(["git", "rev-list", "--count", "HEAD..origin/main"])
+    if ahead != "0":
         sys.exit(
-            f"Local main is not in sync with origin/main "
-            f"({ahead} ahead, {behind} behind). Push or pull first."
+            f"Local main is {ahead} commit(s) ahead of origin/main"
+            + (f" and {behind} behind" if behind != "0" else "")
+            + ". Push or reconcile before releasing."
         )
+    print(f"Fast-forwarding main to origin/main ({behind} commit(s) behind)...")
+    run(["git", "merge", "--ff-only", "origin/main"])
 
 
 def check_tag_absent(tag):
@@ -193,6 +213,13 @@ def main():
     parser.add_argument("-m", dest="message", default=None, help="commit message")
     args = parser.parse_args()
 
+    # Establish a clean, current main BEFORE reading the version, so the
+    # version (and the tag, gallery stamp, and tests) reflect exactly what will
+    # ship — not whatever branch you happened to be standing on.
+    check_clean()
+    ensure_on_main()
+    sync_main()
+
     old = current_version()
     if args.no_bump:
         new = old
@@ -215,9 +242,6 @@ def main():
     else:
         message = prompt_message(label)
 
-    check_branch()
-    check_clean()
-    check_in_sync()
     check_tag_absent(tag)
     run_tests()
 
