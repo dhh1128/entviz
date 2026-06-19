@@ -13,8 +13,8 @@ This is the source of truth for two related assets, both written into
 The card is a specimen of the tool applied to itself: the repo's own root
 commit SHA -- a real, immutable, crypto-grade hash -- rendered as an entviz.
 
-Dependency-light: the Python standard library, the local ``entviz`` CLI (this
-repo's own tool, on PATH after ``uv sync``), and ``cairosvg`` (a dev
+Dependency-light: the Python standard library, the local ``entviz`` package
+(this repo's own tool, importable after ``uv sync``), and ``cairosvg`` (a dev
 dependency) for rasterization.
 
 ------------------------------------------------------------------------------
@@ -108,11 +108,16 @@ def root_commit_sha() -> str:
 
 
 def entviz_svg(value: str) -> str:
-    """Render `value` as an entviz SVG via the local CLI (1:1 aspect)."""
-    return subprocess.run(
-        ["entviz", value, "--ar", "1:1", "--fs", "14", "--note", "git"],
-        capture_output=True, text=True, check=True,
-    ).stdout
+    """Render `value` as an entviz SVG (1:1 aspect, 14pt, git note).
+
+    In-process via the library's render(); byte-identical to the `entviz`
+    CLI invoked as `--ar 1:1 --fs 14 --note git` (the CLI writes render()'s
+    output followed by a trailing newline), but with no dependency on the
+    console script being on PATH — so the drift guard can regenerate this
+    in-process. See tests/test_social_card.py.
+    """
+    from entviz.pipeline import render
+    return render(value, target_ar=1.0, font_size_pt=14, note="git") + "\n"
 
 
 def _svg_viewbox(svg: str) -> tuple[float, float]:

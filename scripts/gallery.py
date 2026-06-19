@@ -270,6 +270,33 @@ def _slugify(text: str) -> str:
     return s or 'entry'
 
 
+def _parse_sample(sample):
+    """Normalize a SAMPLES tuple to (label, entropy, render_kwargs).
+
+    A sample is (label, entropy), (label, entropy, kwargs_dict), or
+    (label, entropy, target_ar_float)."""
+    if len(sample) == 2:
+        return sample[0], sample[1], {}
+    if isinstance(sample[2], dict):
+        return sample[0], sample[1], sample[2]
+    return sample[0], sample[1], {"target_ar": sample[2]}
+
+
+def iter_entries():
+    """Yield (section_title, filename, label, entropy, kwargs) for every gallery
+    sample, in document order.
+
+    Shared by main() and tests/test_gallery.py so the drift guard renders
+    exactly the inputs the generator commits — the two cannot diverge."""
+    entry_seq = 0
+    for title, samples in SAMPLES:
+        for sample in samples:
+            entry_seq += 1
+            label, entropy, kwargs = _parse_sample(sample)
+            filename = f"{entry_seq:02d}-{_slugify(label)}.svg"
+            yield title, filename, label, entropy, kwargs
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--html-out', default=os.path.join(REPO_ROOT, 'docs', 'gallery.html'))
@@ -288,52 +315,48 @@ def main():
     rel_svg_dir = os.path.relpath(args.svg_dir, html_dir).replace(os.sep, '/')
 
     sections = []
-    entry_seq = 0
-    for title, samples in SAMPLES:
-        rows = []
-        for sample in samples:
-            entry_seq += 1
-            if len(sample) == 2:
-                label, entropy = sample
-                kwargs = {}
-            elif isinstance(sample[2], dict):
-                label, entropy, kwargs = sample
-            else:
-                label, entropy, target_ar = sample
-                kwargs = {"target_ar": target_ar}
-            filename = f"{entry_seq:02d}-{_slugify(label)}.svg"
-            svg_path = os.path.join(args.svg_dir, filename)
-            try:
-                svg = render(entropy, **kwargs)
-                with open(svg_path, 'w', encoding='utf-8') as f:
-                    f.write(svg)
-                rel_path = f"{rel_svg_dir}/{filename}"
-                row_html = CARD.format(
-                    input=html.escape(entropy),
-                    svg_path=html.escape(rel_path, quote=True),
-                    alt=html.escape(label, quote=True),
-                    label=html.escape(label),
-                )
-            except Exception as e:
-                # Parser corner cases (e.g. hex-multihash trying to decode
-                # an unrelated hex blob) shouldn't abort the whole gallery.
-                err = (f'<div style="color:#900;font-family:monospace;'
-                       f'padding:0.5em;background:#fee;border-radius:4px;">'
-                       f'render failed: {html.escape(str(e))}</div>')
-                row_html = (
-                    f'<div class="card"><div class="viz">{err}</div>'
-                    f'<div class="label">{html.escape(label)}</div>'
-                    f'<div class="input">{html.escape(entropy)}</div></div>'
-                )
-            rows.append(row_html)
-        sections.append(SECTION.format(title=html.escape(title), rows="".join(rows)))
+    cur_title = None
+    rows = []
+    n_svgs = 0
+    for title, filename, label, entropy, kwargs in iter_entries():
+        if title != cur_title:
+            if cur_title is not None:
+                sections.append(SECTION.format(title=html.escape(cur_title), rows="".join(rows)))
+            cur_title, rows = title, []
+        svg_path = os.path.join(args.svg_dir, filename)
+        try:
+            svg = render(entropy, **kwargs)
+            with open(svg_path, 'w', encoding='utf-8') as f:
+                f.write(svg)
+            n_svgs += 1
+            rel_path = f"{rel_svg_dir}/{filename}"
+            row_html = CARD.format(
+                input=html.escape(entropy),
+                svg_path=html.escape(rel_path, quote=True),
+                alt=html.escape(label, quote=True),
+                label=html.escape(label),
+            )
+        except Exception as e:
+            # Parser corner cases (e.g. hex-multihash trying to decode
+            # an unrelated hex blob) shouldn't abort the whole gallery.
+            err = (f'<div style="color:#900;font-family:monospace;'
+                   f'padding:0.5em;background:#fee;border-radius:4px;">'
+                   f'render failed: {html.escape(str(e))}</div>')
+            row_html = (
+                f'<div class="card"><div class="viz">{err}</div>'
+                f'<div class="label">{html.escape(label)}</div>'
+                f'<div class="input">{html.escape(entropy)}</div></div>'
+            )
+        rows.append(row_html)
+    if cur_title is not None:
+        sections.append(SECTION.format(title=html.escape(cur_title), rows="".join(rows)))
 
     os.makedirs(html_dir, exist_ok=True)
     with open(args.html_out, 'w', encoding='utf-8') as f:
         title = html.escape(f"Entviz {SPEC_VERSION}, generated by lib v{__version__}")
         f.write(PAGE.format(body="".join(sections), title=title))
     print(f"wrote {args.html_out}")
-    print(f"wrote {entry_seq} SVGs under {args.svg_dir}")
+    print(f"wrote {n_svgs} SVGs under {args.svg_dir}")
 
 
 if __name__ == '__main__':
