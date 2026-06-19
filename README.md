@@ -3,8 +3,25 @@
 [![CI](https://github.com/dhh1128/entviz/actions/workflows/ci.yml/badge.svg)](https://github.com/dhh1128/entviz/actions/workflows/ci.yml)
 [![Deploy Docs](https://github.com/dhh1128/entviz/actions/workflows/deploy-docs.yml/badge.svg)](https://github.com/dhh1128/entviz/actions/workflows/deploy-docs.yml)
 [![Release](https://github.com/dhh1128/entviz/actions/workflows/release.yml/badge.svg)](https://github.com/dhh1128/entviz/actions/workflows/release.yml)
+[![PyPI](https://img.shields.io/pypi/v/entviz)](https://pypi.org/project/entviz/)
+[![Python versions](https://img.shields.io/pypi/pyversions/entviz)](https://pypi.org/project/entviz/)
 
 Entviz is a tool for visualizing high-entropy values (like cryptographic keys, UUIDs, or blockchain addresses) into a grid of colored shapes and text, making it easy for humans to compare them.
+
+## Install
+
+```bash
+pip install entviz      # or: uv add entviz
+```
+
+Render any value to an SVG on stdout:
+
+```bash
+entviz "550e8400-e29b-41d4-a716-446655440000" --ar 1:1 > id.svg
+```
+
+The library has one runtime dependency (`lxml`) and emits SVG only — no
+rasterizer required.
 
 ## Comparing two entvizes
 
@@ -119,10 +136,24 @@ language, and the `MARK`) changes per repo. See the module docstring for details
 ### Cutting a release
 
 ```bash
-uv run python scripts/release.py --patch -m "what changed"
+python3 scripts/release.py --patch -m "what changed"
 ```
 
-See [scripts/release.py](scripts/release.py) for bump options and the versioning convention.
+The script is self-guarding: it switches to `main`, fast-forwards to
+`origin/main`, refuses a dirty tree or unpushed local commits, runs the full
+test suite, regenerates the gallery, then bumps the version, commits, and
+pushes a `vX.Y.Z` tag. It is pure-stdlib, so it works from any directory (it
+operates on the repo root regardless of `cwd`) — `python3 /path/to/entviz/scripts/release.py …`
+is equivalent. (`uv` must be on `PATH`, since the script shells out to
+`uv run` for the tests and gallery.)
+
+The pushed tag triggers [`.github/workflows/release.yml`](.github/workflows/release.yml),
+which re-runs the tests on the tagged commit, **publishes the sdist + wheel to
+[PyPI](https://pypi.org/project/entviz/) via Trusted Publishing (OIDC — no API
+token)**, and creates a GitHub Release with the same artifacts attached.
+
+See [scripts/release.py](scripts/release.py) for bump options (`--minor`,
+`--major`, `--set X.Y.Z`, `--no-bump`) and the versioning convention.
 
 ## Project Structure
 
