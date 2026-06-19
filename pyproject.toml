@@ -48,6 +48,18 @@ path = "src/entviz/__init__.py"
 [tool.hatch.build.targets.wheel]
 packages = ["src/entviz"]
 
+# Keep the source distribution lean. By default hatchling sweeps the whole repo
+# into the sdist, which here means megabytes of authoring artifacts that have no
+# business in a release: the gallery, paper PNGs, the compliance corpus,
+# this.i, uv.lock, scratch SVGs, reviews/, experiments/, etc. Ship only what is
+# needed to build and install the package. README.md and LICENSE are pulled in
+# automatically from the project metadata (readme / license-files).
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src/entviz",
+    "/pyproject.toml",
+]
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
