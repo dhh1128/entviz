@@ -6,7 +6,12 @@
 [![PyPI](https://img.shields.io/pypi/v/entviz)](https://pypi.org/project/entviz/)
 [![Python versions](https://img.shields.io/pypi/pyversions/entviz)](https://pypi.org/project/entviz/)
 
-Entviz is a tool for visualizing high-entropy values (like cryptographic keys, UUIDs, or blockchain addresses) into a grid of colored shapes and text, making it easy for humans to compare them.
+Entviz is a tool for visualizing high-entropy values (like cryptographic keys, UUIDs, or blockchain addresses) into a grid of colored shapes and text, making it easy for humans to compare them. This is its reference implementation in python. There are also implementations in [javascript/react](https://www.npmjs.com/package/@entviz/core) and [rust](https://crates.io/crates/entviz). 
+
+<figure markdown="span">
+  ![An entviz rendering of this repository's root commit hash](assets/root-commit-entviz.svg){ width="320" }
+  <figcaption>This repository itself, rendered as an entviz of its own root commit hash.</figcaption>
+</figure>
 
 ## Install
 
