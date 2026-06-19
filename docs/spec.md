@@ -80,7 +80,7 @@ Zero or more cells in an entviz may be blank. The positioning of blank cells der
 
 ![visual CRC](assets/crc.svg)
 
-**Figure 5.** The visual CRC: blank-cell map dots and quartile marks.
+**Figure 5.** The visual CRC: the blank-cell map's plus (max) and dot (min) markers and quartile marks.
 
 Each entviz displays a **color bar** along its left edge. It is derived from the fingerprint and provides a redundant channel that allows rapid gestalt comparison: two entvizes with different 2-bit-pattern histograms will differ visibly in the bar even before a cell-by-cell comparison begins.
 

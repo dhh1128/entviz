@@ -327,11 +327,13 @@ def fig_crc():
     if maxs:
         c = maxs[0]
         rows.append((mp(*marker_center(c)),
-                     "blank-cell map — red plus", "marks the cell holding the largest fingerprint token", WARN))
+                     "blank-cell map — max (plus)", "marks the cell holding the largest fingerprint token",
+                     c.get("stroke") or INK))
     if mins:
         c = mins[0]
         rows.append((mp(*marker_center(c)),
-                     "blank-cell map — blue dot", "marks the cell holding the smallest token", BLUE))
+                     "blank-cell map — min (dot)", "marks the cell holding the smallest token",
+                     c.get("fill") or INK))
     if polys:
         p = polys[0]
         pts = [tuple(map(float, q.split(","))) for q in p.get("points").split()]
