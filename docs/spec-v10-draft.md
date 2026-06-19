@@ -26,9 +26,10 @@ concentrated in dense full-grid inputs (UUID **61%**, hex-128 **61%** within
 that stratum). The levers below move fingerprint signal into the **dominant,
 pre-attentive colour channel**, as a few discordant colour **singletons**
 against an otherwise-coherent echo field (partiality is required — singletons
-must stay rare to pop out). Measured effect of the locked design: hard-quarter
-colour-miss **27.1% → ~0.5%**; per-type (e.g. LEI 9.8% → 0.3%, hex-64 21.5% →
-0.4%, UUID/hex-128 61% → ~2%).
+must stay rare to pop out). Measured effect of the locked design (definitive
+100k run): hard-quarter colour-miss **≈24% → 0.33%**; per-type within that
+quarter (e.g. LEI → ~0%, small hex → <0.1%, UUID/hex-128 ~61% → ~2% on quartile
+alone).
 
 These levers add **casual salience only**; they are *not* a collision-resistance
 claim (the surround pattern, colour bar, ellipse, blank positions, and quartile

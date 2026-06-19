@@ -11,23 +11,25 @@ overwritten by re-runs. The locked design is spec'd in
 The casual colour-collision hole is real and measured, and concentrates exactly
 where the theory predicted:
 
-- **Baseline colour-miss in the background-unchanged ¼: 27.1%** (95% CI
-  [26.6, 27.7]). Just over a quarter of one-character neighbours, in the quarter
-  of cases where the 2-bit background does not flip, are **casually colour-
-  identical**: the surround pattern churns invisibly and nothing in the colour
-  gestalt moves.
+- **Baseline colour-miss in the background-unchanged ¼: 23.67%** (95% CI
+  [23.1, 24.2]; definitive 100k run). About a quarter of one-character
+  neighbours, in the quarter of cases where the 2-bit background does not flip,
+  are **casually colour-identical**: the surround pattern churns invisibly and
+  nothing in the colour gestalt moves.
 - It is **concentrated in dense full-grid inputs**: within that stratum, UUID
   **61%** and hex-128 **61%** colour-miss; ~3–10% for small inputs that carry a
   blank; ~0% for >512-bit inputs (blank cascades + cell count already carry
   them).
 
-The locked design (Change 1 + 2 below) takes the hard-¼ colour-miss from
-**27.1% → 0.40%**, and every input *type* to ≤ ~2%. (Two runs corroborate:
-n = 100k seed 1 original corpus, baseline hard-¼ 27.1%; n = 30k seed 2 with LEI
-and small-hex added, baseline 24.3% → locked **`hybrid` 0.40%** [0.28, 0.57],
-identical to `combined_all` — so the white-anchor branch costs nothing in
-aggregate. A definitive 100k run with the locked config should be regenerated at
-v10 implementation time.)
+The locked design (Change 1 + 2 below) takes the hard-¼ colour-miss to
+**0.33%** and every input *type* to ≤ ~0.5%. Definitive run (the committed
+`results/`): **n = 100k, seed 1, locked levers**, corpus including LEI + small
+hex — baseline hard-¼ **23.67%** [23.1, 24.2] → **`hybrid` 0.33%** [0.27, 0.41]
+(identical to `combined_all`, so the white-anchor branch costs nothing in
+aggregate). The original 100k corpus (UUID + larger inputs only, no small
+blank-bearing types) measured the hard-¼ baseline at **27.1%**; the difference
+is corpus mix — small inputs that carry a blank dilute the average down — and
+both round to "about a quarter".
 
 ## What works, and the two corrections I had to make along the way
 
@@ -38,9 +40,9 @@ Background-unchanged ¼, colour-miss (lower is better):
 | baseline | 27.10% | — |
 | blanks (skip map blank) | 27.07% | **~0 effect — see correction 1** |
 | topleft | 7.65% | one cell can't cover the ¼ where its own 2 bits match |
-| quartile (1st+2nd) | 0.71–0.85% | the workhorse |
-| blanks_all (colour map blank) | 19.6% | partial — only blank-bearing inputs |
-| hybrid (locked) | 0.40% | topleft+quartile+hybrid blanks |
+| quartile (1st+2nd) | 0.87% | the workhorse |
+| blanks_all (colour map blank) | ~20% | partial — only blank-bearing inputs |
+| hybrid (locked) | 0.33% | topleft+quartile+hybrid blanks |
 
 **Correction 1 — "blanks have zero effect" was wrong; it was a lever bug.** My
 first blank lever *skipped the map blank* (`not is_map_blank`). The inputs where
