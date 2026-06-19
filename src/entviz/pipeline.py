@@ -380,9 +380,27 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # the whole grid. Wrapped in an internal group for tidiness; the
     # group itself is purely organizational (no data-channel attribute
     # so React queries don't see it as a separate channel).
+    # v10: fingerprint-edge cells — the top-left cell (grid position 0) and the
+    # cells of the 1st & 2nd quartile ftoks take their surround edge colour from
+    # the fingerprint (2 low-order ftok-quant bits → edge palette) instead of the
+    # nearest-palette nucleus echo, so the surround colour avalanches to a casual
+    # glance. Skipped where the target cell is blank or the quartile ftok is null.
+    fp_edge_cells = set()
+    if 0 in used_cell_indices:
+        fp_edge_cells.add(0)
+    for q_ftok in quartile_ftoks[:2]:
+        if q_ftok is None:
+            continue
+        qci = cell_indices.get(q_ftok.index)
+        if qci is not None:
+            fp_edge_cells.add(qci)
+
     edges_g = etree.SubElement(grid_g, 'g')
     for token, ftok, cell, ci, nucleus_bg in token_cells:
-        renderer.render_edges(edges_g, ftok, cell, nucleus_bg=nucleus_bg)
+        override = (style.edge_colors[ftok.quant & 0b11]
+                    if ci in fp_edge_cells else None)
+        renderer.render_edges(edges_g, ftok, cell, nucleus_bg=nucleus_bg,
+                              edge_override=override)
 
     # Layer 2: ellipse overlay derived from raw digest bytes 60-63,
     # clipped to the grid rect. Wrapped in its own data-channel group
@@ -489,17 +507,31 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # white on any non-white entviz background, gold on a white one.
     map_fill = '#e7be00' if style.bg_color == '#ffffff' else '#ffffff'
 
+    # v10: hybrid fingerprint blank fill. Every non-map blank is filled from the
+    # fingerprint; the map blank is filled from the fingerprint ONLY when it is
+    # the sole blank (the common small-input case — LEI, small hex — whose lone
+    # blank IS the map blank, and where the casual-avalanche colour is needed),
+    # otherwise it keeps the white/gold anchor so it stays findable while its
+    # siblings carry the colour. Filled blanks are enumerated in cell-index
+    # order; the j-th takes edge_palette[digest[32 + j] & 0b11].
+    sole_blank = len(blank_indices) == 1
+    blank_fill_color = {}
+    for j, ci in enumerate(
+            bi for bi in blank_indices if bi != map_cell_idx or sole_blank):
+        blank_fill_color[ci] = style.edge_colors[digest[32 + j] & 0b11]
+
     for ci in blank_indices:
         cg = cell_groups[ci]
         nx, ny = _cell_nucleus_origin(
             ci, grid, grid_rect, cell_width, cell_height, box_width, box_height)
         is_map = ci == map_cell_idx
+        blank_fill = map_fill if (is_map and not sole_blank) else blank_fill_color[ci]
         etree.SubElement(
             cg, 'rect',
             x=str(nx), y=str(ny),
             width=str(nucleus_width), height=str(nucleus_height),
             rx=str(corner_radius), ry=str(corner_radius),
-            fill=(map_fill if is_map else 'none'), stroke='#000000',
+            fill=blank_fill, stroke='#000000',
             **{'stroke-width': '1'},
         )
         if not is_map:
@@ -533,17 +565,29 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         # stroke, so the cross reads as a distinct shape rather than a blob.
         plus_arm = dot_r * 1.2
         plus_w = max(1.0, dot_r * 0.55)
+        # v10: when the map blank is fingerprint-filled (sole-blank case) the
+        # fixed red/blue would clash with the fill, so both markers take the
+        # luminance-contrast colour against that fill (the cell-text foreground
+        # rule). Max/min identity rides on SHAPE (plus vs dot), not hue, so this
+        # costs only the redundant colour cue. Otherwise keep the v9 red/blue.
+        if sole_blank:
+            f = blank_fill_color[map_cell_idx]
+            _, marker_color = get_nucleus_colors(
+                int(f[1:3], 16) | (int(f[3:5], 16) << 8) | (int(f[5:7], 16) << 16))
+            min_color = max_color = marker_color
+        else:
+            min_color, max_color = '#1d4ed8', '#d62828'
         # minftok = blue dot (drawn first); maxftok = red plus (drawn on top, so
         # it stays visible in the degenerate case where both land on one cell).
         etree.SubElement(
             cg, 'circle', cx=str(min_cx), cy=str(min_cy), r=str(dot_r),
-            fill='#1d4ed8', **{'data-blank-map-min': f'{min_row},{min_col}'},
+            fill=min_color, **{'data-blank-map-min': f'{min_row},{min_col}'},
         )
         etree.SubElement(
             cg, 'path',
             d=f'M {max_cx - plus_arm},{max_cy} H {max_cx + plus_arm} '
               f'M {max_cx},{max_cy - plus_arm} V {max_cy + plus_arm}',
-            fill='none', stroke='#d62828',
+            fill='none', stroke=max_color,
             **{'stroke-width': str(plus_w), 'stroke-linecap': 'butt',
                'data-blank-map-max': f'{max_row},{max_col}'},
         )

@@ -23,7 +23,8 @@ class Renderer:
         self.style = style
         self.grid = grid
 
-    def render_edges(self, svg: etree.Element, ftok, cell: Cell, nucleus_bg: str):
+    def render_edges(self, svg: etree.Element, ftok, cell: Cell, nucleus_bg: str,
+                     edge_override=None):
         """
         v4 surround: 24 small boxes around the nucleus. Bit i of ftok.quant
         (LSB=bit 0) selects box i (clockwise from the top-left of the top
@@ -31,8 +32,14 @@ class Renderer:
         color — the palette entry (one of the 4 non-bg colors) that is
         perceptually closest to the nucleus_bg under weighted RGB
         distance. A clear bit emits nothing.
+
+        v10: `edge_override` (a hex color) forces the edge color instead of
+        the nearest-palette echo — used for the fingerprint-edge cells
+        (top-left + 1st/2nd quartile), whose surround colour is drawn from
+        the fingerprint so it avalanches to a casual glance.
         """
-        edge_color = closest_palette_color(nucleus_bg, self.style.edge_colors)
+        edge_color = (edge_override if edge_override is not None
+                      else closest_palette_color(nucleus_bg, self.style.edge_colors))
         bw = cell.box_width
         bh = cell.box_height
         for i in range(24):

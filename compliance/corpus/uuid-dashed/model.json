@@ -5,7 +5,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#ff3f2f",
+      "edge_color": "#000000",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#840e55",
@@ -47,7 +47,7 @@
       "blank": false,
       "blank_map": false,
       "col": 1,
-      "edge_color": "#000000",
+      "edge_color": "#2f3fbf",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#664416",
@@ -61,7 +61,7 @@
       "blank": false,
       "blank_map": false,
       "col": 0,
-      "edge_color": "#2f3fbf",
+      "edge_color": "#000000",
       "fg": "#ffffff",
       "fingerprint": false,
       "nucleus_bg": "#004455",
@@ -130,7 +130,7 @@
     "truncation_marker": false
   },
   "rows": 3,
-  "spec_version": "v9",
+  "spec_version": "v10",
   "truncated": false,
   "user_note": null
 }
