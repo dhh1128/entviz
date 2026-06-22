@@ -28,9 +28,14 @@ ELLIPSE_NDIGITS = 3
 # Coordinate/length/angle fields are compared BY VALUE within this absolute
 # tolerance (docs/spec.md → Equivalence relation → numeric formatting), never by
 # exact equality: two conformant implementations may round an unspecified-
-# precision coordinate differently (e.g. 12.345 vs 12.346), and that ≤0.0005 px
-# disagreement — well below a sub-pixel — must not be a spurious failure.
-_NUM_TOL = 0.05
+# precision coordinate differently (e.g. 12.345 vs 12.346), and that ≤0.001 px
+# disagreement must not be a spurious failure. The tolerance is deliberately
+# kept SMALL ENOUGH that any Tier-A-equivalent coordinate difference is also
+# within the Tier-B raster tolerance (channel_tol — see raster.py): empirically
+# a shift ≤0.02 px stays under the per-channel/fraction allowance while ≥0.03 px
+# fails Tier B, so 0.01 px keeps the two tiers consistent (Tier-A ⊆ Tier-B) with
+# ~10× headroom over the largest legitimate rounding difference (0.001 px).
+_NUM_TOL = 0.01
 
 # Geometry constants from docs/spec.md (all multiples of font_size_px = fs).
 _BOX_W = 0.375      # box_width  = 0.375 * fs
@@ -203,14 +208,25 @@ def _close(a: float, b: float, tol: float = 0.01) -> bool:
     return abs(a - b) <= tol
 
 
+def _first_rect(el):
+    """The first <rect> DESCENDANT of `el` (excluding `el` itself), in document
+    order. Searching descendants — not just direct children — keeps recovery
+    robust to the `<g>` regrouping the equivalence relation permits (a checker
+    must tolerate extra nesting that changes neither paint order nor geometry)."""
+    for c in el.iter():
+        if c is not el and _tag(c) == "rect":
+            return c
+    return None
+
+
 def _derive_fs(root) -> float:
     """font_size_px from the first nucleus rect (nucleus_width = 3*fs)."""
     for g in _findall(root, "g"):
         if g.get("data-channel") != "cell" or g.get("data-cell-blank") == "true":
             continue
-        for c in g:
-            if _tag(c) == "rect":
-                return _num(c.get("width")) / _NUC_W
+        rect = _first_rect(g)
+        if rect is not None:
+            return _num(rect.get("width")) / _NUC_W
     # Fallback: derive from grid bg width = cols * 3.75 * fs.
     cols = int(root.get("data-cols"))
     bg = _grid_bg_rect(root)
@@ -222,9 +238,7 @@ def _derive_fs(root) -> float:
 def _grid_bg_rect(root):
     for g in _findall(root, "g"):
         if g.get("data-channel") == "grid":
-            for c in g:
-                if _tag(c) == "rect":
-                    return c
+            return _first_rect(g)
     return None
 
 
