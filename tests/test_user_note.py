@@ -47,8 +47,8 @@ def test_sanitize_rejects_too_long():
     "café", "gît", "naïve",        # non-ASCII letters (closes the homoglyph surface)
     "ab\tcd", "x\x07y", "a\nb",    # control characters
     "emoji\U0001F600",             # non-ASCII (emoji)
-    "x‮y",                    # bidi override (Trojan-Source)
-    "a​b",                    # zero-width space
+    "x\u202ey",                    # bidi override (Trojan-Source)
+    "a\u200bb",                    # zero-width space
 ])
 def test_sanitize_rejects_non_printable_ascii(bad):
     with pytest.raises(ValueError):
