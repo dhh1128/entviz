@@ -432,3 +432,125 @@ def _diff(a, b, path, diffs):
 
 def models_equal(golden: dict, actual: dict) -> bool:
     return not diff_models(golden, actual)
+
+
+# --------------------------------------------------------------------------
+# Closed-profile validation: an entviz contains ONLY the enumerated channels
+# and nothing else. There is no slot for a brand/logo, a copyright mark, or any
+# extra text or graphic overlaid on the diagram. (Purely non-rendering advisory
+# metadata — <title>, <desc>, <metadata>, XML comments, extra data-* attributes
+# — is allowed; it adds no ink.)
+# --------------------------------------------------------------------------
+
+# Every element type an entviz may contain. Anything else (an <image>/<use>
+# logo, an <a> wrapper, an injected <script>/<style>, <foreignObject>, …) is
+# foreign and rejected outright.
+_PROFILE_TAGS = frozenset({
+    "svg", "defs", "clipPath", "g", "rect", "path", "text", "tspan",
+    "polygon", "circle", "ellipse", "line", "desc", "title", "metadata",
+})
+_ADVISORY_TAGS = frozenset({"desc", "title", "metadata"})
+# A rendering element may appear only in the channel(s) it belongs to.
+_RENDER_OK = frozenset({
+    ("rect", "grid"), ("rect", "cell"), ("rect", "color-bar"),
+    ("path", "grid"), ("path", "cell"),
+    ("circle", "cell"), ("circle", "color-bar"),
+    ("polygon", "cell"),
+    ("ellipse", "ellipse"),
+    ("text", "cell"), ("text", "color-bar"), ("text", "label-top"), ("text", "label-bottom"),
+    ("tspan", "cell"), ("tspan", "color-bar"), ("tspan", "label-top"), ("tspan", "label-bottom"),
+})
+# Allowed direct-child tags inside a single cell group (filled: nucleus rect
+# [+ optional inner-border rect], text, optional quartile polygon; blank: pill
+# rect, and for the map blank a min <circle> + a max <path>).
+_CELL_CHILD_TAGS = frozenset({"rect", "text", "polygon", "circle", "path"})
+# Allowed direct-child tags inside a single color-bar BAND group.
+_BAND_CHILD_TAGS = frozenset({"rect", "text"})
+
+
+def _resolve_channel(el):
+    p = el
+    while p is not None:
+        c = p.get("data-channel") if hasattr(p, "get") else None
+        if c:
+            return c
+        p = p.getparent()
+    return None
+
+
+def validate_closed_profile(svg) -> list[str]:
+    """Return a list of profile violations (empty == a clean, closed entviz).
+
+    Enforces that every element belongs to a known channel: foreign element
+    types are rejected, rendering elements may appear only in their channel, the
+    singletons (background, clip, ellipse overlay) are not duplicated, and a cell
+    or color-bar group may not carry extra children. This is what makes it
+    impossible to overlay a logo, a copyright, or stray text on a conformant
+    entviz — extra ink has nowhere legal to live.
+    """
+    if isinstance(svg, (str, bytes)):
+        root = etree.fromstring(svg.encode() if isinstance(svg, str) else svg)
+    else:
+        root = svg
+    viol: list[str] = []
+    n_rootbg = n_defs = n_clip = n_ellipse = 0
+
+    for el in root.iter():
+        if not isinstance(el.tag, str):
+            continue  # XML comment / processing instruction — non-rendering, allowed
+        t = _tag(el)
+        if t == "svg":
+            continue
+        if t not in _PROFILE_TAGS:
+            viol.append(f"foreign <{t}> element: not part of the entviz profile")
+            continue
+        if t in _ADVISORY_TAGS or t == "g":
+            continue  # advisory metadata / organizational group
+        parent = el.getparent()
+        ptag = _tag(parent) if parent is not None else None
+        ch = _resolve_channel(el)
+        if t == "defs":
+            n_defs += 1
+            continue
+        if t == "clipPath":
+            n_clip += 1
+            continue
+        if t == "rect" and ptag == "clipPath":
+            continue  # clip geometry
+        if t == "rect" and ptag == "svg" and ch is None:
+            n_rootbg += 1
+            continue
+        if t == "line" and ptag == "svg" and ch is None:
+            continue  # canvas border
+        if t == "ellipse" and ch == "ellipse":
+            n_ellipse += 1
+            continue
+        if (t, ch) in _RENDER_OK:
+            continue
+        viol.append(f"unexpected <{t}> in channel {ch!r}: overlaid or extra content")
+
+    if n_rootbg != 1:
+        viol.append(f"expected exactly one background rect, found {n_rootbg}")
+    if n_defs > 1:
+        viol.append(f"expected at most one <defs>, found {n_defs}")
+    if n_clip > 1:
+        viol.append(f"expected at most one <clipPath>, found {n_clip}")
+    if n_ellipse > 1:
+        viol.append(f"expected at most one ellipse overlay, found {n_ellipse}")
+
+    # Per-group child checks: extra ink can't hide inside a legitimate group.
+    for g in _findall(root, "g"):
+        ch = g.get("data-channel")
+        if ch == "cell":
+            kids = [_tag(c) for c in g if isinstance(c.tag, str)]
+            bad = [k for k in kids if k not in _CELL_CHILD_TAGS]
+            if bad:
+                viol.append(f"cell {g.get('data-cell-index')} carries unexpected child(ren): {bad}")
+            if kids.count("text") > 1 or kids.count("polygon") > 1 or kids.count("rect") > 2:
+                viol.append(f"cell {g.get('data-cell-index')} has too many children: {kids}")
+        elif g.get("data-color-bar-rank") is not None:
+            kids = [_tag(c) for c in g if isinstance(c.tag, str)]
+            bad = [k for k in kids if k not in _BAND_CHILD_TAGS]
+            if bad:
+                viol.append(f"color-bar band carries unexpected child(ren): {bad}")
+    return viol

@@ -18,6 +18,10 @@ implementation (:mod:`compliance.generate`) and run against any implementation
 by :mod:`compliance.runner`.
 """
 
-from .model import extract_model, models_equal, diff_models  # noqa: F401
+from .model import (  # noqa: F401
+    extract_model, models_equal, diff_models, validate_closed_profile,
+)
 
-__all__ = ["extract_model", "models_equal", "diff_models"]
+__all__ = [
+    "extract_model", "models_equal", "diff_models", "validate_closed_profile",
+]
