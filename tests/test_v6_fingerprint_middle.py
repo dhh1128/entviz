@@ -87,6 +87,12 @@ def _used_texts_in_order(svg, groups):
 def _cell_font_px(g):
     for t in g:
         if t.tag.endswith("}text"):
+            attr = t.get("font-size")
+            if attr is not None:
+                attr = attr.strip()
+                if attr.endswith("px"):
+                    attr = attr[:-2]
+                return float(attr)
             m = _FONT_SIZE_RE.search(t.get("style", ""))
             if m:
                 return float(m.group(1))

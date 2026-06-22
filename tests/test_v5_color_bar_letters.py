@@ -146,10 +146,15 @@ def test_letter_font_family_is_monospace():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     letters = _band_letters(svg)
     assert letters
+    # font-family is now hoisted onto the root <svg> as an inherited property;
+    # the band letters inherit it rather than carrying a per-text style.
+    root_ff = svg.get("font-family") or ""
+    assert "monospace" in root_ff, (
+        f"root <svg> font-family is not monospace (font-family={root_ff!r})"
+    )
     for t in letters:
-        style = t.get("style") or ""
-        assert "monospace" in style, (
-            f"band letter font is not monospace (style={style!r})"
+        assert t.get("style") is None, (
+            f"band letter should not carry a per-text style (got {t.get('style')!r})"
         )
 
 
@@ -157,6 +162,12 @@ import re
 
 
 def _font_size_px(text_el):
+    attr = text_el.get("font-size")
+    if attr is not None:
+        attr = attr.strip()
+        if attr.endswith("px"):
+            attr = attr[:-2]
+        return float(attr)
     m = re.search(r'font-size:\s*([0-9.]+)px', text_el.get("style") or "")
     assert m, f"font-size not found in style={text_el.get('style')!r}"
     return float(m.group(1))

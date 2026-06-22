@@ -95,8 +95,8 @@ class Renderer:
         text_el = etree.SubElement(svg, 'text',
                                    x=str(n.center.x), y=str(n.center.y),
                                    fill=fg_color,
-                                   style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;",
-                                   **{"text-anchor": "middle", "dominant-baseline": "central"})
+                                   **{"font-size": str(text_size_px),
+                                      "text-anchor": "middle", "dominant-baseline": "central"})
         text_el.text = token.text
 
     def draw_quartile_mark(self, svg: etree.Element, cell: Cell,
