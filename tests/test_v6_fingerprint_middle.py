@@ -191,7 +191,8 @@ def test_middle_text_is_downsized_to_fit_five_chars_for_nonhex_alphabet():
         mid_px = _cell_font_px(g[ci])
         assert mid_px < head_px, (
             f"fp cell {ci} font {mid_px}px not downsized below head {head_px}px")
-        assert abs(mid_px - expected) < 1e-6, mid_px
+        # font-size is read from the SVG, now serialized to 3dp.
+        assert abs(mid_px - expected) < 1e-3, mid_px
 
 
 def test_hex_input_middle_font_is_crockford_080x_not_head_075x():
@@ -205,7 +206,10 @@ def test_hex_input_middle_font_is_crockford_080x_not_head_075x():
             if ci not in set(fp) and g[ci].get("data-cell-blank") is None]
     head_px = _cell_font_px(g[head[0]])
     assert head_px == 12.0
-    assert {_cell_font_px(g[ci]) for ci in fp} == {round(12 * 0.80) * 96 / 72}
+    # font-size is read from the SVG, now serialized to 3dp, so compare within
+    # the serialization rounding rather than by exact set equality.
+    expected = round(12 * 0.80) * 96 / 72
+    assert all(abs(_cell_font_px(g[ci]) - expected) < 1e-3 for ci in fp)
 
 
 def test_middle_token_length_is_five_crockford_chars():

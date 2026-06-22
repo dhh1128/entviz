@@ -95,6 +95,51 @@ def _blank_map_sub_center(cell_idx, nx, ny, grid, sub_w, sub_h):
             ny + (cell_idx // grid.cols + 0.5) * sub_h)
 
 
+# --- numeric serialization (docs/spec.md → Equivalence relation) -----------
+# Coordinates are emitted as compact plain decimals: no exponential notation,
+# at most 3 fractional digits, no trailing zeros, integers without a decimal
+# point, -0 as 0. This mirrors entviz-rs / entviz-js `n()`. The rounding mode
+# is unconstrained by the spec (this uses Python's round-half-to-even via
+# `:.3f`); the checker's 0.05 px tolerance absorbs cross-impl rounding diffs.
+# Normalizing once at serialization time keeps every call site free to build
+# attributes with plain `str()`/f-strings.
+def _compact(x: float) -> str:
+    if not math.isfinite(x):
+        return "0"  # coordinates are always finite; defensive
+    s = f"{x:.3f}"
+    if "." in s:
+        s = s.rstrip("0").rstrip(".")
+    return "0" if s in ("", "-0") else s
+
+
+_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
+# Single-number coordinate/length/opacity attributes.
+_COORD_ATTRS = frozenset({
+    "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry",
+    "x1", "y1", "x2", "y2", "fx", "fy", "offset",
+    "stroke-width", "fill-opacity", "stroke-opacity", "stop-opacity",
+    "data-ellipse-anchor-x", "data-ellipse-anchor-y", "data-ellipse-rx",
+    "data-ellipse-ry", "data-ellipse-rotation-deg",
+})
+# Multi-number attributes (every numeric token is compacted; letters/commas,
+# e.g. the `rotate(...)`/path commands, are left untouched).
+_COMPOSITE_ATTRS = frozenset({"viewBox", "transform", "points", "d"})
+_FONT_SIZE_RE = re.compile(r"(font-size:\s*)(-?\d+(?:\.\d+)?)(px)")
+
+
+def _normalize_numbers(root) -> None:
+    """Rewrite every numeric SVG attribute to the compact form in place."""
+    for el in root.iter():
+        for k, v in list(el.attrib.items()):
+            if k in _COORD_ATTRS:
+                el.set(k, _compact(float(v)))
+            elif k in _COMPOSITE_ATTRS:
+                el.set(k, _NUM_RE.sub(lambda m: _compact(float(m.group())), v))
+            elif k == "style":
+                el.set(k, _FONT_SIZE_RE.sub(
+                    lambda m: m.group(1) + _compact(float(m.group(2))) + m.group(3), v))
+
+
 def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
            note: str = None) -> str:
     """
@@ -660,6 +705,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     _draw_border_line(svg, 1 + bar_width + 0.5, 0,
                       1 + bar_width + 0.5, bounding_h)                                # interior separator
 
+    _normalize_numbers(svg)
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
 

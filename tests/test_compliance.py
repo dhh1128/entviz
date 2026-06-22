@@ -36,6 +36,24 @@ def test_extract_model_is_deterministic():
     assert diff_models(a, b) == []
 
 
+def test_coordinates_are_compact_plain_decimals():
+    # Numeric serialization (docs/spec.md): every numeric SVG attribute value is
+    # a compact plain decimal -- no exponential notation, <= 3 fractional
+    # digits, integers without a decimal point. Catches any coordinate that
+    # slips past _normalize_numbers (the JS port had exactly such a bypass).
+    import re as _re
+    for inp in ("0123456789abcdef0123456789abcdef",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "a" * 66):  # forces a blank-cell map + ellipse overlay
+        svg = render(inp)
+        for m in _re.finditer(r'="(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"', svg):
+            v = m.group(1)
+            assert "e" not in v.lower(), f"exponential notation: {v!r}"
+            frac = v.split(".")[1] if "." in v else ""
+            assert len(frac) <= 3, f"more than 3 fractional digits: {v!r}"
+            assert not (frac and frac.endswith("0")), f"untrimmed trailing zero: {v!r}"
+
+
 def test_diff_models_tolerates_subpixel_coordinate_noise():
     # Equivalence relation: coordinate/length/angle fields compare by value
     # within 0.05, so two implementations that round an unspecified-precision
