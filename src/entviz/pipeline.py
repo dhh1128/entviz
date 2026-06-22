@@ -33,8 +33,16 @@ from .shapes import canvas, rect as draw_rect
 _DPI = 96
 
 
-NOTE_MAX_LEN = 8
-_NOTE_RE = re.compile(r'^[A-Za-z0-9]+$')
+NOTE_MAX_LEN = 10
+# Printable ASCII only (U+0020 space through U+007E tilde). This deliberately
+# excludes everything non-ASCII so the note CANNOT carry homoglyphs/confusables,
+# bidi or other control/format characters, zero-width or combining marks — the
+# whole Unicode-spoofing surface is gone by construction, and the rule is
+# trivially identical across implementations (no Unicode tables/version to pin).
+# The note is still escaped on output, so injection is handled regardless. The
+# length cap keeps even the smallest (1x1) entviz's bottom strip from
+# overflowing (verified). The note is a caption, not entropy.
+_NOTE_RE = re.compile(r'^[\x20-\x7E]+$')
 
 # Anti-DoS input cap (this.i:1nputcap). entviz visualizes identifiers; the
 # largest plausible one (a long cert chain or JWT) is a few KB, so 64 KiB is
@@ -50,10 +58,10 @@ def sanitize_note(note):
     """Validate an optional out-of-band user note (see `this.i:usrn0te1`).
 
     Returns the note unchanged (case preserved — it is a caption, not
-    entropy) when it is ASCII-alphanumeric and at most NOTE_MAX_LEN chars.
-    `None` or an empty string mean "no note" and return None. Any other
-    value raises ValueError: a trust-adjacent field is rejected outright
-    rather than silently truncated or mangled.
+    entropy) when it is printable ASCII (U+0020-U+007E) and at most
+    NOTE_MAX_LEN chars. `None` or an empty string mean "no note" and return
+    None. Any other value raises ValueError: a trust-adjacent field is rejected
+    outright rather than silently truncated or mangled.
     """
     if note is None or note == "":
         return None
@@ -64,7 +72,8 @@ def sanitize_note(note):
             f"note must be at most {NOTE_MAX_LEN} characters (got {len(note)})")
     if not _NOTE_RE.match(note):
         raise ValueError(
-            "note must be ASCII alphanumeric [A-Za-z0-9] with no spaces or punctuation")
+            "note must be printable ASCII (U+0020-U+007E); no control or "
+            "non-ASCII characters")
     return note
 
 
@@ -146,7 +155,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     """
     Render entropy as an SVG entviz and return the SVG as a UTF-8 string.
 
-    `note` is an optional out-of-band caption (max 8 ASCII-alphanumeric
+    `note` is an optional out-of-band caption (max 10 printable-ASCII
     chars). It NEVER enters the entropy or the fingerprint and is outside
     the comparison surface; it renders as a quiet gray caption in the bottom
     strip. An invalid note raises ValueError. See `this.i:usrn0te1`.

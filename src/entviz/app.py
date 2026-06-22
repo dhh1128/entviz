@@ -17,9 +17,9 @@ def main():
     parser.add_argument('-o', '--output', metavar='FILE', default=None,
                         help='Write SVG to FILE (default: stdout)')
     parser.add_argument('--note', metavar='TEXT', default=None,
-                        help='Optional unverified caption (<=8 ASCII alphanumeric '
-                             'chars), rendered as a quiet gray note in the bottom '
-                             'strip. Does not affect the fingerprint or comparison.')
+                        help='Optional unverified caption (<=10 printable-ASCII '
+                             'chars, U+0020-U+007E), rendered as a quiet gray note in '
+                             'the bottom strip. Does not affect the fingerprint or comparison.')
     args = parser.parse_args()
 
     ar_width, ar_height = 1, 1
