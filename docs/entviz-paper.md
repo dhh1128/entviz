@@ -2,7 +2,7 @@
 
 ## Daniel Hardman
 
-## [`daniel@provenant.net`](mailto:daniel@provenant.net)
+## [`daniel.hardman@gmail.com`](mailto:daniel.hardman@gmail.com)
 
 ---
 
