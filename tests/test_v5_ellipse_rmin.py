@@ -68,8 +68,11 @@ def test_ellipse_radii_match_dfar_relative_clamp():
     p = v3_ellipse_params_from_digest(digest)
     expected_rx = r_min + (p["rx_step"] / 15.0) * (r_max - r_min)
     expected_ry = r_min + (p["ry_step"] / 15.0) * (r_max - r_min)
-    assert math.isclose(rendered_rx, expected_rx, rel_tol=1e-9)
-    assert math.isclose(rendered_ry, expected_ry, rel_tol=1e-9)
+    # The SVG now carries the compact 3dp-serialized coordinate (spec numeric
+    # serialization), so compare to the full-precision expectation within the
+    # serialization rounding (<= 0.0005).
+    assert math.isclose(rendered_rx, expected_rx, abs_tol=1e-3)
+    assert math.isclose(rendered_ry, expected_ry, abs_tol=1e-3)
 
 
 def test_ellipse_radii_stay_within_clamp_bounds():
@@ -86,7 +89,9 @@ def test_ellipse_radii_stay_within_clamp_bounds():
     ]
     for inp in inputs:
         rx, ry, d_far = _measure(render(inp))
-        lo = R_MIN_FRACTION * d_far - 1e-6
-        hi = R_MAX_FRACTION * d_far + 1e-6
+        # rx/ry are read from the SVG, now serialized to 3dp (spec numeric
+        # serialization), so allow the <=0.0005 serialization rounding slack.
+        lo = R_MIN_FRACTION * d_far - 1e-3
+        hi = R_MAX_FRACTION * d_far + 1e-3
         assert lo <= rx <= hi, f"{inp!r}: rx={rx} outside [{lo}, {hi}]"
         assert lo <= ry <= hi, f"{inp!r}: ry={ry} outside [{lo}, {hi}]"
