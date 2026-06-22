@@ -300,15 +300,20 @@ def test_paint_order_violation_is_invisible_to_tier_a_but_changes_raster(base):
     assert int(np.abs(a - b).max()) > 0, "expected a visible raster difference"
 
 
-def test_added_visible_element_is_invisible_to_tier_a_but_changes_raster(base):
-    """An extra visible <rect> is 'additional content' the model ignores, but it
-    paints pixels — so it is non-conformance only via Tier B."""
+def test_added_visible_element_is_invisible_to_the_model_but_caught_elsewhere(base):
+    """An extra visible <rect> is 'additional content' the render MODEL ignores
+    (extract_model only reads declared channels) — yet it paints pixels. It is
+    caught two ways: by Tier B (the raster differs) AND, now, by the Tier-A
+    closed-profile check (validate_closed_profile), which has no golden-raster
+    dependency. See test_closed_profile.py."""
+    from compliance import validate_closed_profile
     root = _parse(base)
     bad = etree.SubElement(root, Q + "rect")
     bad.set("x", "0"); bad.set("y", "0")
     bad.set("width", "10"); bad.set("height", "10"); bad.set("fill", "#ff00ff")
     variant = _ser(root)
-    assert_model_unchanged(base, variant)  # Tier A: BLIND
+    assert_model_unchanged(base, variant)            # the model comparison is blind
+    assert validate_closed_profile(variant) != []    # the closed-profile check is not
     np = pytest.importorskip("numpy")
     a, b = _raster(base), _raster(variant)
-    assert int(np.abs(a - b).max()) > 0
+    assert int(np.abs(a - b).max()) > 0               # and Tier B sees the pixels

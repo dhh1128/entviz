@@ -30,7 +30,7 @@ import sys
 from dataclasses import dataclass, field
 
 from . import raster
-from .model import diff_models, extract_model
+from .model import diff_models, extract_model, validate_closed_profile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CORPUS = os.path.join(HERE, "corpus")
@@ -130,9 +130,14 @@ def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
             actual = extract_model(svg)
             models[vid] = actual
             d = diff_models(golden, actual)
-            res.tier_a = not d
+            # Closed profile: the SVG must contain ONLY the enumerated entviz
+            # channels — no overlaid logo, copyright, or other extra content.
+            profile_viol = validate_closed_profile(svg)
+            res.tier_a = not d and not profile_viol
             if d:
                 res.messages.extend(d)
+            if profile_viol:
+                res.messages.extend(f"closed-profile: {m}" for m in profile_viol)
         # Tier B
         if "B" in tiers:
             golden_png = open(os.path.join(corpus_dir, vid, "golden.png"), "rb").read()
