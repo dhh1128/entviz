@@ -56,11 +56,12 @@ def test_coordinates_are_compact_plain_decimals():
 
 def test_diff_models_tolerates_subpixel_coordinate_noise():
     # Equivalence relation: coordinate/length/angle fields compare by value
-    # within 0.05, so two implementations that round an unspecified-precision
-    # coordinate to opposite sides of a boundary (12.345 vs 12.346) are equal,
-    # but a real >= 0.05 geometry difference is still caught.
+    # within 0.01 px, so two implementations that round an unspecified-precision
+    # coordinate to opposite sides of a 3dp boundary (12.345 vs 12.346, a
+    # 0.001 px gap) are equal, but a real >= 0.01 px geometry difference — which
+    # would also be visible to Tier B — is still caught.
     base = {"ellipse": {"anchor": [10.0, 20.0], "rx": 12.345, "ry": 8.0, "rotation": 30.0}}
-    near = {"ellipse": {"anchor": [10.0, 20.001], "rx": 12.346, "ry": 8.0, "rotation": 30.02}}
+    near = {"ellipse": {"anchor": [10.0, 20.001], "rx": 12.346, "ry": 8.0, "rotation": 30.005}}
     far = {"ellipse": {"anchor": [10.0, 20.0], "rx": 12.5, "ry": 8.0, "rotation": 30.0}}
     assert diff_models(base, near) == []
     assert diff_models(base, far) != []
