@@ -39,14 +39,13 @@ def _cell0(art):
     pts = [tuple(map(float, p.split(","))) for p in poly.get("points").split()]
     cx0, cy0, cw, ch = _ZOOM_CROP
     boxes = [b for b in surround_boxes(root)
-             if cx0 <= float(b.get("x")) < cx0 + cw and cy0 <= float(b.get("y")) < cy0 + ch
-             and b.get("fill") != "#e7be00"] or surround_boxes(root)
-    tb = min(boxes, key=lambda b: float(b.get("y")))
+             if cx0 <= b["x"] < cx0 + cw and cy0 <= b["y"] < cy0 + ch
+             and b["fill"] != "#e7be00"] or surround_boxes(root)
+    tb = min(boxes, key=lambda b: b["y"])
     return {
         "nucleus": (nx + nw / 2, ny + 3),
         "text": (tx, ty - 4),
-        "box": (float(tb.get("x")) + float(tb.get("width")) / 2,
-                float(tb.get("y")) + float(tb.get("height")) / 2),
+        "box": (tb["x"] + tb["width"] / 2, tb["y"] + tb["height"] / 2),
         "quartile": (sum(p[0] for p in pts) / 3, sum(p[1] for p in pts) / 3),
     }
 

@@ -28,30 +28,42 @@ class Renderer:
         """
         v4 surround: 24 small boxes around the nucleus. Bit i of ftok.quant
         (LSB=bit 0) selects box i (clockwise from the top-left of the top
-        row). A set bit emits a solid <rect> filled with this cell's edge
+        row). A set bit draws a small box filled with this cell's edge
         color — the palette entry (one of the 4 non-bg colors) that is
         perceptually closest to the nucleus_bg under weighted RGB
-        distance. A clear bit emits nothing.
+        distance. A clear bit draws nothing.
 
         v10: `edge_override` (a hex color) forces the edge color instead of
         the nearest-palette echo — used for the fingerprint-edge cells
         (top-left + 1st/2nd quartile), whose surround colour is drawn from
         the fingerprint so it avalanches to a casual glance.
+
+        v10: the set boxes are emitted as a SINGLE `<path>` (one subpath per
+        box) rather than one `<rect>` each — repeated box rects were ~a third
+        of a dense entviz. The bit pattern and edge color are declared on the
+        cell GROUP (`data-surround-bits` / `data-edge-color`) by the caller, so
+        a checker recovers the channel from the attribute, not by measuring
+        geometry; this path is purely the rendered pixels. `svg` is the
+        surround layer — painted before the cell groups and the ellipse overlay
+        — so the path MUST stay here for the overlay to composite over the boxes
+        exactly as before (paint order is normative). Returns
+        `(surround_bits, edge_color)` for the caller to stamp on the cell group.
         """
         edge_color = (edge_override if edge_override is not None
                       else closest_palette_color(nucleus_bg, self.style.edge_colors))
         bw = cell.box_width
         bh = cell.box_height
+        bits = 0
+        subpaths = []
         for i in range(24):
             if not (ftok.quant >> i) & 1:
                 continue
+            bits |= (1 << i)
             origin = cell.box_origin(i)
-            etree.SubElement(
-                svg, 'rect',
-                x=str(origin.x), y=str(origin.y),
-                width=str(bw), height=str(bh),
-                fill=edge_color,
-            )
+            subpaths.append(f"M{origin.x} {origin.y}h{bw}v{bh}h-{bw}z")
+        if subpaths:
+            etree.SubElement(svg, 'path', fill=edge_color, d="".join(subpaths))
+        return bits, edge_color
 
     def render_nucleus(self, svg: etree.Element, token, cell: Cell,
                        text_size_px=None, bg_override=None, inner_border=None):

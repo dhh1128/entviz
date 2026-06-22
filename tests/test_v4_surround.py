@@ -57,35 +57,38 @@ def test_closest_palette_color_picks_self_when_in_palette():
 # ---- surround box geometry ----------------------------------------------
 
 
-def test_24_surround_boxes_per_cell_when_all_bits_set():
-    """A token whose quant is all-ones produces 24 filled surround
-    boxes per cell. Use a hex input where one token's quant ends up
-    being 0xffffff is impossible without crafting it; instead just
-    check that across all cells, the total filled-box count matches
-    the popcount of (used) quants."""
-    # "deadbeef" → 2 tokens. Token text "deadbe" / "efdead"... well
-    # actually hex tokens are 6 chars. "deadbeef" → 1 token? Let me
-    # use a long input.
-    input_ = "deadbeefdeadbeef"  # 16 hex chars → 2 full tokens + 2 partial (extended) ... actually 16 hex = 2.67 tokens, but tokenization rounds. Let me just use a known one.
-    svg = _doc(render(input_))
-    # Surround boxes: width=6, height=10 at 12pt.
-    boxes = [
-        r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("width", 0)) == 6 and float(r.get("height", 0)) == 10
+def _surround_paths(svg):
+    """v10: the surround boxes are emitted as one <path> per cell in the
+    surround layer (the only <path> with no data-blank-map-* attribute — the
+    blank-map plus marker is the other path)."""
+    return [
+        p for p in svg.xpath('//*[local-name()="path"]')
+        if p.get("data-blank-map-max") is None and p.get("data-blank-map-min") is None
     ]
-    assert boxes, "no surround boxes emitted"
 
 
-def test_surround_box_fill_is_in_palette():
-    """Each filled surround box uses a color from the 4-color edge palette."""
+def test_surround_path_subpath_count_matches_declared_bits():
+    """v10: each filled cell DECLARES its surround pattern as
+    data-surround-bits (hex), and the surround path draws exactly one box
+    (one 'M' subpath) per set bit. The two must round-trip."""
+    svg = _doc(render("deadbeefdeadbeef"))
+    cells = svg.xpath('//*[local-name()="g"][@data-channel="cell"]')
+    total_bits = sum(
+        bin(int(g.get("data-surround-bits"), 16)).count("1")
+        for g in cells if g.get("data-surround-bits") is not None
+    )
+    total_subpaths = sum(p.get("d", "").count("M") for p in _surround_paths(svg))
+    assert total_bits > 0, "no surround bits set"
+    assert total_subpaths == total_bits
+
+
+def test_surround_path_fill_is_in_palette():
+    """Each surround path uses a color from the 4-color edge palette."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
-    boxes = [
-        r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("width", 0)) == 6 and float(r.get("height", 0)) == 10
-    ]
-    assert boxes
-    for b in boxes:
-        assert b.get("fill") in POSSIBLE_EDGE_COLORS
+    paths = _surround_paths(svg)
+    assert paths, "no surround paths emitted"
+    for p in paths:
+        assert p.get("fill") in POSSIBLE_EDGE_COLORS
 
 
 def test_box_origin_clockwise_numbering():

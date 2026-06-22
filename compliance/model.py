@@ -157,18 +157,27 @@ def extract_model(svg: str | bytes) -> dict:
                 cell["text"] = texts[0].text or ""
                 cell["fg"] = texts[0].get("fill")
                 cell["text_size_px"] = _text_size_px(texts[0])
-            # surround bits + edge color from geometry
-            cell_x = nx - bw
-            cell_y = ny - bh
-            bits = 0
-            edge = None
-            for i, (ox, oy) in enumerate(_box_origins(cell_x, cell_y, fs)):
-                fill = surround.get((_round(ox), _round(oy)))
-                if fill is not None:
-                    bits |= (1 << i)
-                    edge = fill
-            cell["surround_bits"] = bits
-            cell["edge_color"] = edge
+            # Surround bits + edge color. v10 SVG profile: the cell group
+            # DECLARES them (data-surround-bits is the hex bit pattern,
+            # data-edge-color the edge color), so recovery is a direct read.
+            # Fall back to recovering them from the box geometry for SVGs that
+            # predate the declaration.
+            bits_attr = g.get("data-surround-bits")
+            if bits_attr is not None:
+                cell["surround_bits"] = int(bits_attr, 16)
+                cell["edge_color"] = g.get("data-edge-color")
+            else:
+                cell_x = nx - bw
+                cell_y = ny - bh
+                bits = 0
+                edge = None
+                for i, (ox, oy) in enumerate(_box_origins(cell_x, cell_y, fs)):
+                    fill = surround.get((_round(ox), _round(oy)))
+                    if fill is not None:
+                        bits |= (1 << i)
+                        edge = fill
+                cell["surround_bits"] = bits
+                cell["edge_color"] = edge
         cells[str(ci)] = cell
     model["cells"] = cells
 

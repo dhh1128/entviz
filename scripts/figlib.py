@@ -24,6 +24,7 @@ drift test that calls them) need only entviz + lxml (+ segno for the comparison
 figure), not a system libcairo — cairosvg lives in the opt-in `render` group.
 """
 import os
+import re
 import sys
 
 from lxml import etree
@@ -285,10 +286,24 @@ def rect_box(r):
             float(r.get("width")), float(r.get("height")))
 
 
+_BOX_SUBPATH_RE = re.compile(r"M(-?[\d.]+) (-?[\d.]+)h(-?[\d.]+)v(-?[\d.]+)")
+
+
 def surround_boxes(root):
+    """v10: surround boxes are subpaths of per-cell <path>s (one box per
+    `M x y h w v h h-w z`), not individual rects. Recover each box as a dict
+    with x/y/width/height/fill so a caller can locate a representative box."""
     grid = [g for g in root.iter(SVGNS + "g") if g.get("data-channel") == "grid"][0]
-    return [r for r in grid.iter(SVGNS + "rect")
-            if float(r.get("width")) < 20 and r.get("fill") != PAGE]
+    out = []
+    for p in grid.iter(SVGNS + "path"):
+        # skip the blank-map plus marker (the only other <path> in the grid)
+        if p.get("data-blank-map-max") is not None or p.get("data-blank-map-min") is not None:
+            continue
+        fill = p.get("fill")
+        for m in _BOX_SUBPATH_RE.finditer(p.get("d", "")):
+            x, y, w, h = map(float, m.groups())
+            out.append({"x": x, "y": y, "width": w, "height": h, "fill": fill})
+    return out
 
 
 # ---- CVD color maths (Machado, Oliveira & Fernandes 2009, severity 1.0) --
