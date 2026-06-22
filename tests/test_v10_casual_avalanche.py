@@ -48,23 +48,11 @@ def _cell_group(root, idx):
 
 
 def _edge_fills_of_cell(root, idx):
-    """The set of fill colours on cell `idx`'s surround boxes, located by
-    geometry (edges live in a flat layer, not the cell group)."""
-    cg = _cell_group(root, idx)
-    nuc = next(r for r in cg.findall(SVG + "rect")
-               if r.get("rx") is None and r.get("fill", "").startswith("#"))
-    nl, nt = float(nuc.get("x")), float(nuc.get("y"))
-    nw, nh = float(nuc.get("width")), float(nuc.get("height"))
-    bw, bh = nw / 8, nh / 2
-    cl, ct, cw, ch = nl - bw, nt - bh, nw + 2 * bw, nh + 2 * bh
-    fills = set()
-    for r in root.iter(SVG + "rect"):
-        if abs(float(r.get("width")) - bw) > 0.01:
-            continue
-        cx, cy = float(r.get("x")) + bw / 2, float(r.get("y")) + bh / 2
-        if cl <= cx <= cl + cw and ct <= cy <= ct + ch:
-            fills.add(r.get("fill"))
-    return fills
+    """v10: the cell group DECLARES its surround edge colour via
+    data-edge-color (the boxes are a path in the surround layer). Returned as a
+    set so the existing `== {expected}` assertions still read naturally."""
+    ec = _cell_group(root, idx).get("data-edge-color")
+    return {ec} if ec is not None else set()
 
 
 def _dummy_cell():
@@ -80,18 +68,19 @@ def test_render_edges_override_forces_fill():
 
     class F:  # all 24 bits set so every box renders
         quant = (1 << 24) - 1
-    # render_edges adds plain `rect` tags (the SVG namespace is only applied
-    # when the whole tree is serialized), so query without a namespace here.
+    # v10: render_edges draws the boxes as one <path> and RETURNS
+    # (surround_bits, edge_color). The namespace is only applied at
+    # whole-tree serialization, so query the path without a namespace here.
     g = etree.Element("g")
-    r.render_edges(g, F(), _dummy_cell(), nucleus_bg="#840e55",
-                   edge_override="#2f3fbf")
-    fills = {rect.get("fill") for rect in g.findall("rect")}
-    assert fills == {"#2f3fbf"}, "override must force the edge colour"
+    bits, edge = r.render_edges(g, F(), _dummy_cell(), nucleus_bg="#840e55",
+                                edge_override="#2f3fbf")
+    assert edge == "#2f3fbf", "override must force the edge colour"
+    assert bits == (1 << 24) - 1
+    assert {p.get("fill") for p in g.findall("path")} == {"#2f3fbf"}
     # without override, falls back to nearest palette to the nucleus
     g2 = etree.Element("g")
-    r.render_edges(g2, F(), _dummy_cell(), nucleus_bg="#840e55")
-    fills2 = {rect.get("fill") for rect in g2.findall("rect")}
-    assert fills2 == {closest_palette_color("#840e55", style.edge_colors)}
+    _, edge2 = r.render_edges(g2, F(), _dummy_cell(), nucleus_bg="#840e55")
+    assert edge2 == closest_palette_color("#840e55", style.edge_colors)
 
 
 def test_topleft_cell_edge_is_fingerprint_sourced():

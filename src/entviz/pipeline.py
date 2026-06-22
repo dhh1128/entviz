@@ -449,11 +449,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
             fp_edge_cells.add(qci)
 
     edges_g = etree.SubElement(grid_g, 'g')
+    # ci -> (surround_bits, edge_color); declared on the cell group below so the
+    # checker recovers the surround channel from data-surround-bits/-edge-color
+    # rather than the box geometry (the path render_edges emits is just pixels).
+    surround_by_cell = {}
     for token, ftok, cell, ci, nucleus_bg in token_cells:
         override = (style.edge_colors[ftok.quant & 0b11]
                     if ci in fp_edge_cells else None)
-        renderer.render_edges(edges_g, ftok, cell, nucleus_bg=nucleus_bg,
-                              edge_override=override)
+        surround_by_cell[ci] = renderer.render_edges(
+            edges_g, ftok, cell, nucleus_bg=nucleus_bg, edge_override=override)
 
     # Layer 2: ellipse overlay derived from raw digest bytes 60-63,
     # clipped to the grid rect. Wrapped in its own data-channel group
@@ -492,6 +496,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
             attrs["data-cell-blank"] = "true"
         if ci in fingerprint_cells:
             attrs["data-cell-fingerprint"] = "true"
+        # v10: a filled cell declares its surround channel here (hex bit pattern
+        # + edge color); the boxes themselves were drawn as a path in the
+        # surround layer above. data-edge-color is omitted when no box is set
+        # (edge color is then undefined, matching the render model).
+        if ci in surround_by_cell:
+            bits, edge_color = surround_by_cell[ci]
+            attrs["data-surround-bits"] = f"0x{bits:x}"
+            if bits:
+                attrs["data-edge-color"] = edge_color
         cell_groups[ci] = etree.SubElement(nuclei_g, 'g', **attrs)
 
     # V3-4: per-token cell-text rendered size. Reference drives all
