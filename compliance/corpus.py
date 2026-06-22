@@ -114,7 +114,11 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("fs-24", "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", {"font_size_pt": 24}),
 
     # --- user note caption (bottom strip; out of comparison surface) ---
+    # The note is printable ASCII (U+0020-U+007E): spaces and punctuation are
+    # valid (they used to be rejected — see the removed err-note-space/punct).
     ("note-git", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "git"}),
+    ("note-space", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "two words"}),
+    ("note-punct", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "a.b_c-d!"}),
 ]
 
 # (id, entropy, kwargs, expected_category)
@@ -125,10 +129,12 @@ ERROR_VECTORS: list[tuple[str, str, dict, str]] = [
     # canonical spec vector flipped to lowercase).
     ("err-eip55-bad-checksum",
      "0x5aaeb6053F3E94C9b9A09f33669435E7Ef1BeAed", {}, "eip55-checksum"),
-    # user-note sanitization
+    # user-note sanitization. The note is printable ASCII only, so the rejected
+    # cases are now (a) too long, (b) a control character, (c) any non-ASCII
+    # codepoint (which closes the homoglyph/bidi/zero-width surface).
     ("err-note-too-long", "a1b2c3d4e5f6a7b8", {"note": "toolongnote"}, "note-length"),
-    ("err-note-space", "a1b2c3d4e5f6a7b8", {"note": "two words"}, "note-charset"),
-    ("err-note-punct", "a1b2c3d4e5f6a7b8", {"note": "bad!"}, "note-charset"),
+    ("err-note-control", "a1b2c3d4e5f6a7b8", {"note": "ab\tcd"}, "note-charset"),
+    ("err-note-nonascii", "a1b2c3d4e5f6a7b8", {"note": "café"}, "note-charset"),
     # render params out of the reference's supported range
     ("err-fontsize-low", "a1b2c3d4e5f6a7b8", {"font_size_pt": 4}, "font-size-range"),
     ("err-fontsize-high", "a1b2c3d4e5f6a7b8", {"font_size_pt": 40}, "font-size-range"),

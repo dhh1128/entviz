@@ -135,7 +135,8 @@ def test_note_is_passed_through(monkeypatch, capsys):
 
 
 def test_invalid_note_becomes_parser_error(monkeypatch):
-    # A note with punctuation fails sanitize_note -> ValueError -> parser.error.
+    # A non-ASCII note fails sanitize_note -> ValueError -> parser.error.
+    # (Spaces and punctuation are valid now; the charset is printable ASCII.)
     with pytest.raises(SystemExit) as exc:
-        _run(monkeypatch, HEX, "--note", "bad note!")
+        _run(monkeypatch, HEX, "--note", "café")
     assert exc.value.code == 2

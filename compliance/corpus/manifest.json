@@ -51,13 +51,15 @@
     "fs-6",
     "fs-12",
     "fs-24",
-    "note-git"
+    "note-git",
+    "note-space",
+    "note-punct"
   ],
   "error_vectors": [
     "err-eip55-bad-checksum",
     "err-note-too-long",
-    "err-note-space",
-    "err-note-punct",
+    "err-note-control",
+    "err-note-nonascii",
     "err-fontsize-low",
     "err-fontsize-high"
   ],
