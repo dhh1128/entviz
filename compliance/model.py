@@ -25,6 +25,13 @@ SVG_NS = "http://www.w3.org/2000/svg"
 # the same value; rounding here makes that concrete and cross-implementation.
 ELLIPSE_NDIGITS = 3
 
+# Coordinate/length/angle fields are compared BY VALUE within this absolute
+# tolerance (docs/spec.md → Equivalence relation → numeric formatting), never by
+# exact equality: two conformant implementations may round an unspecified-
+# precision coordinate differently (e.g. 12.345 vs 12.346), and that ≤0.0005 px
+# disagreement — well below a sub-pixel — must not be a spurious failure.
+_NUM_TOL = 0.05
+
 # Geometry constants from docs/spec.md (all multiples of font_size_px = fs).
 _BOX_W = 0.375      # box_width  = 0.375 * fs
 _BOX_H = 0.625      # box_height = 0.625 * fs
@@ -372,6 +379,17 @@ def _diff(a, b, path, diffs):
         else:
             for i, (x, y) in enumerate(zip(a, b)):
                 _diff(x, y, f"{path}[{i}]", diffs)
+    elif isinstance(a, bool) or isinstance(b, bool):
+        # bool is an int subclass; compare strictly (don't run it through the
+        # numeric tolerance, where True/1 etc. would blur).
+        if a != b:
+            diffs.append(f"{path}: golden={a!r} actual={b!r}")
+    elif isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        # Coordinates/lengths/angles: by-value comparison within the spec's
+        # numeric tolerance, not exact (real differences are >= 1 px / structural
+        # and remain caught; only sub-0.05 rounding noise is absorbed).
+        if abs(a - b) > _NUM_TOL:
+            diffs.append(f"{path}: golden={a!r} actual={b!r} (|delta| > {_NUM_TOL})")
     else:
         if a != b:
             diffs.append(f"{path}: golden={a!r} actual={b!r}")

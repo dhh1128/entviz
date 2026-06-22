@@ -149,12 +149,14 @@ The following are **purely serialization-level** differences. They MUST NOT be t
 
 * the XML prolog, `DOCTYPE`, character-encoding declaration, and namespace declarations;
 * attribute ordering, element indentation, and insignificant whitespace;
-* numeric formatting that denotes the same value within the geometry-rounding rules of this spec (e.g. `60` vs `60.0` vs `60.00`);
+* numeric formatting: coordinate and length values are compared **by value, not by string**. Two values are equivalent when they agree to within an absolute tolerance of **0.05 px** (for the ellipse rotation, **0.05°**). So `60`, `60.0`, and `60.00` are equivalent, and so are two implementations' coordinates that differ only in the last computed bit or in how they rounded an unspecified-precision value. A conformance checker MUST compare these fields numerically within this tolerance and MUST NOT require byte-identical numerals;
 * the concrete value of any salted `id` (e.g. the clip-path id), provided ids remain unique within the document as required;
 * element grouping (`<g>` nesting) that changes neither paint order nor geometry;
 * the presence of additional, advisory metadata beyond the REQUIRED attribute set, provided it does not alter rendering.
 
-Conversely, any difference in the render model, or any difference visible in the canonical raster outside text-glyph regions beyond tolerance, **is** non-conformance.
+**Numeric serialization.** Every number an implementation writes into the SVG (coordinates, lengths, the ellipse parameters, transform arguments) MUST be a finite decimal in **plain notation**: implementations **MUST NOT** use exponential/scientific notation (e.g. `1e-7`), because not every SVG consumer accepts it in every attribute context and it defeats by-eye diffing. Implementations **SHOULD** emit the **compact form** — at most **3 fractional digits**, no trailing zeros after the decimal point, integer-valued numbers with no decimal point, and `-0` written as `0` — to keep documents small. The rounding used to reach 3 digits is deliberately **not** constrained (round-half-up, round-half-to-even, etc. are all acceptable): the 0.05 px equivalence tolerance above absorbs the ≤ 0.0005 px disagreement different rounding modes produce, so an implementation MAY use its language's native fixed-precision formatter (`printf("%.3f")`, `Number.toFixed(3)`, `format!("{:.3}")`, `strconv.FormatFloat`, `String.format("%.3f")`, `std::format`) — trimming trailing zeros — **without a hand-written rounder**. This is what keeps the serialization portable across languages whose formatters round ties differently (Java and JS round half **up**; Python, Go, Rust, and C/C++ round half **to even**).
+
+Conversely, any difference in the render model beyond the numeric tolerance above, or any difference visible in the canonical raster outside text-glyph regions beyond tolerance, **is** non-conformance.
 
 ### Canonical rasterization (Tier B)
 
