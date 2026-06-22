@@ -117,6 +117,7 @@ _NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?")
 _COORD_ATTRS = frozenset({
     "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry",
     "x1", "y1", "x2", "y2", "fx", "fy", "offset",
+    "font-size",
     "stroke-width", "fill-opacity", "stroke-opacity", "stop-opacity",
     "data-ellipse-anchor-x", "data-ellipse-anchor-y", "data-ellipse-rx",
     "data-ellipse-ry", "data-ellipse-rotation-deg",
@@ -328,6 +329,13 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     renderer = Renderer(style, grid)
 
     svg = canvas(bounding_rect.size)
+    # font-family is an inherited SVG presentation property: set the monospace
+    # chain ONCE on the root <svg> so every descendant <text> inherits it. Each
+    # <text> then carries only a compact `font-size` attribute, not the full
+    # `style="font-family:...; font-size:Npx;"` string (~21% of a dense SVG).
+    # A conformant checker accepts the size from either an ancestor-inherited
+    # font-family + a `font-size` attribute or the legacy per-text style.
+    svg.set("font-family", MONOSPACE_FONT_FAMILY)
     # v5: data-* attributes on the root SVG let an overlay (e.g. the
     # Idea-2 React component) discover structure without re-deriving it
     # from raw geometry. data-truncated is OMITTED when false (not
@@ -734,7 +742,10 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     because it is already present in the type-label parenthetical (e.g.
     `hex(200)`, `b64(119)`).
     """
-    style = f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {text_size_px}px;"
+    # font-family is inherited from the root <svg>; each label <text> carries
+    # only a compact font-size presentation attribute (compacted by
+    # _normalize_numbers via _COORD_ATTRS).
+    font_size_attr = {"font-size": str(text_size_px)}
     # Top strip — always.
     top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
     if type_name:
@@ -759,8 +770,8 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
         label_el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
-            fill='#666666', style=style,
-            **{"dominant-baseline": "central"},
+            fill='#666666',
+            **{**font_size_attr, "dominant-baseline": "central"},
         )
         marker_tspan = etree.SubElement(
             label_el, 'tspan',
@@ -772,8 +783,8 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
         el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
-            fill='#666666', style=style,
-            **{"dominant-baseline": "central"},
+            fill='#666666',
+            **{**font_size_attr, "dominant-baseline": "central"},
         )
         el.text = rest_text
     # Bottom strip — when a suffix exists and/or a user note is supplied.
@@ -788,8 +799,8 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
         el = etree.SubElement(
             bottom_g, 'text',
             x=str(grid_rect.right), y=str(bottom_cy),
-            fill='#666666', style=style,
-            **{"text-anchor": "end", "dominant-baseline": "central"},
+            fill='#666666',
+            **{**font_size_attr, "text-anchor": "end", "dominant-baseline": "central"},
         )
         if suffix and note:
             suffix_tspan = etree.SubElement(el, 'tspan')   # inherits #666
@@ -1176,8 +1187,8 @@ def _draw_color_bar(svg, bar_rect, gm, color_usage, edge_colors,
                 band_g, 'text',
                 x=str(bar_cx), y=str(baseline_y),
                 fill=fg,
-                style=f"font-family: {MONOSPACE_FONT_FAMILY}; font-size: {font_size}px;",
                 **{
+                    "font-size": str(font_size),
                     "text-anchor": "middle",
                     "data-color-bar-letter": "true",
                 },

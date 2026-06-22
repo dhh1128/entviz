@@ -221,12 +221,14 @@ def test_pipeline_uses_shrunk_font_for_6char_decimal_tokens():
     # The shrunken cell text size is 12px. The label strip text is also
     # 12px (round(12*0.75)*4/3 = 12), so we look for a 6-digit decimal
     # chunk specifically to disambiguate.
-    assert 'font-size: 12.0px' in svg or 'font-size: 12px' in svg
+    # font-size is now a compact presentation attribute (font-family is
+    # inherited from the root <svg>).
+    assert 'font-size="12"' in svg
     # Confirm: an unshrunken 16px cell text for the snowflake digits is
     # NOT present.
     import re
     big_digit_cell = re.search(
-        r'font-size: 16(?:\.0)?px[^<]*>\d{4,6}<',
+        r'font-size="16(?:\.0)?"[^<]*>\d{4,6}<',
         svg,
     )
     assert big_digit_cell is None, f"decimal cell text rendered at full size: {big_digit_cell.group(0)}"

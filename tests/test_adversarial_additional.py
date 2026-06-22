@@ -234,25 +234,44 @@ def test_fa4_root_svg_has_viewbox_matching_width_height(inp):
 # monospace font is requested.
 # ---------------------------------------------------------------------------
 
-def test_fa5_font_chain_used_in_cell_text():
+def test_fa5_font_chain_hoisted_to_root_svg():
+    """The font chain is now set ONCE on the root <svg> as an inherited
+    font-family presentation attribute, instead of repeated on every
+    <text>. Confirm it lives there exactly once with the documented chain."""
     out = render("deadbeefcafebabe")
     root = _root(out)
-    # Cell text elements live inside cell groups; find every <text>
-    # under the grid channel that is NOT a color-bar letter or label.
+    assert root.get("font-family") == FONT_CHAIN, (
+        f"root <svg> font-family is not the documented chain: "
+        f"{root.get('font-family')!r}"
+    )
+    # And it must appear exactly once in the whole document (not duplicated
+    # onto descendants). lxml escapes the embedded quotes (&quot;) when
+    # serializing the attribute, so count a stable unescaped marker token from
+    # the chain instead of the raw chain string.
+    assert out.count("JetBrains") == 1, (
+        f"font chain marker appears {out.count('JetBrains')} times, expected "
+        "once (on the root <svg> only)"
+    )
+
+
+def test_fa5_cell_text_inherits_chain_no_per_text_family():
+    """Every cell <text> inherits the chain from the root <svg> and carries
+    no per-text font-family (neither as a style nor as an attribute)."""
+    out = render("deadbeefcafebabe")
+    root = _root(out)
     texts = root.findall(".//{http://www.w3.org/2000/svg}text")
-    cell_texts = [
-        t for t in texts
-        if t.get("data-color-bar-letter") is None
-    ]
+    cell_texts = [t for t in texts if t.get("data-color-bar-letter") is None]
     assert cell_texts, "no <text> elements found in rendered SVG"
     for t in cell_texts:
-        style = t.get("style") or ""
-        assert FONT_CHAIN in style, (
-            f"<text> element is missing the font chain. style={style!r}"
+        assert t.get("font-family") is None, (
+            f"<text> should inherit font-family, not set it: {t.get('font-family')!r}"
+        )
+        assert FONT_CHAIN not in (t.get("style") or ""), (
+            f"<text> still carries the chain in its style: {t.get('style')!r}"
         )
 
 
-def test_fa5_font_chain_used_in_color_bar_letters():
+def test_fa5_color_bar_letters_inherit_chain():
     out = render("deadbeefcafebabe")
     root = _root(out)
     letters = [
@@ -261,16 +280,16 @@ def test_fa5_font_chain_used_in_color_bar_letters():
     ]
     assert letters, "no color-bar letters found in rendered SVG"
     for t in letters:
-        style = t.get("style") or ""
-        assert FONT_CHAIN in style, (
-            f"color-bar letter is missing the font chain. style={style!r}"
+        assert t.get("font-family") is None, (
+            f"color-bar letter should inherit font-family: {t.get('font-family')!r}"
         )
+        assert FONT_CHAIN not in (t.get("style") or "")
 
 
-def test_fa5_font_chain_used_in_label_strips():
+def test_fa5_label_strips_inherit_chain():
     """Render input with a suffix (SSH key with comment) so both top and
     bottom label strips are present, then assert each label-strip <text>
-    carries the font chain."""
+    inherits the chain (no per-text font-family)."""
     payload = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGZ user@example"
     out = render(payload)
     root = _root(out)
@@ -284,10 +303,10 @@ def test_fa5_font_chain_used_in_label_strips():
     for g in label_groups:
         for t in g.findall(f"{ns}text"):
             saw_text = True
-            style = t.get("style") or ""
-            assert FONT_CHAIN in style, (
-                f"label strip <text> is missing the font chain. style={style!r}"
+            assert t.get("font-family") is None, (
+                f"label strip <text> should inherit font-family: {t.get('font-family')!r}"
             )
+            assert FONT_CHAIN not in (t.get("style") or "")
     assert saw_text, "no <text> elements under label strips"
 
 

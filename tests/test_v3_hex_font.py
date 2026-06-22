@@ -26,6 +26,16 @@ def _doc(svg_str):
 
 
 def _font_size_px(el):
+    # Prefer the compact font-size presentation attribute; fall back to style.
+    attr = el.get("font-size")
+    if attr is not None:
+        attr = attr.strip()
+        if attr.endswith("px"):
+            attr = attr[:-2]
+        try:
+            return float(attr)
+        except ValueError:
+            return None
     style = el.get("style") or ""
     m = re.search(r"font-size:\s*([\d.]+)px", style)
     return float(m.group(1)) if m else None

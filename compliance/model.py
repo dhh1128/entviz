@@ -319,6 +319,18 @@ def _text_content(g) -> Optional[str]:
 
 
 def _text_size_px(text_el) -> Optional[float]:
+    # Prefer a font-size presentation attribute (compact form); fall back to
+    # font-size inside the style attribute (legacy form). A checker MUST accept
+    # either per the SVG profile.
+    attr = text_el.get("font-size")
+    if attr is not None:
+        v = attr.strip()
+        if v.endswith("px"):
+            v = v[:-2]
+        try:
+            return round(float(v), 3)
+        except ValueError:
+            return None
     style = text_el.get("style") or ""
     for part in style.split(";"):
         part = part.strip()
