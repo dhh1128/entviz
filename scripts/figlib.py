@@ -17,7 +17,10 @@ House style — "entviz-fig":
   * Labels/captions in DejaVu Sans (a humanist sans reliably installed here that
     cairosvg + fontconfig resolve natively). Literal entropy / hex / band-letter
     text reuses the renderer's own MONOSPACE_FONT_FAMILY so glyph metrics match
-    a real entviz.
+    a real entviz. That stack leads with web fonts (JetBrains Mono, …) that no
+    build box installs, and cairosvg honors only the first family — so the PNG
+    path rewrites it via hoist_generic_font() (see build()); the committed SVG
+    keeps the full browser-correct chain.
 
 cairosvg is imported lazily inside build() so the SVG-building functions (and the
 drift test that calls them) need only entviz + lxml (+ segno for the comparison
@@ -408,6 +411,28 @@ def drunken_bishop(fp_bytes, cols=17, rows=9):
 
 
 # ---- build runner ----------------------------------------------------------
+# cairosvg honors only the FIRST family in a font-family list; on a miss it
+# bails to a proportional default, ignoring the rest of the chain AND the
+# trailing generic keyword. Our mono chain (correctly, for browsers) leads with
+# web fonts no build box installs (JetBrains Mono, Menlo, …), so cairosvg renders
+# space-padded ASCII art proportionally — ragged columns. Browsers walk the chain
+# fine, so the committed SVGs stay as-is; we only rewrite the bytes handed to
+# cairosvg, hoisting the trailing `monospace` keyword to the front so the raster
+# lands on a real monospace (proven: keyword-first => exact column metrics).
+# Scoped to `monospace` only: the sans chain already leads with an installed
+# DejaVu Sans, so cairosvg resolves it natively and needs no rewrite.
+_MONO_FONT = re.compile(
+    r'(font-family\s*=\s*")([^"]*?,\s*)(monospace)(")')
+
+
+def hoist_generic_font(svg):
+    """Move a trailing `monospace` keyword to the front of each font-family, so
+    cairosvg (first-family-only) resolves a real monospace font on this box."""
+    def repl(m):
+        return f"{m.group(1)}{m.group(3)}, {m.group(2).rstrip(', ')}{m.group(4)}"
+    return _MONO_FONT.sub(repl, svg)
+
+
 def build(figures, out_dir, png=True):
     """Write each figure's SVG (and, if png, a 2x PNG) into out_dir.
 
@@ -427,7 +452,8 @@ def build(figures, out_dir, png=True):
             fh.write(svg + "\n")
         if png:
             png_path = os.path.join(out_dir, name + ".png")
-            cairosvg.svg2png(bytestring=svg.encode(), write_to=png_path, scale=2.0,
+            cairosvg.svg2png(bytestring=hoist_generic_font(svg).encode(),
+                             write_to=png_path, scale=2.0,
                              background_color="white")
             print(f"wrote {svg_path}  +  {os.path.basename(png_path)}")
         else:

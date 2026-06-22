@@ -33,9 +33,13 @@ MARK, CAPTION.
     "<path.svg>"   -> embed an arbitrary SVG (e.g. a logo) at that path.
     None           -> text-only card (no floating mark).
 
-Fonts: only families resolvable at raster time are used; the stacks end in
-DejaVu Sans / DejaVu Sans Mono (present on most Linux/CI images), so the PNG
-reproduces without bundling fonts.
+Fonts: the committed SVG carries full CSS font stacks (web fonts first, ending
+in DejaVu Sans / DejaVu Sans Mono) that browsers walk correctly. cairosvg,
+however, honors only the FIRST family and falls back to a proportional default
+on a miss — ignoring the rest of the stack AND the trailing generic keyword. So
+``hoist_mono_font`` rewrites the bytes handed to the rasterizer, moving the
+``monospace`` keyword to the front so the mono caption renders with real
+monospace metrics; the committed SVG is left untouched.
 """
 
 from __future__ import annotations
@@ -91,6 +95,24 @@ SANS = ("'Helvetica Neue', Arial, 'Segoe UI', Roboto, "
         "'DejaVu Sans', sans-serif")
 MONO = ("'JetBrains Mono', 'Menlo', 'Consolas', "
         "'DejaVu Sans Mono', monospace")
+
+# cairosvg honors only the FIRST family in a font-family list; on a miss it
+# bails to a proportional default, ignoring the rest of the chain AND the
+# trailing generic keyword. MONO (correctly, for browsers) leads with web fonts
+# no CI box installs, so cairosvg would render the mono `sha7` caption
+# proportionally. We keep the committed SVG's chain as-is (browsers walk it) and
+# only rewrite the bytes handed to cairosvg, hoisting `monospace` to the front so
+# the raster lands on a real monospace font.
+_MONO_FONT = re.compile(r'(font-family\s*=\s*")([^"]*?,\s*)(monospace)(")')
+
+
+def hoist_mono_font(svg: str) -> str:
+    """Move a trailing `monospace` keyword to the front of each font-family, so
+    cairosvg (first-family-only) resolves a real monospace font on this box."""
+    return _MONO_FONT.sub(
+        lambda m: f"{m.group(1)}{m.group(3)}, {m.group(2).rstrip(', ')}{m.group(4)}",
+        svg,
+    )
 
 STRIPE_W = 26                   # left accent stripe (palette) width
 TEXT_X = 78                     # left edge of the text column
@@ -253,7 +275,7 @@ def main() -> int:
         )
         return 1
     cairosvg.svg2png(
-        bytestring=svg.encode(), write_to=str(CARD_PNG),
+        bytestring=hoist_mono_font(svg).encode(), write_to=str(CARD_PNG),
         output_width=W, output_height=H,
     )
     size_kb = CARD_PNG.stat().st_size / 1024
