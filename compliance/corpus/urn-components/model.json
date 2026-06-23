@@ -1,0 +1,104 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        0,
+        1
+      ],
+      "map_min": [
+        1,
+        1
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ade6c1",
+      "quartile": 2,
+      "row": 0,
+      "surround_bits": 14450002,
+      "text": "weat",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": true,
+      "blank_map": false,
+      "col": 0,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 1
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ebea85",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 11597193,
+      "text": "her",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 0,
+    "right": 6,
+    "slots": 9
+  },
+  "cols": 2,
+  "ellipse": {
+    "anchor": [
+      27.0,
+      66.0
+    ],
+    "rotation": 0.0,
+    "rx": 67.293,
+    "ry": 49.079
+  },
+  "input_bytes": 39,
+  "labels": {
+    "bottom": null,
+    "top": "urn:example:...",
+    "truncation_marker": false
+  },
+  "rows": 2,
+  "spec_version": "v11",
+  "truncated": false,
+  "user_note": null
+}

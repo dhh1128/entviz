@@ -118,7 +118,20 @@ Parsed = collections.namedtuple(
 Token = collections.namedtuple('Token', ['text', 'index', 'quant'])
 
 UUID_REGEX = re.compile(r'^\{?[0-9a-f]{8}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{4}-?[0-9a-f]{12}\}?$', re.I)
-DID_REGEX = re.compile(r'^(did:[a-z0-9]+:)((?:[a-zA-Z0-9_.-]|%[a-fA-F0-9]{2})+)((/[^?]*)?([?].*)?)$')
+# DID (W3C DID Core). The method-specific-id MAY contain ':' as a segment
+# separator, so the body ends only at the first '/', '?', or '#' — the DID URL
+# tail, which is a FREE annotation and is dropped. method-name is lowercase
+# alnum per the ABNF. group(1)=method, group(2)=method-specific-id (verbatim,
+# up to the DID URL). See docs/spec.md *Decentralized Identifiers* and
+# this.i:d1dm3th0.
+DID_REGEX = re.compile(r'^did:([a-z0-9]+):([A-Za-z0-9._%:-]+)(?:[/?#].*)?$')
+# URN (RFC 8141): urn:<NID>:<NSS> optionally followed by r-/q-/f-components
+# (?+ / ?= / #), which are NOT part of URN equivalence and are dropped. The
+# `urn` scheme and the NID are case-insensitive (re.I; the prefix is lowercased
+# in parse_urn); the NSS is case-sensitive and kept verbatim. `/` is a legal
+# NSS character, so the NSS ends only at the first '?' or '#'. group(1)=NID,
+# group(2)=NSS. See docs/spec.md *Uniform Resource Names*.
+URN_REGEX = re.compile(r'^urn:([A-Za-z0-9][A-Za-z0-9-]{0,31}):([^?#]+)(?:[?#].*)?$', re.I)
 STELLAR_REGEX = re.compile(r'^(G|g)([' + BASE32_ALPHABET_EITHER_CASE + ']{55})$')
 # Stellar muxed account (strkey 'M…'): version byte 0x60 (med25519) + 32-byte
 # ed25519 key + 8-byte memo id + CRC16, base32-encoded to 69 chars total
@@ -881,14 +894,65 @@ def parse_lei(text) -> Parsed:
 
 def parse_did(text) -> Parsed:
     """
-    See if we can parse text as a DID or DID URL.
-    If yes, return Parsed("DID", "did:" + method + ":", body (rest of DID1), URL if any).
+    Parse a W3C DID (Decentralized Identifier) or DID URL.
+
+    Form: `did:<method>:<method-specific-id>` optionally followed by a DID URL
+    tail (path `/…`, query `?…`, fragment `#…`). The method-specific-id MAY
+    contain `:` as a segment separator (W3C DID Core ABNF), so the body ends
+    only at the first `/`, `?`, or `#`.
+
+    Binding (docs/spec.md *Decentralized Identifiers*, this.i:d1dm3th0):
+      * The method name is IDENTITY — the same body under a different method is
+        a different DID (swap test) — so `did:<method>:` is kept as the prefix
+        and bound by PREFIX-FOLD (prefix_semantic=True → the pipeline
+        fingerprints `prefix ‖ core`), exactly like SWHID/gitoid. Fixes the
+        pre-v11 bug where the method was stripped and NOT bound, so did:web:X
+        and did:key:X collided.
+      * The method-specific-id is the core, kept VERBATIM (internal `:`/`.`
+        separators, multibase selector, network id, self-cert hash all
+        retained) and tokenized as base64url. It is NOT percent-decoded and NOT
+        case-folded (DIDs are case-sensitive per DID Core; the consequence is
+        fail-safe — case differences only ever produce a false negative).
+      * The DID URL tail is a FREE annotation and is DROPPED (not a suffix),
+        like SWHID `;…` qualifiers.
+      * Label: no type; the `did:<method>:` prefix is self-describing, so the
+        top strip reads `did:<method>:...` (the SWHID/gitoid no-type rule).
     """
+    if not text:
+        return None
     m = DID_REGEX.match(text)
-    if m:
-        # DID method-specific identifiers vary by method; base64url is
-        # the common case (e.g., did:key). Generic fallback.
-        return Parsed("DID", BASE64URL, m.group(1), m.group(2), m.group(3))
+    if not m:
+        return None
+    method, msid = m.group(1), m.group(2)
+    return Parsed("", BASE64URL, f"did:{method}:", msid, None,
+                  prefix_semantic=True)
+
+def parse_urn(text) -> Parsed:
+    """
+    Parse a URN (RFC 8141): `urn:<NID>:<NSS>` optionally followed by
+    r-/q-/f-components (`?+` / `?=` / `#`).
+
+    A URN is the same shape as a DID and rides the same generic path
+    (docs/spec.md *Uniform Resource Names*, this.i:d1dm3th0):
+      * The NID is IDENTITY (`urn:isbn:…` ≠ `urn:issn:…`), bound by PREFIX-FOLD.
+      * The NSS is the core, kept VERBATIM (its internal `:` and `/` are part of
+        the identity), tokenized as base64url, NOT percent-decoded.
+      * The r-/q-/f-components are a FREE annotation and are DROPPED — RFC 8141
+        states explicitly that they are not part of URN equivalence.
+      * Label: no type; the `urn:<nid>:` prefix is self-describing.
+
+    Two differences from a DID: the NSS keeps `/` and ends only at `?` or `#`
+    (not `/`); and per RFC 8141 the `urn` scheme + NID are case-INSENSITIVE, so
+    the `urn:<nid>:` prefix is LOWERCASED while the NSS case is PRESERVED.
+    """
+    if not text:
+        return None
+    m = URN_REGEX.match(text)
+    if not m:
+        return None
+    nid, nss = m.group(1).lower(), m.group(2)
+    return Parsed("", BASE64URL, f"urn:{nid}:", nss, None,
+                  prefix_semantic=True)
     
 def parse_swhid(text) -> Parsed:
     """
@@ -1099,6 +1163,7 @@ parse_funcs = [
     parse_snowflake,
     parse_lei,
     parse_did,
+    parse_urn,
     parse_swhid,
     parse_gitoid,
     parse_bech32_address,

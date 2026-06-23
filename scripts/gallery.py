@@ -177,6 +177,35 @@ SAMPLES = [
         ("git commit, SHA-256 — rendered with --note git",
          "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae", {"note": "git"}),
     ]),
+    # v11: DIDs and URNs share one generic path — the scheme+namespace
+    # (did:<method>: / urn:<nid>:) binds via prefix-fold, the body is kept
+    # verbatim, and any DID URL / URN r-q-f component is dropped. See
+    # docs/spec.md *Decentralized Identifiers* / *Uniform Resource Names*.
+    ("Decentralized Identifiers (DID)", [
+        ("did:key (Ed25519)",
+         "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK"),
+        ("did:web (domain)", "did:web:w3c-ccg.github.io"),
+        ("did:web (colon path — segments are identity, kept)",
+         "did:web:w3c-ccg.github.io:user:alice"),
+        ("did:peer numalgo 2 (dotted body + purpose codes kept verbatim)",
+         "did:peer:2.Ez6LSt4Jscr227NFyuzKHT85haVE4AFVXm1tDwYeZ5xenxMmW"
+         ".Vz6MkfvwnoNS6Cto38MEMbqdnypVDN7gS4oAMaHFkjAUse5JE"),
+        ("did:ethr (chain id in body)",
+         "did:ethr:0x5:0xf3beac30c498d9e26865f34fcaa57dbb935b0d74"),
+        ("did:ion (Sidetree SAID)",
+         "did:ion:EiClkZMDxPKqC9c-umQfTkR8vvZ9JPhl_xLDI9Nfk38w5w"),
+        ("did:webvh (self-certifying SCID : domain)",
+         "did:webvh:QmQyDxVnosYTzHAMbzYDRZkVrD32ea9Sr2XNs8NkgMB5mn:domain.example"),
+    ]),
+    ("Uniform Resource Names (URN, RFC 8141)", [
+        ("urn:isbn", "urn:isbn:0451450523"),
+        ("urn:uuid (generic — not re-parsed as a bare UUID)",
+         "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"),
+        ("urn:oid (colons + dots kept in the NSS)",
+         "urn:oid:2.16.840.1.113883.6.1"),
+        ("urn:lex (NID lowercased; NSS case preserved)",
+         "urn:lex:eu:council:directive:2010-19"),
+    ]),
 ]
 
 

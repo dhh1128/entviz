@@ -1,0 +1,10 @@
+{
+  "id": "did-peer-2",
+  "entropy": "did:peer:2.Ez6LSt4Jscr227NFyuzKHT85haVE4AFVXm1tDwYeZ5xenxMmW.Vz6MkfvwnoNS6Cto38MEMbqdnypVDN7gS4oAMaHFkjAUse5JE",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

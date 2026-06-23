@@ -1,0 +1,10 @@
+{
+  "id": "urn-nss-slash",
+  "entropy": "urn:example:a123,z456/foo",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

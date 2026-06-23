@@ -1,5 +1,5 @@
 {
-  "spec_version": "v10",
+  "spec_version": "v11",
   "lib_version": "0.10.0",
   "rasterizer": "cairosvg-2.9.0@scale2.0",
   "raster_scale": 2.0,
@@ -53,7 +53,29 @@
     "fs-24",
     "note-git",
     "note-space",
-    "note-punct"
+    "note-punct",
+    "did-web",
+    "did-web-path",
+    "did-web-port",
+    "did-web-urldrop",
+    "did-key-ed25519",
+    "did-key-secp256k1",
+    "did-key-fragment",
+    "did-peer-2",
+    "did-ion",
+    "did-ethr-network",
+    "did-pkh",
+    "did-webvh",
+    "did-keri",
+    "did-prism",
+    "did-jwk-large",
+    "urn-isbn",
+    "urn-isbn-upper",
+    "urn-oid",
+    "urn-uuid",
+    "urn-nss-slash",
+    "urn-base",
+    "urn-components"
   ],
   "error_vectors": [
     "err-eip55-bad-checksum",
@@ -75,6 +97,22 @@
     [
       "avalanche-a",
       "uuid-dashed"
+    ],
+    [
+      "did-web",
+      "did-web-urldrop"
+    ],
+    [
+      "did-key-ed25519",
+      "did-key-fragment"
+    ],
+    [
+      "urn-isbn",
+      "urn-isbn-upper"
+    ],
+    [
+      "urn-base",
+      "urn-components"
     ]
   ]
 }

@@ -1,0 +1,10 @@
+{
+  "id": "did-pkh",
+  "entropy": "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

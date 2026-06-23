@@ -119,6 +119,48 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("note-git", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "git"}),
     ("note-space", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "two words"}),
     ("note-punct", "309cf2674ee7a0749978cf8265ab91a60aea0f7d", {"note": "a.b_c-d!"}),
+
+    # --- DIDs (v11): method bound by prefix-fold (did:<method>: ‖ core), body
+    # kept verbatim & base64url-tokenized, DID URL (/?#) dropped, case preserved,
+    # no-type `did:<method>:...` label. See docs/spec.md *Decentralized
+    # Identifiers* and this.i:d1dm3th0. did-web-urldrop / did-key-fragment are
+    # INVARIANT_PAIRS with their bare forms (the DID URL is dropped). ---
+    ("did-web", "did:web:w3c-ccg.github.io", {}),
+    ("did-web-path", "did:web:w3c-ccg.github.io:user:alice", {}),        # colon segments are identity (kept)
+    ("did-web-port", "did:web:example.com%3A3000:user:alice", {}),       # percent-encoding kept verbatim
+    ("did-web-urldrop", "did:web:w3c-ccg.github.io/path/to/x?q=1#frag", {}),  # == did-web (URL dropped)
+    ("did-key-ed25519", "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK", {}),
+    ("did-key-secp256k1", "did:key:zQ3shokFTS3brHcDQrn82RUDfCZESWL1ZdCEJwekUDPQiYBme", {}),
+    ("did-key-fragment",
+     "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK#z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK",
+     {}),                                                                # == did-key-ed25519 (fragment dropped)
+    ("did-peer-2",
+     "did:peer:2.Ez6LSt4Jscr227NFyuzKHT85haVE4AFVXm1tDwYeZ5xenxMmW.Vz6MkfvwnoNS6Cto38MEMbqdnypVDN7gS4oAMaHFkjAUse5JE",
+     {}),                                                                # dotted body + purpose codes kept verbatim
+    ("did-ion", "did:ion:EiClkZMDxPKqC9c-umQfTkR8vvZ9JPhl_xLDI9Nfk38w5w", {}),
+    ("did-ethr-network", "did:ethr:0x5:0xf3beac30c498d9e26865f34fcaa57dbb935b0d74", {}),  # chain segment kept
+    ("did-pkh", "did:pkh:eip155:1:0xb9c5714089478a327f09197987f16f9e5d936e8a", {}),       # CAIP-10 colons kept
+    ("did-webvh", "did:webvh:QmQyDxVnosYTzHAMbzYDRZkVrD32ea9Sr2XNs8NkgMB5mn:domain.example", {}),
+    ("did-keri", "did:keri:EBDCrJM9thBcC3hYZSzKGo-Iv53zQY9KIYEDhN0g5DnV", {}),
+    ("did-prism", "did:prism:9b5118411248d9663b6ab15128fba8106511230ff654e7514cdcc4ce919bde9b", {}),
+    # did:jwk body is a base64url JWK (>512 bits) → exercises the truncation
+    # path together with prefix-fold.
+    ("did-jwk-large",
+     "did:jwk:eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6ImFjYklRaXVNczNpOF91c3pFakoydHBUdFJNNEVVM3l6OTFQSDZDZEgyVjAiLCJ5IjoiX0tjeUxqOXZXTXB0bm1LdG00NkdxRHo4d2Y3NEk1TEtncmwyR3pIM25TRSJ9",
+     {}),
+
+    # --- URNs (v11, RFC 8141): NID bound by prefix-fold, NSS verbatim &
+    # base64url-tokenized, r-/q-/f-components dropped, `urn:<nid>:` prefix
+    # LOWERCASED (NID case-insensitive) but NSS case preserved. NSS keeps `/`
+    # and ends only at `?`/`#`. urn-isbn-upper / urn-components are
+    # INVARIANT_PAIRS. See docs/spec.md *Uniform Resource Names*. ---
+    ("urn-isbn", "urn:isbn:0451450523", {}),
+    ("urn-isbn-upper", "URN:ISBN:0451450523", {}),                       # == urn-isbn (NID case-insensitive)
+    ("urn-oid", "urn:oid:2.16.840.1.113883.6.1", {}),                    # colons + dots in NSS
+    ("urn-uuid", "urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6", {}),   # generic, NOT re-parsed as a bare UUID
+    ("urn-nss-slash", "urn:example:a123,z456/foo", {}),                  # `/` is a legal NSS char (kept)
+    ("urn-base", "urn:example:weather", {}),
+    ("urn-components", "urn:example:weather?=op=map&lat=39#frag", {}),    # == urn-base (components dropped)
 ]
 
 # (id, entropy, kwargs, expected_category)
@@ -148,4 +190,12 @@ INVARIANT_PAIRS: list[tuple[str, str]] = [
     ("uuid-dashed", "uuid-undashed"),
     ("ulid-canonical", "ulid-lowercase"),
     ("avalanche-a", "uuid-dashed"),  # same input, different id → identical model
+    # v11: the DID URL (path/query/fragment) is a free annotation → dropped, so
+    # a DID and the same DID carrying a URL render identically.
+    ("did-web", "did-web-urldrop"),
+    ("did-key-ed25519", "did-key-fragment"),
+    # v11: a URN's NID is case-insensitive (prefix lowercased), and its
+    # r-/q-/f-components are dropped (RFC 8141 non-equivalence).
+    ("urn-isbn", "urn-isbn-upper"),
+    ("urn-base", "urn-components"),
 ]
