@@ -204,6 +204,8 @@ SAMPLES = [
          "did:prism:9b5118411248d9663b6ab15128fba8106511230ff654e7514cdcc4ce919bde9b"),
         ("did:cheqd (Cosmos; namespace + UUID, both kept)",
          "did:cheqd:mainnet:de9786cd-ec53-458c-857c-9342cf264f80"),
+        ("did:dock (Substrate; SS58 base58)",
+         "did:dock:5CEdyZkZnALDdCAp7crTRiaCq6KViprTM6kHUQCD8X6VqGPW"),
         ("did:ipid (IPFS; CIDv0 content address)",
          "did:ipid:QmeJGfbW6bhapSfyjV5kDq5wt3h2g46Pwj15pJBVvy7jM3"),
     ]),
