@@ -1,0 +1,136 @@
+{
+  "bg_color": "#2f3fbf",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#7a0dd8",
+      "quartile": 1,
+      "row": 0,
+      "surround_bits": 14516487,
+      "text": "2.16",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#34ce03",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 5452863,
+      "text": ".840",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#355003",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 5989925,
+      "text": ".1.1",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#3c7fd7",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 16126799,
+      "text": "1388",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#800edc",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 7252943,
+      "text": "3.6.",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#755dd7",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 12916556,
+      "text": "1",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 2
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 10,
+    "right": 8,
+    "slots": 12
+  },
+  "cols": 2,
+  "ellipse": {
+    "anchor": [
+      27.0,
+      146.0
+    ],
+    "rotation": 132.0,
+    "rx": 78.065,
+    "ry": 78.065
+  },
+  "input_bytes": 29,
+  "labels": {
+    "bottom": null,
+    "top": "urn:oid:...",
+    "truncation_marker": false
+  },
+  "rows": 3,
+  "spec_version": "v11",
+  "truncated": false,
+  "user_note": null
+}

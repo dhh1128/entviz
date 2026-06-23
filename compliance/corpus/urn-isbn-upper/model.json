@@ -1,0 +1,110 @@
+{
+  "bg_color": "#e7be00",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#758ed3",
+      "quartile": 1,
+      "row": 0,
+      "surround_bits": 8632598,
+      "text": "0451",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": true,
+      "blank_map": true,
+      "col": 1,
+      "fingerprint": false,
+      "map_max": [
+        0,
+        0
+      ],
+      "map_min": [
+        1,
+        1
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#399de3",
+      "quartile": 3,
+      "row": 1,
+      "surround_bits": 7609317,
+      "text": "4505",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#b77ddb",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 1732897,
+      "text": "23",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 0
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 1
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 2
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 6,
+    "right": 5,
+    "slots": 9
+  },
+  "cols": 2,
+  "ellipse": {
+    "anchor": [
+      27.0,
+      66.0
+    ],
+    "rotation": 84.0,
+    "rx": 27.828,
+    "ry": 52.114
+  },
+  "input_bytes": 19,
+  "labels": {
+    "bottom": null,
+    "top": "urn:isbn:...",
+    "truncation_marker": false
+  },
+  "rows": 2,
+  "spec_version": "v11",
+  "truncated": false,
+  "user_note": null
+}

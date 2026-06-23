@@ -3252,3 +3252,99 @@ Entviz = goal:
         reflects the decoupled order. Relates to [[cr0ckmid]], [[d1scr3t3]], the
         colour-bar + blank-cell-map steps, and the multi-impl corpus/ports
         ([[entviz-multiimpl-plan]] — Rust/TS/React + golden corpus regen).
+
+    DID method handling (v11) = decision:
+      id: d1dm3th0
+      status: drafted
+      why: >
+        2026-06-23. Added broad W3C DID support. The pre-v11 parse_did was
+        wrong four ways: (1) its regex forbade `:` in the body, so
+        multi-segment DIDs (did:web:a:b, did:webvh:<scid>:domain,
+        did:ethr:0x89:0x…) and any `#fragment` fell through to the UTF-8
+        fallback; (2) it stripped the method as a NON-semantic prefix, so the
+        method never bound the fingerprint and did:web:X == did:key:X in every
+        channel; (3) it surfaced the DID URL as a `suffix` (displayed) instead
+        of dropping it; (4) it forced base64url on every body regardless.
+
+        The fix is ONE generic path, justified by [[h4shtext]] (hash TEXT, not
+        bytes) + [[s3mpr3fx]] (prefix-fold for identity material in a different
+        alphabet from the body):
+          * Body ends at the first /,?,# (W3C DID Core ABNF allows `:` inside
+            method-specific-id). The DID URL tail is a FREE annotation -> DROP
+            (same as [[sufxbind]] SWHID `;…` qualifiers). This also disposes of
+            ION's `?-ion-initial-state=` long-form for free.
+          * Method name is IDENTITY (swap test: same body, different method =
+            different DID). Bind by PREFIX-FOLD: prefix=`did:<method>:`,
+            hash input = prefix ‖ core. Exactly the SWHID/gitoid mechanism.
+          * Core = method-specific-id VERBATIM (multibase selector, network id,
+            separators, self-cert hash all kept) — bound because we hash text.
+            NOT percent-decoded (no parser ahead of the hash).
+          * Case PRESERVED (DIDs are case-sensitive per DID Core; most bodies
+            are case-sensitive base58btc/base64url). Diverges from the
+            per-alphabet [[c4s3norm]] rule ON PURPOSE; fail-safe (case diff ->
+            false negative only).
+          * Label: no-type, prefix self-describing -> `did:<method>:...`
+            (the SWHID/gitoid no-type rule).
+
+        KEY INSIGHT that collapsed the planned "hybrid w/ big special-case
+        table" down to generic-only: in this spec EVERY non-hex alphabet
+        tokenizes at the SAME 4-char/24-bit boundary (base58/base64url/bech32/
+        base32/crockford32/base36 all = 4; only hex & decimal = 6). So
+        declaring base58 vs base64url for a DID body changes ONLY the
+        nucleus-COLOUR hint channel — never token boundaries, the fingerprint,
+        or read-aloud text. Combined with verbatim-core binding, the generic
+        path is already fully identity-correct for did:key/peer/webvh/keri/
+        btcr/etc. base64url is chosen as the uniform DID alphabet (superset of
+        the base58/base64url bodies; out-of-alphabet chars like . : % -> zero
+        quant, cosmetic only); it also dodges the disproof case-folding hazard
+        (disproof tries case-insensitive hex/base32/bech32 first and would
+        UPPER-case a case-sensitive base58 body, corrupting the fingerprint).
+
+        DELIBERATELY DEFERRED (additive, non-breaking, each touches one named
+        method — NOT in v11):
+          (a) EIP-55 reject for did:ethr/did:erc725. Declined: conflicts with
+              the clean case-preservation rule, and is fail-safe without it (a
+              corrupted mixed-case address just renders differently). Reuses
+              [[3ip55rj1]] if added.
+          (b) Drop the long-form initial-state of did:ion/did:prism as a free
+              annotation. Declined: the `?-ion-initial-state=` form is already
+              dropped by the DID-URL rule; the `:`-suffix form needs per-method
+              structure NOT yet validated — naive "keep first `:`-segment"
+              BREAKS on `did:ion:test:Ei…` (the network `test` precedes the
+              SAID, so first-segment would keep `test` and drop the SAID).
+              Until validated, ion/prism long-forms ride generic: the
+              `:`-suffix stays in the core verbatim and, if >512 bits, the
+              existing head/middle/tail large-input path handles it (correct,
+              just visualizes more). Held-back examples flagged for checksum/
+              structure validation before they enter the corpus.
+
+        Did NOT special-case did:peer (Daniel co-authored it): generic base58
+        path is already identity-LOSSLESS — the `.` separators + V/E/S purpose
+        codes + base64url service blocks all stay verbatim in the cells (read-
+        aloud faithful) and bind the fingerprint. Special-casing would add only
+        a richer label + `.`-segment cell alignment (cosmetic), not worth the
+        per-method tokenizer cost across 5 impls.
+
+        URNs (RFC 8141) folded into v11 too — they are the same shape as DIDs
+        (urn:<NID>:<NSS> ~ did:<method>:<msid>; DIDs were designed in the URN
+        tradition), so they ride the SAME generic path: NID is identity ->
+        prefix-fold `urn:<nid>:`, NSS is the verbatim base64url core, and the
+        r-/q-/f-components (?+ / ?= / #) are a free annotation -> DROP (RFC 8141
+        states outright they are NOT part of URN equivalence). Two differences
+        from DID: (1) `/` is a legal NSS char and part of identity, and the
+        components start only at `?` or `#`, so the NSS terminates at the first
+        ? or # (NOT /). (2) Per RFC 8141 the urn scheme + NID are
+        case-INSENSITIVE while the NSS is case-sensitive, so we LOWERCASE the
+        `urn:<nid>:` prefix (URN:ISBN: == urn:isbn:) but PRESERVE NSS case — the
+        one place URN diverges from DID's preserve-all-case rule. Not
+        per-namespace special-cased (urn:uuid/oid/isbn all ride generic). Daniel
+        asked for this and chose the RFC-correct prefix-lowercasing.
+
+        Blast radius: docs/spec.md (v10->v11, new *Decentralized Identifiers* +
+        *Uniform Resource Names* subsections, tokenization-list pointer),
+        spec-change-log.md (v11 entry),
+        the python reference parse_did rewrite + tests, NEW DID corpus vectors +
+        golden regen, then the 4 sister-repo ports (js/rs/java/go) reproduce
+        Tier A — tracked as tick 5yau. Relates to [[s3mpr3fx]], [[h4shtext]],
+        [[sufxbind]], [[c4s3norm]], [[3ip55rj1]], [[lbldedup]],
+        [[entviz-multiimpl-plan]].

@@ -1,0 +1,10 @@
+{
+  "id": "did-ethr-network",
+  "entropy": "did:ethr:0x5:0xf3beac30c498d9e26865f34fcaa57dbb935b0d74",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

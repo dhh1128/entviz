@@ -150,32 +150,35 @@ def test_f4_bch_shaped_inputs_differing_in_suffix_render_differently():
 # ---------------------------------------------------------------------------
 
 def test_fa11_svg_injection_is_escaped():
-    """A hostile <script>...</script> payload that reaches the SVG via a
-    rendered label region (here, a DID URL path surfaced as Parsed.suffix
-    and drawn into the bottom label strip) must be HTML-escaped, not
-    emitted verbatim.
+    """Hostile markup must never reach the SVG unescaped (F-A11). Two layers:
 
-    Note: a bare '<script>...' string fed through render() goes through
-    the UTF-8→base64url fallback and never appears verbatim in the SVG
-    at all — so the meaningful injection-regression case is one where
-    the hostile text DOES land in a text element (label strip, suffix,
-    or cell text). A DID URL is used because its path/query is surfaced
-    as a rendered suffix.
+    1. A DID URL carrying a <script> payload is DROPPED entirely as of v11 —
+       the DID URL (path/query/fragment) is a FREE annotation, no longer
+       surfaced as a rendered suffix (this.i:d1dm3th0; docs/spec.md
+       *Decentralized Identifiers*). So the payload never reaches the SVG at
+       all — strictly stronger than escaping.
+    2. For user-controlled text that DOES still land in a text element — the
+       user note, which is printable-ASCII and so may contain '<' — lxml
+       escaping is the defense.
 
-    (The former SSH-comment vector is now closed entirely: an SSH comment
-    is a FREE annotation and is dropped, not rendered — see
-    test_v4_ssh_keys.test_ssh_comment_does_not_affect_rendering and
-    this.i:sufxbind. lxml escaping remains the defense for any user text
-    that still reaches a text element, e.g. the DID URL below.)
+    (The former SSH-comment vector is likewise closed by dropping the free
+    annotation — see test_v4_ssh_keys.test_ssh_comment_does_not_affect_rendering
+    and this.i:sufxbind. A bare '<script>...' fed as the entropy goes through
+    the UTF-8→base64url fallback and never appears verbatim either.)
     """
-    payload = "did:web:example.com/<script>alert(1)</script>"
-    out = render(payload)
-    assert "&lt;script" in out, (
-        "expected escaped &lt;script in output (lxml should escape '<')"
+    # Layer 1 — the DID URL and its payload are dropped, not rendered.
+    out = render("did:web:example.com/<script>alert(1)</script>")
+    assert "did:web:" in out, "the DID itself should still render (label)"
+    assert "<script" not in out, "raw <script must not appear (DID URL dropped)"
+    assert "&lt;script" not in out, (
+        "the DID URL is DROPPED as a free annotation (v11), so the payload "
+        "must not appear at all — not even escaped"
     )
-    assert "<script" not in out, (
-        "raw <script substring must NOT appear anywhere in the SVG"
-    )
+
+    # Layer 2 — a hostile user note DOES reach a text element and MUST be escaped.
+    noted = render("ff112233", note="<script>")
+    assert "&lt;script" in noted, "user note '<' must be lxml-escaped"
+    assert "<script" not in noted, "raw <script must not appear from the note"
 
 
 # ---------------------------------------------------------------------------

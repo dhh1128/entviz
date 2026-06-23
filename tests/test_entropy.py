@@ -43,11 +43,10 @@ expected_parsers = [
     # valid ULID Crockford32 shape). Use 28 chars to avoid the overlap.
     ("60124dC4fEe278FDCBD38C102Dab", parse_hex),
     ("BlJbbpxQMJUPE_BaZVxi8jsHuxNM5HEDt-JSyvOTm6U6", parse_cesr),
-    ("did:peer:abc123", parse_did),
-    ("did:tdw:abc123swoeireulf?arg=val", parse_did),
-    ("did:web:abc123swoeireulf/path/path", parse_did),
-    ("did:webs:abc123swoeireulf/path/path?arg=val", parse_did),
-    ("did:webs:abc123swoeireulf/path/path?arg=val", parse_did),
+    # DID/URN coverage lives in tests/test_v11_did_urn.py, not here: as of v11
+    # both use the SWHID/gitoid no-type label (type == ""), which this harness's
+    # "expected a descriptive type" assertion rejects — the same reason SWHID
+    # and gitoid are tested in their own files.
     ("AAAAC3NzaC1lZDI1NTE5AAAAIB0UIIW091sZULC1ojG1x7N+/SybeFJMu9dGGKCBRiR+", parse_ssh_key), # ed25519
     ("AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNSBA0Md9M/Cwp0J32Rvk/aiElw77t6l9YQbMmJSP4PfybRxeGP4fqsrIvr6ckdRms5N8Bp/kvug/iAgX6OK59E=", parse_ssh_key), # ecdsa
     ("AAAAB3NzaC1kc3MAAACBAKGcEm/5P2PSlg6+Vj8NTlR4elcBzhVgegS3zgpJ7WdzhC857ggkAs9M/KHQVcEDbg3BiRk2r4cRMqPUZ2i61u9lL63WuhkY/eaMdkqR7Df5ZdoRsduKP0ENpciAFhHnaUlvDbujDPSxSNRJq5+zQuzoJxIJRbLCbAnp/jPBAqWTAAAAFQDjDPh4NhNLDneMFFPSDrLC7NJR1QAAAIBDfQ+Yuufm2W19Oafm6ei/XyTskVYwx/rPp+H/m3Jczt47DzTsjzzVLgQS2GPLcu3Ms6XLP9/ko4aEK2dgTox1SV4T//NOrSIgJM3u/UbXaacY9g3C9wAHwOKV9iondUL+Qn+pJ/fphLStqmyIpXqmjXKqT+gv1uJFQZuPq1oh1QAAAIAxbOZot7HRRA9QX7kayXv7o00w9St7LrxhOjIAudU6IBsigqpNeIPXcK74mOotZ2OhMLMfggsUZUkNQ1oMH+isJF7gEVMcatdPpTCa2AFQFKJRWpVNmKGueQ44Sl5l4mrNfSdW1IOf7Z5pHKzjrSgJGO9KRcm1N9sYow7GCEdP9Q==", parse_ssh_key), # DSA

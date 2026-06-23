@@ -1,0 +1,10 @@
+{
+  "id": "did-web-port",
+  "entropy": "did:web:example.com%3A3000:user:alice",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

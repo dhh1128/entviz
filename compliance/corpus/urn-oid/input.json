@@ -1,0 +1,10 @@
+{
+  "id": "urn-oid",
+  "entropy": "urn:oid:2.16.840.1.113883.6.1",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}
