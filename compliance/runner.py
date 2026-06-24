@@ -29,6 +29,8 @@ import subprocess
 import sys
 from dataclasses import dataclass, field
 
+from lxml import etree
+
 from . import raster
 from .model import diff_models, extract_model, validate_closed_profile
 
@@ -39,10 +41,11 @@ DEFAULT_CORPUS = os.path.join(HERE, "corpus")
 @dataclass
 class VectorResult:
     vid: str
-    kind: str            # "render" | "error" | "invariant"
+    kind: str            # "render" | "error" | "invariant" | "version" | "skip"
     tier_a: bool | None = None
     tier_b: bool | None = None
     passed: bool = False
+    skipped: bool = False  # declared in a --skip-file: expected NOT to pass
     messages: list[str] = field(default_factory=list)
 
 
@@ -57,7 +60,11 @@ class Report:
     def summary(self) -> str:
         n = len(self.results)
         ok = sum(1 for r in self.results if r.passed)
-        lines = [f"{ok}/{n} vectors passed"]
+        nskip = sum(1 for r in self.results if r.skipped)
+        head = f"{ok}/{n} vectors passed"
+        if nskip:
+            head += f" ({nskip} skipped / expected-fail)"
+        lines = [head]
         for r in self.results:
             if not r.passed:
                 lines.append(f"  FAIL [{r.kind}] {r.vid}")
@@ -87,20 +94,63 @@ def _run_external(cmd: str, input_json: dict):
     return proc.stdout.decode("utf-8"), False
 
 
+def _svg_spec_version(svg: str | bytes) -> str | None:
+    """The implementation's declared spec version (root ``data-entviz-version``).
+
+    Read from the SVG root attribute with a light parse so it works at any tier
+    (Tier B alone does not extract the full render model)."""
+    if isinstance(svg, str):
+        svg = svg.encode("utf-8")
+    try:
+        return etree.fromstring(svg).get("data-entviz-version")
+    except etree.XMLSyntaxError:
+        return None
+
+
+def read_skip_file(path: str) -> set[str]:
+    """Parse a skip file into a set of vector ids.
+
+    Each non-blank, non-``#``-comment line names one vector id to skip; any text
+    after the id on the same line (whitespace- or ``#``-separated) is a free-form
+    reason and is ignored. Skipped vectors are run anyway and EXPECTED to fail —
+    a skipped vector that passes is a hard error (the skip list has rotted)."""
+    skip: set[str] = set()
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            skip.add(line.split()[0])
+    return skip
+
+
 def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
             impl_cmd: str | None = None, tiers=("A", "B"),
-            only: set[str] | None = None) -> Report:
+            only: set[str] | None = None,
+            skip: set[str] | None = None) -> Report:
     """Certify an implementation against the corpus.
 
     `only`, if given, restricts certification to that set of vector ids — used
     to certify an implementation against the subset of vectors whose parsers it
     has ported (the remainder are reported separately as out of scope, not as
     failures). Invariant pairs are checked only when both members are in scope.
+
+    `skip`, if given, is a set of vector ids the implementation is NOT expected
+    to handle (e.g. a port that omits a parser). Unlike `only`, skipped vectors
+    are still RUN: a skipped vector is expected to FAIL, and a skipped vector
+    that PASSES is itself a hard failure — that keeps a skip list from rotting
+    and silently shrinking coverage as a port catches up. Invariant pairs with a
+    skipped member are dropped (the pair cannot be asserted when one side is out
+    of the port's scope).
     """
     with open(os.path.join(corpus_dir, "manifest.json")) as f:
         manifest = json.load(f)
     report = Report()
     models: dict[str, dict] = {}
+    skip = skip or set()
+    # The implementation's declared spec version, captured from the first SVG it
+    # produces, for the corpus-vs-impl version-match assertion below.
+    impl_version: str | None = None
 
     def in_scope(vid):
         return only is None or vid in only
@@ -123,6 +173,9 @@ def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
             res.messages.append(f"render raised: {e!r}")
             report.results.append(res)
             continue
+
+        if impl_version is None:
+            impl_version = _svg_spec_version(svg)
 
         # Tier A
         if "A" in tiers:
@@ -183,9 +236,16 @@ def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
         report.results.append(res)
 
     # Invariant pairs: identical render models (only meaningful with Tier A).
-    if "A" in tiers and not impl_cmd:
+    # Both members were rendered through the SAME implementation above — the
+    # reference in-process, or the external --impl-cmd — and their models
+    # extracted by the single authoritative model.py; this asserts the impl maps
+    # both members to the same entviz. A pair with a skipped member is dropped:
+    # the invariant cannot be asserted when one side is outside the port's scope.
+    if "A" in tiers:
         for a, b in manifest.get("invariant_pairs", []):
             if not (in_scope(a) and in_scope(b)):
+                continue
+            if a in skip or b in skip:
                 continue
             res = VectorResult(vid=f"{a}=={b}", kind="invariant")
             if a in models and b in models:
@@ -204,6 +264,51 @@ def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
                 res.messages.append("missing model for invariant pair")
             report.results.append(res)
 
+    # Skip-file post-processing: a skipped vector is EXPECTED to fail. Invert its
+    # verdict — a skipped vector that failed counts as a pass (expected), and a
+    # skipped vector that PASSED is a hard failure (the skip list has rotted and
+    # must be trimmed). Skips are applied to render/error vectors only.
+    processed_vids = {r.vid for r in report.results if r.kind in ("render", "error")}
+    for res in report.results:
+        if res.kind in ("render", "error") and res.vid in skip:
+            res.skipped = True
+            if res.passed:
+                res.passed = False
+                res.messages.insert(0,
+                    "skip-list rot: this vector is in the skip file but the "
+                    "implementation PASSED it — remove it from the skip file")
+            else:
+                res.passed = True
+    # A skip id that matches no in-scope vector is itself an error (typo, or the
+    # vector was renamed/removed): fail so skip lists stay honest.
+    for vid in sorted(skip - processed_vids):
+        res = VectorResult(vid=vid, kind="skip", skipped=True)
+        res.messages.append(
+            "skip file references an unknown vector id (typo, or the vector was "
+            "renamed/removed from the corpus)")
+        report.results.append(res)
+
+    # Spec-version match: the corpus and the implementation must agree on the
+    # spec version, guarding against pinning the wrong corpus to a port (the
+    # corpus stamps spec_version; the impl stamps it as data-entviz-version on
+    # every render). Mismatch fails loudly.
+    corpus_version = manifest.get("spec_version")
+    vres = VectorResult(vid="spec-version-match", kind="version")
+    if impl_version is None:
+        vres.messages.append(
+            "could not determine the implementation's spec version "
+            "(no render vector produced output)")
+    elif corpus_version is None:
+        vres.messages.append("corpus manifest declares no spec_version")
+    elif impl_version != corpus_version:
+        vres.messages.append(
+            f"spec-version mismatch: corpus={corpus_version!r} but the "
+            f"implementation renders data-entviz-version={impl_version!r} "
+            "(wrong corpus pinned, or the port is out of date)")
+    else:
+        vres.passed = True
+    report.results.append(vres)
+
     return report
 
 
@@ -215,10 +320,15 @@ def main():
     ap.add_argument("--tiers", default="AB", help="subset of A,B to run (default AB)")
     ap.add_argument("--only", default=None,
                     help="comma-separated vector ids to certify (subset)")
+    ap.add_argument("--skip-file", default=None,
+                    help="path to a file of vector ids the impl need not handle "
+                         "(expected-fail); a skipped vector that passes fails the run")
     args = ap.parse_args()
     tiers = tuple(t for t in ("A", "B") if t in args.tiers.upper())
     only = set(args.only.split(",")) if args.only else None
-    report = certify(args.corpus, impl_cmd=args.impl_cmd, tiers=tiers, only=only)
+    skip = read_skip_file(args.skip_file) if args.skip_file else None
+    report = certify(args.corpus, impl_cmd=args.impl_cmd, tiers=tiers, only=only,
+                     skip=skip)
     print(report.summary())
     sys.exit(0 if report.passed else 1)
 
