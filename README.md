@@ -178,6 +178,21 @@ See [scripts/release.py](scripts/release.py) for bump options (`--minor`,
 
 For the full specification of the Entviz algorithm and design goals, see [docs/spec.md](docs/spec.md).
 
+For embedding entviz in an application — install + render + reading the
+structured entropy characterization in each of the five languages — see the
+[Developer Integration Guide](https://dhh1128.github.io/entviz/integration-guide/)
+([source](docs/integration-guide.md)). The characterization re-expresses a
+parsed value along independent axes and is emitted both as a `characterize()`
+return value and as `data-*` attributes on the rendered SVG:
+
+```python
+from entviz.characterize import characterize
+
+ch = characterize("550e8400-e29b-41d4-a716-446655440000")
+# {"encoding": "hex", "scheme": "uuid", "role": "identifier", "qualifiers": {},
+#  "size_basis": "decoded", "size_bits": 128, "parts": [...], "entropy_type": "uuid"}
+```
+
 ## Methodology & AI Collaboration
 
 This repository follows a specific methodology for high-quality software development, especially when collaborating with AI:

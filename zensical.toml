@@ -17,6 +17,7 @@ repo_name = "dhh1128/entviz"
 nav = [
     { Home = "index.md" },
     { Specification = "spec.md" },
+    { "Integration Guide" = "integration-guide.md" },
     { "Spec Change Log" = "spec-change-log.md" },
     { Gallery = "gallery.html" },
     { Paper = "entviz-paper.md" },
