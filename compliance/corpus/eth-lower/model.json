@@ -161,14 +161,31 @@
     "rx": 104.705,
     "ry": 73.553
   },
+  "encoding": "hex",
+  "entropy_type": "eth",
   "input_bytes": 42,
   "labels": {
     "bottom": null,
     "top": "ETH: 0x...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "0x"
+    },
+    {
+      "bind": "core",
+      "text": "742d35cc6634c0532925a3b844bc454e4438f44e"
+    }
+  ],
+  "qualifiers": {},
+  "role": "address",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "eth",
+  "size_basis": "decoded",
+  "size_bits": 160,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

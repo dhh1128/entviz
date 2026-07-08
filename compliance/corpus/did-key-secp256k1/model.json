@@ -253,14 +253,33 @@
     "rx": 78.745,
     "ry": 115.089
   },
+  "encoding": "base64url",
+  "entropy_type": "did",
   "input_bytes": 57,
   "labels": {
     "bottom": null,
     "top": "did:key:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "did:key:"
+    },
+    {
+      "bind": "core",
+      "text": "zQ3shokFTS3brHcDQrn82RUDfCZESWL1ZdCEJwekUDPQiYBme"
+    }
+  ],
+  "qualifiers": {
+    "method": "key"
+  },
+  "role": "identifier",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "did",
+  "size_basis": "utf8",
+  "size_bits": 392,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

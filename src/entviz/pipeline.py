@@ -12,6 +12,7 @@ used "bounding rect" for the cells-only rectangle; that name moved to the
 outer canvas and the inner rectangle became grid_rect.)
 """
 import colorsys
+import json
 import math
 import re
 
@@ -385,6 +386,25 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     svg.set("data-rows", str(grid.rows))
     if is_truncated:
         svg.set("data-truncated", "true")
+    # v13 entropy characterization (spec: "Entropy characterization"), emitted
+    # as data-* attributes so a consumer — including a port under conformance
+    # test — reports its OWN structured characterization off the SVG rather than
+    # having the checker recompute it in Python. These attributes carry no ink
+    # (reporting-only) and do not affect geometry or the raster. String axes are
+    # emitted verbatim (null scheme/role -> empty string); size_bits as its
+    # decimal; qualifiers/parts as compact JSON (the XML serializer escapes it).
+    from .characterize import characterize
+    ch = characterize(raw_input)
+    svg.set("data-encoding", ch["encoding"])
+    svg.set("data-scheme", ch["scheme"] if ch["scheme"] is not None else "")
+    svg.set("data-role", ch["role"] if ch["role"] is not None else "")
+    svg.set("data-size-basis", ch["size_basis"])
+    svg.set("data-entropy-type", ch["entropy_type"])
+    svg.set("data-size-bits", str(ch["size_bits"]))
+    svg.set("data-qualifiers",
+            json.dumps(ch["qualifiers"], separators=(",", ":"), ensure_ascii=False))
+    svg.set("data-parts",
+            json.dumps(ch["parts"], separators=(",", ":"), ensure_ascii=False))
     # <defs> first so gradients, clipPath, and future symbols appear at
     # the top of the SVG. Order of definitions inside <defs> doesn't
     # matter for SVG rendering, but consolidating them early keeps the

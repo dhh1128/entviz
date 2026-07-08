@@ -359,14 +359,33 @@
     "rx": 73.553,
     "ry": 83.937
   },
+  "encoding": "base64url",
+  "entropy_type": "did",
   "input_bytes": 110,
   "labels": {
     "bottom": null,
     "top": "fingerprint of did:peer:...",
     "truncation_marker": true
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "did:peer:"
+    },
+    {
+      "bind": "core",
+      "text": "2.Ez6LSt4Jscr227NFyuzKHT85haVE4AFVXm1tDwYeZ5xenxMmW.Vz6MkfvwnoNS6Cto38MEMbqdnypVDN7gS4oAMaHFkjAUse5JE"
+    }
+  ],
+  "qualifiers": {
+    "method": "peer"
+  },
+  "role": "identifier",
   "rows": 6,
-  "spec_version": "v12",
+  "scheme": "did",
+  "size_basis": "utf8",
+  "size_bits": 808,
+  "spec_version": "v13",
   "truncated": true,
   "user_note": null
 }

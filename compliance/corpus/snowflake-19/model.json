@@ -95,14 +95,27 @@
     "rx": 66.342,
     "ry": 66.342
   },
+  "encoding": "decimal",
+  "entropy_type": "snowflake",
   "input_bytes": 19,
   "labels": {
     "bottom": null,
     "top": "snowflake:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "1234567890987654321"
+    }
+  ],
+  "qualifiers": {},
+  "role": "identifier",
   "rows": 2,
-  "spec_version": "v12",
+  "scheme": "snowflake",
+  "size_basis": "decoded",
+  "size_bits": 64,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

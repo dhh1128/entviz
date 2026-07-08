@@ -125,14 +125,31 @@
     "rx": 78.065,
     "ry": 61.773
   },
+  "encoding": "base36",
+  "entropy_type": "lei",
   "input_bytes": 20,
   "labels": {
     "bottom": "...05",
     "top": "LEI:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "213800WAVVOPS85N22"
+    },
+    {
+      "bind": "none",
+      "text": "05"
+    }
+  ],
+  "qualifiers": {},
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "lei",
+  "size_basis": "decoded",
+  "size_bits": 96,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

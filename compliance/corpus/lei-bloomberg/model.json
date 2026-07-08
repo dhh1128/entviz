@@ -125,14 +125,31 @@
     "rx": 57.7,
     "ry": 45.481
   },
+  "encoding": "base36",
+  "entropy_type": "lei",
   "input_bytes": 20,
   "labels": {
     "bottom": "...12",
     "top": "LEI:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "5493001KJTIIGC8Y1R"
+    },
+    {
+      "bind": "none",
+      "text": "12"
+    }
+  ],
+  "qualifiers": {},
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "lei",
+  "size_basis": "decoded",
+  "size_bits": 96,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

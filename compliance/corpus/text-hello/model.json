@@ -95,14 +95,27 @@
     "rx": 31.729,
     "ry": 73.265
   },
+  "encoding": "base64url",
+  "entropy_type": "base64url",
   "input_bytes": 11,
   "labels": {
     "bottom": null,
     "top": "txt(11)->b64url:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "aGVsbG8gd29ybGQ"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
   "rows": 2,
-  "spec_version": "v12",
+  "scheme": null,
+  "size_basis": "utf8",
+  "size_bits": 88,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

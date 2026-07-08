@@ -165,14 +165,33 @@
     "rx": 63.169,
     "ry": 73.553
   },
+  "encoding": "base64url",
+  "entropy_type": "urn",
   "input_bytes": 45,
   "labels": {
     "bottom": null,
     "top": "urn:uuid:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "urn:uuid:"
+    },
+    {
+      "bind": "core",
+      "text": "f81d4fae-7dec-11d0-a765-00a0c91e6bf6"
+    }
+  ],
+  "qualifiers": {
+    "nid": "uuid"
+  },
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "urn",
+  "size_basis": "utf8",
+  "size_bits": 288,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

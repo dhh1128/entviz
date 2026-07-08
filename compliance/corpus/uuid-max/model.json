@@ -123,14 +123,27 @@
     "rx": 58.496,
     "ry": 68.155
   },
+  "encoding": "hex",
+  "entropy_type": "uuid",
   "input_bytes": 36,
   "labels": {
     "bottom": null,
     "top": "UUID:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "ffffffffffffffffffffffffffffffff"
+    }
+  ],
+  "qualifiers": {},
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "uuid",
+  "size_basis": "decoded",
+  "size_bits": 128,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

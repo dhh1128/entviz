@@ -123,14 +123,33 @@
     "rx": 78.065,
     "ry": 78.065
   },
+  "encoding": "base64url",
+  "entropy_type": "urn",
   "input_bytes": 29,
   "labels": {
     "bottom": null,
     "top": "urn:oid:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "urn:oid:"
+    },
+    {
+      "bind": "core",
+      "text": "2.16.840.1.113883.6.1"
+    }
+  ],
+  "qualifiers": {
+    "nid": "oid"
+  },
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "urn",
+  "size_basis": "utf8",
+  "size_bits": 168,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

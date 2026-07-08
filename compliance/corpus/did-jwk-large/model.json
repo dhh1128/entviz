@@ -359,14 +359,33 @@
     "rx": 68.0,
     "ry": 116.0
   },
+  "encoding": "base64url",
+  "entropy_type": "did",
   "input_bytes": 176,
   "labels": {
     "bottom": null,
     "top": "fingerprint of did:jwk:...",
     "truncation_marker": true
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "did:jwk:"
+    },
+    {
+      "bind": "core",
+      "text": "eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIiwieCI6ImFjYklRaXVNczNpOF91c3pFakoydHBUdFJNNEVVM3l6OTFQSDZDZEgyVjAiLCJ5IjoiX0tjeUxqOXZXTXB0bm1LdG00NkdxRHo4d2Y3NEk1TEtncmwyR3pIM25TRSJ9"
+    }
+  ],
+  "qualifiers": {
+    "method": "jwk"
+  },
+  "role": "identifier",
   "rows": 6,
-  "spec_version": "v12",
+  "scheme": "did",
+  "size_basis": "utf8",
+  "size_bits": 1344,
+  "spec_version": "v13",
   "truncated": true,
   "user_note": null
 }

@@ -2486,6 +2486,195 @@ Entviz = goal:
         scope, and it is the live vector the SVG-injection
         regression now exercises. See also [[lbldedup]].
 
+    Entropy Characterization Model = decision:
+      id: ch4rmod3l
+      status: done
+      why: >
+        Design-locked 2026-07-07. The parser's output
+        `Parsed(type, alphabet, prefix, core, suffix,
+        prefix_semantic)` conflates orthogonal facts, causing the
+        React pain and the "prefix confusion" the redesign targets.
+        Full write-up + staged plan:
+        reviews/entropy-characterization-redesign.md.
+
+        Two conflations, one root cause (the output type is a
+        LABEL, not a MODEL):
+          (1) `type` is one opaque display string fusing scheme
+              (BTC/CESR/CID/…), semantic role of the bits (key/
+              digest/address…), network/variant (legacy/Shelley/
+              testnet), and size. Downstream consumers must
+              string-parse it back apart — the direct blocker for
+              promoting entropyType (tick 3ek3) and for React pills.
+          (2) `prefix` carries three roles — presentation framing
+              to strip, identity discriminator to fold, self-
+              describing scheme text to show — patched by the
+              `prefix_semantic` boolean. That boolean is the tell
+              of the overload. See [[s3mpr3fx]].
+
+        Sharpened model (lean but explicit): encoding (already
+        clean — drives tokenization) + scheme (recognizer; None =
+        bare encoding) + role (CLOSED enum key|signature|digest|
+        address|identifier|null) + qualifiers (network/variant/
+        algorithm/version) + size_basis + size_bits + parts, each
+        with a `bind` mode in {none, fold, core}. `bind` replaces
+        prefix+prefix_semantic: the three prefix roles become three
+        bind values, and DISPLAY becomes an orthogonal property.
+        entropyType (3ek3) = scheme ?? encoding.
+
+        Two principles the 17-case pressure test forced (impls
+        DIVERGE without them):
+          * role is asserted ONLY from the GENERIC recognizer,
+            never per-method/per-namespace. did:key -> identifier
+            (NOT key); did:pkh (holds an ETH address) -> identifier
+            (NOT address); urn:isbn -> identifier (NOT book). v11
+            does no per-method decode, so a narrower role needs
+            logic the spec excludes. (SSH is fine: its generic
+            recognizer really decodes ed25519 -> role=key.)
+          * bind is a property of the PART at the recognizer's
+            granularity, not of a character's abstract role. The `z`
+            multibase selector is bind=none as a bare value but
+            bind=core inside a did:key msi — different parts, no
+            contradiction. Same for CIDv0's `Qm`.
+
+        size_bits (see [[h4shtext]] — we hash TEXT, so this is the
+        size of the value AS RENDERED, not the semantic secret):
+        REPORTING-ONLY, always a multiple of 8, from the core only
+        (never the input string, never a folded prefix). Branch
+        chosen by an EXPLICIT size_basis field, driven by SCHEME
+        (did/urn/fallback -> utf8; else decoded) — NOT inferred from
+        alphabet (DID msi and real base64url both declare base64url)
+        nor from content shape (did:jwk msi is base64url JSON but is
+        a text core; entviz never decodes a msi). (A) ENCODING /
+        decoded cores = decoded bytes × 8 — power-of-2 alphabets
+        floor(chars × bits_per_char / 8) × 8; base58/base36/decimal
+        decode the integer (MUST NOT use the token-packing
+        bits_per_char, which overstates). Approximate for base58
+        SUBSTRING cores (version/checksum split off). (B) TEXT /
+        utf8 cores = UTF-8 bytes × 8. A CESR E (Blake3-256) reports
+        264 (33 core bytes incl. the code alignment byte), NOT 256;
+        semantic size rides in qualifiers.algorithm.
+
+        CRITICAL: size_bits is NOT the >512-bit truncation basis.
+        The head/middle/tail trigger keeps using the existing
+        tokenization byte length (_core_byte_length =
+        len(core) × bits_per_char // 8), UNCHANGED. The two coincide
+        for encoding cores but DIVERGE for text cores (a 65-86-char
+        text core truncates under size_bits but not under the
+        tokenization basis) — re-pointing the trigger at size_bits
+        would move the boundary and break goldens. Keep distinct.
+
+        Execution: MODEL-ONLY + byte-identical labels first
+        (additive fields; fingerprint/goldens/Tier B untouched),
+        verified against 17 corpus cases spanning CESR, blockchains,
+        CID v0/v1, LEI, snowflake, SSH, DID (key/ethr/pkh/web/webvh/
+        peer/jwk), URN, and the UTF-8 fallback — every derived label
+        reproduces today's bytes. Sequence: this model -> 3ek3 ->
+        dev docs (7srp) -> announce. Full write-up + staged plan:
+        reviews/entropy-characterization-redesign.md. See
+        [[lbldedup]], [[sufxbind]], [[s3mpr3fx]], [[h4shtext]],
+        [[s1zeb1ts]].
+
+        STAGE 0 LANDED (2026-07-07, spec v13 / lib 0.13.0). The
+        model is a pure library function `entviz.characterize(entropy)
+        -> dict` returning the eight fields {encoding, scheme, role,
+        qualifiers, size_basis, size_bits, parts, entropy_type}; it
+        re-expresses parse()'s result and never re-parses. Emission
+        is ADDITIVE and REPORTING-ONLY: compliance/model.py's
+        extract_model(svg, entropy=None) merges characterize(entropy)
+        as top-level model.json keys when the entropy is supplied.
+        The characterization is computed from the INPUT, not recovered
+        from the SVG — so no data-* attribute was added to the drawing
+        and every golden.svg is byte-identical apart from the v12->v13
+        version stamp (golden.png unchanged). The invariant-pair check
+        in runner.py excludes the eight characterization keys (like
+        input_bytes): two inputs that share an entviz may legitimately
+        differ in scheme/size_bits/parts (avalanche-a hex vs
+        uuid-dashed). role/scheme/qualifiers are derived off
+        parse().type + prefix; the size_bits two-branch math lives in
+        [[s1zeb1ts]]. Verified against all 17 worked cases
+        (tests/test_characterize.py, 43 assertions). Normative spec:
+        docs/spec.md "Entropy characterization" (Resolution A/B + the
+        two principles + the reporting-only warning); spec-change-log
+        v13.
+
+        STAGE 0b CORRECTION (2026-07-07, still v13). The Stage-0
+        transport was WRONG for the multi-impl goal: extract_model
+        recomputed the characterization in Python from the entropy even
+        for external port SVGs, so a port's own characterization was
+        never conformance-tested — the runner injected the reference's.
+        FIX: the RENDERER now emits all eight fields onto the root <svg>
+        as data-* attributes (data-encoding/-scheme/-role/-size-basis/
+        -entropy-type strings, empty string for null scheme/role;
+        data-size-bits decimal; data-qualifiers/-parts compact JSON,
+        XML-escaped by the serializer), and extract_model(svg) recovers
+        them FROM THE SVG (entropy= param removed; callers in
+        generate.py/runner.py/tests updated). Now each impl is compared
+        against ITS OWN characterization, and the React component can
+        read structured fields straight off the SVG. Still reporting-
+        only + zero-ink: the closed profile already permits extra
+        data-*; golden.png byte-identical to the pre-characterization
+        baseline (e14ac25) and every model.json characterization VALUE
+        unchanged vs the Stage-0 commit (only the source moved). Full
+        suite 779 passed; gallery + social-card SVGs regenerated (attrs-
+        only insertion, pixels unchanged).
+
+    size_bits two-branch definition = decision:
+      id: s1zeb1ts
+      status: done
+      why: >
+        Design-locked 2026-07-07 (Resolutions A/B of the
+        characterization redesign); landed at Stage 0 (spec v13).
+        The characterization's single size measure, size_bits, is
+        ALWAYS a whole multiple of 8, computed from the CORE only —
+        never the input string, never a folded identity prefix — and
+        is REPORTING-ONLY. Because [[h4shtext]] means entviz renders
+        (and hashes) the value's canonical TEXT, size_bits measures
+        the serialized value AS RENDERED, not the semantic secret it
+        may carry.
+
+        (A) Two branches, selected by the EXPLICIT size_basis field
+        (scheme-driven: did/urn/UTF-8-fallback -> utf8, else decoded;
+        NEVER inferred from alphabet or content shape):
+          * decoded (ENCODING cores): decoded byte length × 8. The
+            power-of-2 alphabets (hex=4, base32/bech32/crockford32=5,
+            base64/base64url=6 bits/char) via
+            floor(chars × bits_per_char / 8) × 8. The NON-power-of-2
+            alphabets (base58, base36, decimal) MUST decode the core
+            to its integer value and take its minimal byte length —
+            they MUST NOT use the token-packing bits_per_char (base58
+            is packed at 6 but true density ≈5.86, base36≈5.17,
+            decimal≈3.32), which would overstate the size. This is
+            why cid-v0's 44 base58 chars report 264 bits (integer
+            decode), not 44×6//8×8.
+          * utf8 (TEXT cores — DID msi, URN NSS, UTF-8 fallback):
+            UTF-8 byte length of the core text × 8. For the UTF-8
+            fallback this is the original input's byte length. A
+            did:jwk msi is base64url-encoded JSON yet is a TEXT core,
+            because entviz never decodes a DID msi — proving the
+            basis is SCHEME-driven, not content-shaped.
+
+        (B) Caveats. Where an encoding core is a base58check
+        SUBSTRING (version byte + checksum split into none-bound
+        parts), the decoded substring is not independently
+        byte-aligned, so size_bits is APPROXIMATE — accepted, since
+        it feeds only the label and the coarse >512 test. A folded
+        identity prefix (bind=fold) is EXCLUDED from size_bits: it
+        binds the fingerprint but is not part of the rendered core
+        (so did:ethr:'s core-UTF-8 = 46 bytes = 368 bits excludes the
+        "did:ethr:" fold prefix).
+
+        CRITICAL (shared with [[ch4rmod3l]]): size_bits is NOT the
+        >512-bit truncation basis. The head/middle/tail trigger keeps
+        using the existing tokenization byte length (_core_byte_length
+        = len(core) × bits_per_char // 8), UNCHANGED. The two coincide
+        for encoding cores but DIVERGE for text cores (a 65-86-char
+        text core would truncate under size_bits but not under the
+        tokenization basis; did-peer-2: size_bits 808 vs trunc-basis
+        600 — both truncate, but the divergence window is real).
+        Re-pointing the trigger at size_bits would move the boundary
+        and break goldens. entviz.characterize computes size_bits;
+        entropy._core_byte_length is left untouched. See [[h4shtext]].
+
     Spec-Implementation Audit Triage 2026-06-02 = goal:
       id: aud0602t
       status: done
@@ -3347,4 +3536,64 @@ Entviz = goal:
         golden regen, then the 4 sister-repo ports (js/rs/java/go) reproduce
         Tier A — tracked as tick 5yau. Relates to [[s3mpr3fx]], [[h4shtext]],
         [[sufxbind]], [[c4s3norm]], [[3ip55rj1]], [[lbldedup]],
+        [[entviz-multiimpl-plan]].
+
+    Frame quiet margin (v12) = decision:
+      id: fr4mem4rg
+      status: drafted
+      why: >
+        2026-07-02. Issue #31: the outer gray #808080 frame could be CLIPPED at
+        fractional render scales. Root cause: through v11 the four 1px border
+        lines were centered ON the canvas boundary (top y=0.5, bottom
+        y=bounding_h-0.5, etc.), so the outer half of each stroke lay on the
+        edge. When a browser scaled the SVG to a non-integer pixel size (the
+        repro: the @entviz/react playground at 20pt, scaling a 12pt-geometry
+        SVG to 152·20/12 = 253.33px), default overflow:hidden shaved that outer
+        half and the bottom/right frame rendered thin or missing. This matters
+        because the frame is the load-bearing anchor for raster
+        comparison/localization (a matcher finds the solid rectangle, then
+        derives scale/geometry) — a broken frame degrades the primary
+        same/different judgment under the T2 rendering-surface tier.
+
+        FIX (Daniel picked, refining issue option 1): add a MARGIN=1 user-unit
+        QUIET RING on all four sides. The frame, white field, and all content
+        inset by MARGIN; frame outer edge now sits exactly 1 unit inside the
+        canvas -> un-clippable (the fractional overflow clip removes < 1 device
+        px = < 1 user unit at any scale >= 1; MARGIN=1 is the smallest integer
+        inset with this property). All three issue options (inset / add margin /
+        rect band) COLLAPSE to "grow the canvas to make room": you cannot inset
+        the frame in place because content already reaches it (color bar left
+        edge at old x=1, just inside the old left border at x=0.5).
+
+        Daniel's refinement over plain option 1: the ring is TRANSPARENT, not
+        white. The white bg fills only the FRAME RECT (inset by MARGIN); the
+        outer ring has no fill element -> transparent. So the gray frame is the
+        outermost visible pixel on every side (no white halo), the glyph
+        composites cleanly on any page colour, and — because the raster compare
+        is RGBA — an impl that paints the ring white is correctly rejected at
+        Tier B. Field rect = (MARGIN, MARGIN) size (frame_w, frame_h); it
+        coincides with the frame's outer edges so no white shows outside gray.
+
+        Why NOT a static-golden guard: a corpus rendered at integer font sizes
+        has integer geometry and rasterizes at exact scale 2.0, so NO golden (at
+        ANY font size, incl fs-24/fs-40) ever exhibits the clip — the trigger is
+        DOWNSTREAM fractional DISPLAY scaling, which Tier A (model coords) and
+        Tier B (fixed integer raster) are structurally blind to. The right guard
+        is GEOMETRIC + scale-independent: tests/test_issue31_quiet_margin.py
+        asserts no ink lands in the [0,MARGIN) ring across inputs and font sizes
+        (incl the 20pt repro).
+
+        BREAKING for every input (all geometry shifts +MARGIN, bounding grows
+        +2·MARGIN) -> spec v11->v12, lib 0.11.0->0.12.0, FULL corpus regen. No
+        deployed certified users of v11 geometry.
+
+        Blast radius: docs/spec.md (bounding-rect step: frame_rect vs bounding,
+        transparent field, inset borders, normative frame invariant; version
+        line; paint-order wording), spec-change-log.md (v12 entry),
+        src/entviz/__init__.py (versions), src/entviz/pipeline.py (MARGIN const,
+        inner_w/h + field_rect + shifted origins + inset border lines),
+        ~12 geometry contract tests updated (+1 shift, +2 dims, field-not-
+        canvas), NEW test_issue31_quiet_margin.py, corpus + gallery + social
+        card + paper/spec figures regen, then 4 ports (js/rs/java/go) reproduce
+        Tier A against the regenerated corpus. Relates to
         [[entviz-multiimpl-plan]].

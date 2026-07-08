@@ -95,14 +95,33 @@
     "rx": 24.4,
     "ry": 41.2
   },
+  "encoding": "base64url",
+  "entropy_type": "urn",
   "input_bytes": 25,
   "labels": {
     "bottom": null,
     "top": "urn:example:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "urn:example:"
+    },
+    {
+      "bind": "core",
+      "text": "a123,z456/foo"
+    }
+  ],
+  "qualifiers": {
+    "nid": "example"
+  },
+  "role": "identifier",
   "rows": 2,
-  "spec_version": "v12",
+  "scheme": "urn",
+  "size_basis": "utf8",
+  "size_bits": 104,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

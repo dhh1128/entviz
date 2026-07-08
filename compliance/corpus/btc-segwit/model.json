@@ -203,14 +203,34 @@
     "rx": 94.356,
     "ry": 57.7
   },
+  "encoding": "bech32",
+  "entropy_type": "btc",
   "input_bytes": 42,
   "labels": {
     "bottom": null,
     "top": "BTC SegWit: bc1...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "bc1"
+    },
+    {
+      "bind": "core",
+      "text": "qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+    }
+  ],
+  "qualifiers": {
+    "network": "mainnet",
+    "variant": "segwit"
+  },
+  "role": "address",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "btc",
+  "size_basis": "decoded",
+  "size_bits": 192,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

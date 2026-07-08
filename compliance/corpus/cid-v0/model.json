@@ -209,14 +209,35 @@
     "rx": 76.726,
     "ry": 42.113
   },
+  "encoding": "base58",
+  "entropy_type": "cid",
   "input_bytes": 46,
   "labels": {
     "bottom": null,
     "top": "CIDv0: Qm...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "Qm"
+    },
+    {
+      "bind": "core",
+      "text": "YwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG"
+    }
+  ],
+  "qualifiers": {
+    "codec": "dag-pb",
+    "hash": "sha2-256",
+    "version": 0
+  },
+  "role": "identifier",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "cid",
+  "size_basis": "decoded",
+  "size_bits": 264,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

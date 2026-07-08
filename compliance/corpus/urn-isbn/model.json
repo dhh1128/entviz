@@ -97,14 +97,33 @@
     "rx": 27.828,
     "ry": 52.114
   },
+  "encoding": "base64url",
+  "entropy_type": "urn",
   "input_bytes": 19,
   "labels": {
     "bottom": null,
     "top": "urn:isbn:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "urn:isbn:"
+    },
+    {
+      "bind": "core",
+      "text": "0451450523"
+    }
+  ],
+  "qualifiers": {
+    "nid": "isbn"
+  },
+  "role": "identifier",
   "rows": 2,
-  "spec_version": "v12",
+  "scheme": "urn",
+  "size_basis": "utf8",
+  "size_bits": 80,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

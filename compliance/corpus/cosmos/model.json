@@ -167,14 +167,37 @@
     "rx": 90.283,
     "ry": 49.554
   },
+  "encoding": "bech32",
+  "entropy_type": "bech32",
   "input_bytes": 45,
   "labels": {
     "bottom": "...rk363e",
     "top": "bech32: cosmos1...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "cosmos1"
+    },
+    {
+      "bind": "core",
+      "text": "qqqsyqcyq5rqwzqfpg9scrgwpugpzysn"
+    },
+    {
+      "bind": "none",
+      "text": "rk363e"
+    }
+  ],
+  "qualifiers": {
+    "hrp": "cosmos"
+  },
+  "role": "address",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "bech32",
+  "size_basis": "decoded",
+  "size_bits": 160,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

@@ -94,7 +94,18 @@ def _round(v: float, nd: int = _COORD_NDIGITS) -> float:
 
 
 def extract_model(svg: str | bytes) -> dict:
-    """Recover the render model from an entviz SVG string/bytes."""
+    """Recover the render model from an entviz SVG string/bytes.
+
+    The structured entropy characterization (spec v13: ``encoding``, ``scheme``,
+    ``role``, ``qualifiers``, ``size_basis``, ``size_bits``, ``parts``,
+    ``entropy_type``) is recovered FROM THE SVG's ``data-*`` attributes — the
+    implementation under test emits its own characterization there, so the
+    conformance comparison is against *its* fields, not a value the checker
+    recomputes in Python. This is what makes every implementation (reference and
+    ports) genuinely conformance-enforced on the characterization. These fields
+    are reporting-only and carry no ink. See ``docs/spec.md`` → *Entropy
+    characterization* and :mod:`entviz.characterize`.
+    """
     if isinstance(svg, str):
         svg = svg.encode("utf-8")
     root = etree.fromstring(svg)
@@ -197,7 +208,34 @@ def extract_model(svg: str | bytes) -> dict:
     model["labels"] = _labels(root)
     model["user_note"] = _user_note(root)
 
+    # --- entropy characterization (spec v13, reporting-only) ---
+    # Recovered from the SVG's data-* attributes, so the field values are the
+    # implementation-under-test's own characterization (not recomputed here).
+    model.update(_characterization(root))
+
     return model
+
+
+def _characterization(root) -> dict:
+    """Recover the 8-field entropy characterization from the root SVG data-*
+    attributes (spec v13). Empty ``data-scheme``/``data-role`` -> ``None``;
+    ``data-size-bits`` -> int; ``data-qualifiers``/``data-parts`` are compact
+    JSON. All eight keys are always present on a conformant SVG."""
+    import json
+
+    def _str_or_none(v):
+        return v if v else None
+
+    return {
+        "encoding": root.get("data-encoding"),
+        "scheme": _str_or_none(root.get("data-scheme")),
+        "role": _str_or_none(root.get("data-role")),
+        "qualifiers": json.loads(root.get("data-qualifiers") or "{}"),
+        "size_basis": root.get("data-size-basis"),
+        "size_bits": _opt_int(root.get("data-size-bits")),
+        "parts": json.loads(root.get("data-parts") or "[]"),
+        "entropy_type": root.get("data-entropy-type"),
+    }
 
 
 def _opt_int(s) -> Optional[int]:

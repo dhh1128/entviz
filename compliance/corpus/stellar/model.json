@@ -259,14 +259,31 @@
     "rx": 57.977,
     "ry": 78.745
   },
+  "encoding": "base32",
+  "entropy_type": "stellar",
   "input_bytes": 56,
   "labels": {
     "bottom": null,
     "top": "XLM: G...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "G"
+    },
+    {
+      "bind": "core",
+      "text": "CKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM"
+    }
+  ],
+  "qualifiers": {},
+  "role": "address",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "stellar",
+  "size_basis": "decoded",
+  "size_bits": 272,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

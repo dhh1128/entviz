@@ -209,14 +209,34 @@
     "rx": 37.335,
     "ry": 57.7
   },
+  "encoding": "hex",
+  "entropy_type": "gitoid",
   "input_bytes": 83,
   "labels": {
     "bottom": null,
     "top": "gitoid:blob:sha256:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "gitoid:blob:sha256:"
+    },
+    {
+      "bind": "core",
+      "text": "473a0f4c3be8a93681a267e3b1e9a7dcda1185436fe141f7749120a303721813"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "sha256",
+    "object": "blob"
+  },
+  "role": "digest",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "gitoid",
+  "size_basis": "decoded",
+  "size_bits": 256,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

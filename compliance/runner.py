@@ -37,6 +37,17 @@ from .model import diff_models, extract_model, validate_closed_profile
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CORPUS = os.path.join(HERE, "corpus")
 
+# Model keys excluded from the invariant-pair comparison: they are non-pixel
+# metadata that may legitimately differ between two inputs that share a
+# visualization. `input_bytes` is the raw input length; the rest are the
+# reporting-only entropy characterization (spec v13). See the invariant-pair
+# loop below.
+_CHARACTERIZATION_KEYS = frozenset({
+    "encoding", "scheme", "role", "qualifiers",
+    "size_basis", "size_bits", "parts", "entropy_type",
+})
+_INVARIANT_EXCLUDED_KEYS = frozenset({"input_bytes"}) | _CHARACTERIZATION_KEYS
+
 
 @dataclass
 class VectorResult:
@@ -253,8 +264,15 @@ def certify(corpus_dir: str = DEFAULT_CORPUS, *, render_fn=reference_render,
                 # input-length metadata (data-input-bytes) legitimately differs
                 # (e.g. a dashed vs undashed UUID is 36 vs 32 chars) without any
                 # change to the entviz, so it is excluded from this comparison.
-                ma = {k: v for k, v in models[a].items() if k != "input_bytes"}
-                mb = {k: v for k, v in models[b].items() if k != "input_bytes"}
+                # The reporting-only entropy characterization (spec v13) is
+                # likewise excluded: two inputs can share an entviz yet differ in
+                # scheme/size_bits/parts (e.g. avalanche-a hex vs uuid-dashed),
+                # and a URN's dropped r-/q-/f-components change its input bytes
+                # but not its visualization. Both are non-pixel metadata.
+                ma = {k: v for k, v in models[a].items()
+                      if k not in _INVARIANT_EXCLUDED_KEYS}
+                mb = {k: v for k, v in models[b].items()
+                      if k not in _INVARIANT_EXCLUDED_KEYS}
                 d = diff_models(ma, mb)
                 res.passed = not d
                 if d:

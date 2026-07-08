@@ -321,14 +321,27 @@
     "rx": 57.7,
     "ry": 69.919
   },
+  "encoding": "base64url",
+  "entropy_type": "base64url",
   "input_bytes": 56,
   "labels": {
     "bottom": null,
     "top": "txt(56)->b64url:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
   "rows": 5,
-  "spec_version": "v12",
+  "scheme": null,
+  "size_basis": "utf8",
+  "size_bits": 448,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

@@ -209,14 +209,27 @@
     "rx": 29.71,
     "ry": 29.71
   },
+  "encoding": "hex",
+  "entropy_type": "hex",
   "input_bytes": 64,
   "labels": {
     "bottom": null,
     "top": "hex(64):",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": null,
+  "size_basis": "decoded",
+  "size_bits": 256,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

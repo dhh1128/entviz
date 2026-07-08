@@ -209,14 +209,29 @@
     "rx": 76.726,
     "ry": 80.187
   },
+  "encoding": "base64url",
+  "entropy_type": "cesr",
   "input_bytes": 44,
   "labels": {
     "bottom": null,
     "top": "CESR Blake3-256:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "EBfdlu8R27Fbx_ehrqwImnK_8Cm79sqbAQ4caaZG_LFv"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "Blake3-256"
+  },
+  "role": "digest",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "cesr",
+  "size_basis": "decoded",
+  "size_bits": 264,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

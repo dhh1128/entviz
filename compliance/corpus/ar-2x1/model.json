@@ -209,14 +209,27 @@
     "rx": 66.342,
     "ry": 31.729
   },
+  "encoding": "hex",
+  "entropy_type": "hex",
   "input_bytes": 64,
   "labels": {
     "bottom": null,
     "top": "hex(64):",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "deadbeefcafebabe1234567890abcdef0fedcba9876543210123456789abcdef"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": null,
+  "size_basis": "decoded",
+  "size_bits": 256,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

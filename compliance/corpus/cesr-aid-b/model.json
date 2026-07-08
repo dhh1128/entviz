@@ -209,14 +209,29 @@
     "rx": 57.7,
     "ry": 45.481
   },
+  "encoding": "base64url",
+  "entropy_type": "cesr",
   "input_bytes": 44,
   "labels": {
     "bottom": null,
     "top": "CESR Ed25519 nt pubkey:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "Ed25519 nt pubkey"
+  },
+  "role": "key",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "cesr",
+  "size_basis": "decoded",
+  "size_bits": 264,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

@@ -265,14 +265,35 @@
     "rx": 49.554,
     "ry": 49.554
   },
+  "encoding": "base32",
+  "entropy_type": "cid",
   "input_bytes": 59,
   "labels": {
     "bottom": null,
     "top": "CIDv1 dag-pb: b...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "b"
+    },
+    {
+      "bind": "core",
+      "text": "AFYBEIGDYRZT5SFP7UDM7HU76UH7Y26NF3EFUYLQABF3OCLGTQY55FBZDI"
+    }
+  ],
+  "qualifiers": {
+    "codec": "dag-pb",
+    "hash": "sha2-256",
+    "version": 1
+  },
+  "role": "identifier",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "cid",
+  "size_basis": "decoded",
+  "size_bits": 288,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

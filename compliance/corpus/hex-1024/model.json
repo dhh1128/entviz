@@ -359,14 +359,27 @@
     "rx": 63.2,
     "ry": 44.0
   },
+  "encoding": "hex",
+  "entropy_type": "hex",
   "input_bytes": 256,
   "labels": {
     "bottom": null,
     "top": "fingerprint of hex(256):",
     "truncation_marker": true
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
   "rows": 6,
-  "spec_version": "v12",
+  "scheme": null,
+  "size_basis": "decoded",
+  "size_bits": 1024,
+  "spec_version": "v13",
   "truncated": true,
   "user_note": null
 }

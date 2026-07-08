@@ -161,14 +161,27 @@
     "rx": 85.882,
     "ry": 76.427
   },
+  "encoding": "crockford32",
+  "entropy_type": "ulid",
   "input_bytes": 26,
   "labels": {
     "bottom": null,
     "top": "ULID:",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+    }
+  ],
+  "qualifiers": {},
+  "role": "identifier",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "ulid",
+  "size_basis": "decoded",
+  "size_bits": 128,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

@@ -209,14 +209,33 @@
     "rx": 73.992,
     "ry": 45.481
   },
+  "encoding": "base64url",
+  "entropy_type": "did",
   "input_bytes": 53,
   "labels": {
     "bottom": null,
     "top": "did:keri:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "did:keri:"
+    },
+    {
+      "bind": "core",
+      "text": "EBDCrJM9thBcC3hYZSzKGo-Iv53zQY9KIYEDhN0g5DnV"
+    }
+  ],
+  "qualifiers": {
+    "method": "keri"
+  },
+  "role": "identifier",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "did",
+  "size_basis": "utf8",
+  "size_bits": 352,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

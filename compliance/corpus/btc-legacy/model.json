@@ -167,14 +167,38 @@
     "rx": 99.513,
     "ry": 47.593
   },
+  "encoding": "base58",
+  "entropy_type": "btc",
   "input_bytes": 34,
   "labels": {
     "bottom": "...vfNa",
     "top": "BTC legacy: 1...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "1"
+    },
+    {
+      "bind": "core",
+      "text": "A1zP1eP5QGefi2DMPTfTL5SLmv7Di"
+    },
+    {
+      "bind": "none",
+      "text": "vfNa"
+    }
+  ],
+  "qualifiers": {
+    "network": "mainnet",
+    "variant": "legacy"
+  },
+  "role": "address",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "btc",
+  "size_basis": "decoded",
+  "size_bits": 168,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

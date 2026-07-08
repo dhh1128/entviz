@@ -203,14 +203,33 @@
     "rx": 49.554,
     "ry": 45.481
   },
+  "encoding": "bech32",
+  "entropy_type": "ltc",
   "input_bytes": 43,
   "labels": {
     "bottom": null,
     "top": "LTC: ltc1...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "ltc1"
+    },
+    {
+      "bind": "core",
+      "text": "qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5"
+    }
+  ],
+  "qualifiers": {
+    "network": "mainnet"
+  },
+  "role": "address",
   "rows": 4,
-  "spec_version": "v12",
+  "scheme": "ltc",
+  "size_basis": "decoded",
+  "size_bits": 192,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

@@ -161,14 +161,34 @@
     "rx": 61.773,
     "ry": 73.992
   },
+  "encoding": "hex",
+  "entropy_type": "swhid",
   "input_bytes": 50,
   "labels": {
     "bottom": null,
     "top": "swh:1:rev:...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "swh:1:rev:"
+    },
+    {
+      "bind": "core",
+      "text": "309cf2674ee7a0749978cf8265ab91a60aea0f7d"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "sha1",
+    "object": "rev"
+  },
+  "role": "digest",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "swhid",
+  "size_basis": "decoded",
+  "size_bits": 160,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }

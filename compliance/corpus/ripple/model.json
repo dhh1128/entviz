@@ -165,14 +165,31 @@
     "rx": 69.919,
     "ry": 49.554
   },
+  "encoding": "base58",
+  "entropy_type": "xrp",
   "input_bytes": 34,
   "labels": {
     "bottom": null,
     "top": "XRP: r...",
     "truncation_marker": false
   },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "r"
+    },
+    {
+      "bind": "core",
+      "text": "Eb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh"
+    }
+  ],
+  "qualifiers": {},
+  "role": "address",
   "rows": 3,
-  "spec_version": "v12",
+  "scheme": "xrp",
+  "size_basis": "decoded",
+  "size_bits": 192,
+  "spec_version": "v13",
   "truncated": false,
   "user_note": null
 }
