@@ -202,8 +202,8 @@
   "cols": 3,
   "ellipse": {
     "anchor": [
-      147.0,
-      106.0
+      148.0,
+      107.0
     ],
     "rotation": 84.0,
     "rx": 76.726,
@@ -216,7 +216,7 @@
     "truncation_marker": false
   },
   "rows": 4,
-  "spec_version": "v11",
+  "spec_version": "v12",
   "truncated": false,
   "user_note": null
 }

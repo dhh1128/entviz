@@ -49,9 +49,10 @@ def _expected_fg_for_band(bg_hex):
 
 
 def _band_rects(svg):
+    # x=2 = MARGIN(1) + left border(1) after the transparent quiet ring (#31).
     return [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 20
+        if float(r.get("x", -1)) == 2 and float(r.get("width", -1)) == 20
     ]
 
 
@@ -132,8 +133,8 @@ def test_letter_is_centered_horizontally_in_color_bar():
     bands = _band_rects(svg)
     letters = _band_letters(svg)
     assert bands and letters
-    # Bar drawing region: x=1, width=bar_width=20. Center x = 11.
-    expected_cx = 1 + 20 / 2
+    # Bar drawing region: x=2 (MARGIN+1), width=bar_width=20. Center x = 12.
+    expected_cx = 2 + 20 / 2
     for t in letters:
         assert abs(float(t.get("x")) - expected_cx) < 0.01, (
             f"letter x={t.get('x')} not centered (expected {expected_cx})"

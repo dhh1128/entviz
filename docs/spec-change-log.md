@@ -6,6 +6,18 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## What's new in v12
+
+v12 fixes a rendering defect in the outer **frame** that could clip it at fractional render scales ([issue #31](https://github.com/dhh1128/entviz/issues/31)). The frame — the gray #808080 rectangle around the whole glyph — is the load-bearing anchor for raster-based comparison/localization: a matcher finds the solid rectangle in a screenshot or photo and derives scale and geometry from it. Through v11 the four border lines were centered on the canvas boundary, so the outer half of each stroke lay *on* the edge; when the SVG was scaled to a non-integer pixel size (e.g. displayed at a non-default font size in a browser), the default `overflow: hidden` shaved that outer half and the frame rendered thin or missing along the bottom/right edges, degrading frame detection. This is a breaking change to the rendered output of **every** input (all geometry shifts), so the whole conformance corpus is regenerated; there are no deployed certified users of v11's exact geometry.
+
+1. **Transparent quiet margin around the frame.** A `MARGIN = 1` user-unit ring is added on all four sides of the canvas. The frame, the white field fill, and all content are inset by MARGIN, so the frame's outer edge now sits exactly one unit inside the canvas boundary and can never be clipped: the fractional overflow clip removes strictly less than one device pixel, and one user unit is ≥ one device pixel at any scale ≥ 1. `MARGIN = 1` is the smallest integer inset with this property. The bounding-rect dimensions grow by `2·MARGIN`; the color bar and grid origins shift by `+MARGIN`.
+2. **The margin ring is transparent, not white.** The white background fills only the **frame rect** (inset by MARGIN), leaving the outer ring unpainted. No fill or ink reaches the canvas edge, so the gray frame is the outermost visible pixel on every side and the glyph composites cleanly on any page color (no white halo). Because the raster comparison is RGBA, the transparent ring is a matched property — an implementation that paints it white is correctly rejected at Tier B.
+3. **Frame invariant.** The spec now states, normatively, that the frame renders as a complete, solid, closed rectangle whose outer edge is exactly MARGIN from the canvas edge and never touches or crosses the boundary at any render scale. A geometric regression test (`tests/test_issue31_quiet_margin.py`) asserts no ink lands in the quiet ring across representative inputs and font sizes (including the 20 pt repro) — the right place to guard this, since a static raster corpus rendered at integer scale is structurally blind to a fractional-display-scale clip.
+
+**Ports.** Per the multi-impl roadmap, this change propagates to the four sister-repo ports (entviz-js, -rs, -java, -go), each reproducing Tier A against the regenerated corpus.
+
+---
+
 ## What's new in v11
 
 v11 adds first-class handling for **DIDs** (W3C Decentralized Identifiers) and the closely-related **URNs** (RFC 8141). The prior treatment recognized only a single-segment DID method-specific-id, tokenized every DID as base64url, **stripped the method without binding it**, surfaced the DID URL as a suffix, and could not parse a `#fragment`; URNs were not recognized at all (they fell to the UTF-8 fallback as one opaque blob). v11 replaces this with a single, principled generic path shared by both schemes. No other input type changes; all non-DID/URN corpus vectors are unaffected, and new DID + URN vectors are added to the corpus (so this is a breaking change *only* for DID/URN inputs, which had no deployed certified users).

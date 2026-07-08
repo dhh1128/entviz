@@ -14,10 +14,13 @@ def _doc(svg_str):
 
 
 def _color_bar_bands(svg):
-    """All rects at x=1 with width=bar_width=20 (the v6 color bar bands)."""
+    """All rects at x=2 with width=bar_width=20 (the v6 color bar bands).
+
+    x=2 = MARGIN(1) + left border(1) after the transparent quiet ring (#31).
+    """
     return [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 20
+        if float(r.get("x", -1)) == 2 and float(r.get("width", -1)) == 20
     ]
 
 
@@ -27,27 +30,29 @@ def test_color_bar_bands_exist():
 
 
 def test_color_bar_total_height_equals_drawing_region_height():
-    # In v3 the color bar's drawing region is bounding_h - 2 (the top
-    # and bottom 1-px black borders cover the outermost pixel rows).
+    # The color bar's drawing region runs between the top and bottom frame
+    # lines: from y = MARGIN+1 to y = bounding_h - MARGIN - 1, so its height
+    # is bounding_h - 2·MARGIN - 2 = bounding_h - 4 with MARGIN=1 (issue #31).
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = _color_bar_bands(svg)
     total = sum(float(b.get("height")) for b in bands)
     bounding_h = float(svg.get("height"))
-    assert abs(total - (bounding_h - 2)) < 0.01
+    assert abs(total - (bounding_h - 4)) < 0.01
 
 
 def test_color_bar_bands_are_contiguous_top_to_bottom():
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = _color_bar_bands(svg)
-    # Bands sorted by y should be contiguous, starting at y=1 (just below
-    # the top border) and ending at bounding_h - 1 (just above the bottom).
+    # Bands sorted by y should be contiguous, starting at y = MARGIN+1 = 2
+    # (just below the top frame line) and ending at bounding_h - MARGIN - 1
+    # (just above the bottom frame line).
     sorted_bands = sorted(bands, key=lambda b: float(b.get("y")))
     prev_bottom = float(sorted_bands[0].get("y"))
-    assert prev_bottom == 1
+    assert prev_bottom == 2
     for b in sorted_bands:
         assert abs(float(b.get("y")) - prev_bottom) < 0.01
         prev_bottom = float(b.get("y")) + float(b.get("height"))
-    assert abs(prev_bottom - (float(svg.get("height")) - 1)) < 0.01
+    assert abs(prev_bottom - (float(svg.get("height")) - 2)) < 0.01
 
 
 def test_color_bar_band_fills_are_from_edge_colors():

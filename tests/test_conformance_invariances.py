@@ -52,7 +52,19 @@ def _raster(svg, scale=2.0):
     np = pytest.importorskip("numpy")
     Image = pytest.importorskip("PIL.Image")
     png = cairosvg.svg2png(bytestring=svg.encode(), scale=scale)
-    return np.asarray(Image.open(io.BytesIO(png)).convert("RGB")).astype(int)
+    img = Image.open(io.BytesIO(png)).convert("RGBA")
+    # Composite over white before comparing. Since issue #31 the outermost
+    # MARGIN-unit ring is transparent (it shows the page behind the glyph, and
+    # entviz is designed for light backgrounds). A bare .convert("RGB") would
+    # instead composite that transparency onto BLACK, turning the quiet ring
+    # into a spurious high-contrast edge that a sub-pixel coordinate shift would
+    # flip 0<->255 — an artifact, not an ink difference. On white the ring
+    # matches the white field, so these invariance probes measure ink stability.
+    # (The ring's actual transparency is a matched property verified by the
+    # corpus Tier-B RGBA compare in compliance/raster.py and by the closed
+    # profile check — not the job of these in-tree probes.)
+    bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
+    return np.asarray(Image.alpha_composite(bg, img).convert("RGB")).astype(int)
 
 
 def assert_model_unchanged(original, variant):

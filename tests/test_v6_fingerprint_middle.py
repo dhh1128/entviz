@@ -65,9 +65,10 @@ def _nucleus_fill(g):
 
 
 def _entviz_bg(svg):
+    # grid_rect top-left is (28,27) after the MARGIN quiet ring (issue #31).
     cols = int(svg.get("data-cols"))
     for r in svg.xpath('//*[local-name()="rect"]'):
-        if (float(r.get("x", -1)) == 27 and float(r.get("y", -1)) == 26
+        if (float(r.get("x", -1)) == 28 and float(r.get("y", -1)) == 27
                 and float(r.get("width", 0)) == cols * 60
                 and r.get("fill") in BG_CANDIDATES):
             return r.get("fill")

@@ -48,12 +48,13 @@ def test_nucleus_dimensions_at_16pt():
 
 def test_cell_height_is_25x_font_size_px():
     """v4 cell_height = 2.5 · font_size_px = 40 at 12pt (was 32 in v3).
-    Bounding height for a 2x2 grid with top label strip (no suffix):
+    Inner (frame-to-frame) height for a 2x2 grid with top label strip:
        1 + GM + nucleus_height + 2·cell_height + GM + 1
-     = 1 + 5 + 20 + 80 + 5 + 1 = 112 px (GM=5; v6 label band abuts grid)."""
+     = 1 + 5 + 20 + 80 + 5 + 1 = 112 px (GM=5; v6 label band abuts grid);
+    the canvas adds 2·MARGIN for the quiet ring → 114 (issue #31)."""
     svg = _doc(render("deadbeef"))
     bh = float(svg.get("height"))
-    assert bh == 112, f"v6 bounding height should be 112, got {bh}"
+    assert bh == 114, f"v11.1 bounding height should be 114, got {bh}"
 
 
 def test_text_baseline_inside_nucleus():

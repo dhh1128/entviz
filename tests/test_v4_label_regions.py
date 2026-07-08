@@ -152,8 +152,9 @@ def test_top_label_left_aligned_to_grid():
     svg = _doc(render("0x742d35cc6634c0532925a3b844bc454e4438f44e"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    # At 12pt with 7-token Ethereum, grid_rect.left = 27 (v6 bar_width=20).
-    assert float(top.get("x")) == 27
+    # At 12pt with 7-token Ethereum, grid_rect.left = 28 (v6 bar_width=20;
+    # +1 for the MARGIN quiet ring, issue #31).
+    assert float(top.get("x")) == 28
     assert top.get("text-anchor") in (None, "start")
 
 
@@ -212,9 +213,9 @@ def test_canvas_height_grows_with_top_label_only():
     grid (GM only on the border side), so the top label adds just
     nucleus_height (= 20 at 12pt) over the no-label baseline."""
     svg = _doc(render("deadbeef"))
-    # deadbeef → 2 tokens → 2x2 grid; no-label bounding_h = 92.
-    # With top label only: 92 + 20 = 112.
-    assert float(svg.get("height")) == 112
+    # deadbeef → 2 tokens → 2x2 grid; no-label inner_h = 92.
+    # With top label only: 92 + 20 = 112; + 2·MARGIN quiet ring = 114 (#31).
+    assert float(svg.get("height")) == 114
 
 
 def test_canvas_height_grows_with_both_labels():
@@ -224,6 +225,6 @@ def test_canvas_height_grows_with_both_labels():
     # Bitcoin Legacy: 34 chars - 1 prefix - 4 suffix = 29-char body →
     # 8 base58 tokens. choose_grid(8, 1.0) → 3x3 (v4 cell AR 3:2 means
     # 2x4 = 0.75 is below 1.0; 3x3 = 1.5 is the closest from above).
-    # No labels: bounding_h = 1+5+(3·40)+5+1 = 132. With both labels:
-    # 132 + 40 = 172.
-    assert float(svg.get("height")) == 172
+    # No labels: inner_h = 1+5+(3·40)+5+1 = 132. With both labels:
+    # 132 + 40 = 172; + 2·MARGIN quiet ring = 174 (issue #31).
+    assert float(svg.get("height")) == 174

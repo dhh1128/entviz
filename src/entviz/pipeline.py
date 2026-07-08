@@ -32,6 +32,16 @@ from .shapes import canvas, rect as draw_rect
 
 _DPI = 96
 
+# Transparent quiet-margin width, in user units, surrounding the gray frame
+# (issue #31). The frame, white field, and all content are inset by MARGIN so
+# the frame's outer edge never sits on the canvas boundary — where fractional
+# render scales clip it via the SVG's default overflow:hidden, breaking the
+# raster-localization anchor. The MARGIN ring itself is left unpainted
+# (transparent). MARGIN = 1 user unit is the smallest integer inset that is
+# provably un-clippable at any scale >= 1 (the fractional overflow clip is
+# < 1 device px, i.e. < 1 user unit).
+MARGIN = 1
+
 
 NOTE_MAX_LEN = 10
 # Printable ASCII only (U+0020 space through U+007E tilde). This deliberately
@@ -304,10 +314,11 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     grid_w = cell_width * grid.cols
     grid_h = cell_height * grid.rows
 
-    # Bounding rect dimensions (v6):
+    # Inner (frame-to-frame) dimensions (v6):
     #   width  = 1 + bar_width + 1 + GM + grid_width + GM + 1
     #   height = 1 + GM + nucleus_height + grid_height
     #              + [nucleus_height +] GM + 1
+    # (bounding_w/h add 2·MARGIN for the transparent quiet ring — see below.)
     # The top "type label" strip is always present (the entviz declares the
     # detected type / alphabet). The bottom "suffix label" strip appears only
     # when the parsed result has a suffix. v6: each label band ABUTS the grid
@@ -315,24 +326,38 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # the label text is the same distance from the grid as nucleus text is
     # from a nucleus edge. (When there's no suffix, the GM below the grid is
     # just the bottom margin and is unchanged.)
-    bounding_w = 1 + bar_width + 1 + gm + grid_w + gm + 1
+    # inner_w/inner_h span from one frame outer edge to the other (the old
+    # bounding rect). The canvas is then grown by MARGIN on every side to hold
+    # the transparent quiet ring (issue #31), and every content origin is
+    # shifted inward by MARGIN.
+    inner_w = 1 + bar_width + 1 + gm + grid_w + gm + 1
     # The bottom strip appears when there is a suffix OR a user note.
     has_bottom_label = bool(suffix) or bool(note)
     bottom_region = (nucleus_height + gm) if has_bottom_label else gm
-    bounding_h = 1 + gm + nucleus_height + grid_h + bottom_region + 1
+    inner_h = 1 + gm + nucleus_height + grid_h + bottom_region + 1
+    bounding_w = inner_w + 2 * MARGIN
+    bounding_h = inner_h + 2 * MARGIN
     bounding_rect = Rect(Point(0, 0), Size(bounding_w, bounding_h))
+    # The white field fills only inside the frame's outer edge (from MARGIN to
+    # bounding-MARGIN on each axis); the MARGIN ring outside it is left with no
+    # fill element, so it renders transparent and no color reaches the edge.
+    field_rect = Rect(Point(MARGIN, MARGIN), Size(inner_w, inner_h))
 
-    # grid_rect sits directly below the top label band (which abuts it).
+    # grid_rect sits directly below the top label band (which abuts it); its
+    # origin is shifted by MARGIN so all grid-derived content lands inside the
+    # quiet ring.
     grid_rect = Rect(
-        Point(1 + bar_width + 1 + gm, 1 + gm + nucleus_height),
+        Point(MARGIN + 1 + bar_width + 1 + gm, MARGIN + 1 + gm + nucleus_height),
         Size(grid_w, grid_h),
     )
 
-    # Color bar drawing region: x=1, width=bar_width; y starts at 1
-    # (just below the top border) and ends at bounding_h - 1 (just
-    # above the bottom border), so its drawable height is bounding_h - 2.
+    # Color bar drawing region: x = MARGIN + 1, width = bar_width; y runs from
+    # MARGIN + 1 (just below the top border) to bounding_h - MARGIN - 1 (just
+    # above the bottom border), so its drawable height is inner_h - 2 — the
+    # same value as before the margin was added, so the bar is unchanged and
+    # merely translated.
     color_bar_rect = Rect(
-        Point(1, 1), Size(bar_width, bounding_h - 2),
+        Point(MARGIN + 1, MARGIN + 1), Size(bar_width, inner_h - 2),
     )
 
     renderer = Renderer(style, grid)
@@ -385,7 +410,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         width=str(grid_rect.size.width), height=str(grid_rect.size.height),
     )
 
-    draw_rect(svg, bounding_rect, '#ffffff')
+    draw_rect(svg, field_rect, '#ffffff')
 
     # v5: introduce channel groups so an overlay can find each visual
     # subsystem by name (data-channel="..."). The groups are pure
@@ -720,20 +745,25 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         note=note,
     )
 
-    # Gray border lines (#808080) on all four sides of the bounding rect,
-    # plus an interior vertical separator at x = 1 + bar_width + 0.5 (the
-    # color bar's right edge). Each line is centered on a half-pixel so a
-    # 1-px stroke covers exactly one pixel column/row crisply; the four
-    # outer lines extend the full canvas width/height so the corner
-    # pixels are painted by both adjacent sides (no 1-px gap at corners).
-    # shape-rendering="crispEdges" disables antialiasing so the lines
-    # render as solid 1-px bands, not blurry 2-px halos.
-    _draw_border_line(svg, 0, 0.5, bounding_w, 0.5)                                  # top
-    _draw_border_line(svg, bounding_w - 0.5, 0, bounding_w - 0.5, bounding_h)        # right
-    _draw_border_line(svg, 0, bounding_h - 0.5, bounding_w, bounding_h - 0.5)        # bottom
-    _draw_border_line(svg, 0.5, 0, 0.5, bounding_h)                                  # left
-    _draw_border_line(svg, 1 + bar_width + 0.5, 0,
-                      1 + bar_width + 0.5, bounding_h)                                # interior separator
+    # Gray border lines (#808080) forming the frame, inset by MARGIN from the
+    # canvas edge so the frame's outer edge sits at MARGIN (never on the
+    # boundary — issue #31), plus an interior vertical separator at
+    # x = MARGIN + 1 + bar_width + 0.5 (the color bar's right edge). Each line
+    # is centered on a half-pixel so a 1-px stroke covers exactly one pixel
+    # column/row crisply; the outer lines share the same span endpoints
+    # (MARGIN .. bounding-MARGIN) so the corner pixels are painted by both
+    # adjacent sides (no 1-px gap at corners). shape-rendering="crispEdges"
+    # disables antialiasing so the lines render as solid 1-px bands.
+    _draw_border_line(svg, MARGIN, MARGIN + 0.5,
+                      bounding_w - MARGIN, MARGIN + 0.5)                              # top
+    _draw_border_line(svg, bounding_w - MARGIN - 0.5, MARGIN,
+                      bounding_w - MARGIN - 0.5, bounding_h - MARGIN)                 # right
+    _draw_border_line(svg, MARGIN, bounding_h - MARGIN - 0.5,
+                      bounding_w - MARGIN, bounding_h - MARGIN - 0.5)                 # bottom
+    _draw_border_line(svg, MARGIN + 0.5, MARGIN,
+                      MARGIN + 0.5, bounding_h - MARGIN)                              # left
+    _draw_border_line(svg, MARGIN + 1 + bar_width + 0.5, MARGIN,
+                      MARGIN + 1 + bar_width + 0.5, bounding_h - MARGIN)              # interior separator
 
     _normalize_numbers(svg)
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)

@@ -49,12 +49,16 @@ def test_two_bit_histogram_all_one():
 
 
 def test_color_bar_bands_sum_to_drawing_region_height():
-    """In rendered output, color-bar band heights sum to bounding_h - 2."""
+    """In rendered output, color-bar band heights sum to bounding_h - 4.
+
+    The bar runs between the frame lines (y = MARGIN+1 .. bounding_h-MARGIN-1),
+    a height of bounding_h - 2·MARGIN - 2 = bounding_h - 4 with MARGIN=1 (#31).
+    """
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     bands = [
         r for r in svg.xpath('//*[local-name()="rect"]')
-        if float(r.get("x", -1)) == 1 and float(r.get("width", -1)) == 20
+        if float(r.get("x", -1)) == 2 and float(r.get("width", -1)) == 20
     ]
     total = sum(float(b.get("height")) for b in bands)
     bh = float(svg.get("height"))
-    assert abs(total - (bh - 2)) < 0.01
+    assert abs(total - (bh - 4)) < 0.01

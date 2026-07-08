@@ -347,14 +347,16 @@ def test_visual_output_is_preserved_after_stripping_v5_additions():
         svg_str = render(raw)
         stripped = _strip_v5_overlay(svg_str)
         doc = etree.fromstring(stripped.encode())
-        # Bounding rect: full-canvas white background rect.
+        # White field rect: inset by MARGIN=1 on every side so the outer
+        # quiet ring stays transparent (issue #31), i.e. 2 units smaller than
+        # the canvas in each dimension.
         rects = doc.xpath('//*[local-name()="rect"]')
         assert any(
             r.get("fill") == "#ffffff"
-            and float(r.get("width")) == float(doc.get("width"))
-            and float(r.get("height")) == float(doc.get("height"))
+            and float(r.get("width")) == float(doc.get("width")) - 2
+            and float(r.get("height")) == float(doc.get("height")) - 2
             for r in rects
-        ), f"bounding white rect missing after strip for {raw!r}"
+        ), f"white field rect missing after strip for {raw!r}"
         # No data-* attrs survived anywhere.
         for el in doc.iter():
             for k in el.attrib:
