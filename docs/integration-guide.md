@@ -24,11 +24,11 @@ TypeScript/JavaScript (with a React component).
 
 Every implementation exposes a `render` entry point that takes an entropy string
 (plus optional aspect ratio, font size, and note) and returns an **SVG string**.
-Four of the five (all but Java) also expose a public `characterize` function that
-returns the structured [characterization](#the-characterization-model) directly.
-In **every** implementation, the eight characterization fields are also emitted
-onto the root `<svg>` as [`data-*` attributes](#reading-the-fields-off-a-rendered-svg),
-so a consumer can read them off any rendered entviz without a separate call.
+All five also expose a public `characterize` function that returns the structured
+[characterization](#the-characterization-model) directly. In **every**
+implementation, the eight characterization fields are also emitted onto the root
+`<svg>` as [`data-*` attributes](#reading-the-fields-off-a-rendered-svg), so a
+consumer can read them off any rendered entviz without a separate call.
 
 === "Python"
 
@@ -101,17 +101,19 @@ so a consumer can read them off any rendered entviz without a separate call.
 
     ```java
     import io.github.dhh1128.entviz.Entviz;
+    import io.github.dhh1128.entviz.Characterization;
     import io.github.dhh1128.entviz.RenderOptions;
 
     // Defaults: aspect ratio 1.0, 12pt, no note.
     String svg = Entviz.render("550e8400-e29b-41d4-a716-446655440000");
     String wide = Entviz.render("550e8400-e29b-41d4-a716-446655440000",
             new RenderOptions(2.0, 12.0, "id"));
-    ```
 
-    The Java port does not expose a public `characterize` function; read the
-    eight fields from the [`data-*` attributes](#reading-the-fields-off-a-rendered-svg)
-    on the SVG `Entviz.render` returns.
+    // characterize(entropy) -> Characterization (record, public accessors).
+    Characterization ch = Entviz.characterize("550e8400-e29b-41d4-a716-446655440000");
+    // ch.scheme() -> "uuid", ch.role() -> "identifier", ch.sizeBits() -> 128
+    // (scheme() and role() are null when absent); ch.qualifiers(), ch.parts().
+    ```
 
 === "TypeScript / JavaScript"
 
@@ -174,12 +176,11 @@ There are two equivalent ways to obtain the characterization.
 
 ### (a) Call `characterize()` directly
 
-In Python, Rust, Go, and TypeScript, call the public `characterize` function
-shown in the [quickstart](#quickstart-per-language). It returns the eight fields
-as a structured object (a dict / struct / interface) — no string parsing. This
-is the right choice when you have the raw value in hand and want the
-characterization without rendering. (The Java port has no public `characterize`;
-use approach (b).)
+In all five languages, call the public `characterize` function shown in the
+[quickstart](#quickstart-per-language). It returns the eight fields as a
+structured object (a dict / struct / record / interface) — no string parsing.
+This is the right choice when you have the raw value in hand and want the
+characterization without rendering.
 
 ### (b) Read the `data-*` attributes off a rendered SVG
 
