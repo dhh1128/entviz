@@ -54,7 +54,7 @@ consumer can read them off any rendered entviz without a separate call.
     ```toml
     # Cargo.toml
     [dependencies]
-    entviz = "0.13"
+    entviz = "0.14"
     ```
 
     ```rust
@@ -95,7 +95,7 @@ consumer can read them off any rendered entviz without a separate call.
     <dependency>
       <groupId>io.github.dhh1128</groupId>
       <artifactId>entviz</artifactId>
-      <version>0.13.0</version>
+      <version>0.14.0</version>
     </dependency>
     ```
 
@@ -169,6 +169,35 @@ string.
     measure, which is unchanged and distinct from `size_bits`. Use `size_bits`
     for display and coarse "is this big?" decisions only; do not treat it as the
     truncation boundary. See [Resolution A](spec.md#resolution-a-size_bits-and-size_basis).
+
+## The visible label
+
+The text entviz draws is a **projection of the characterization fields**, not a
+separately hand-fused string. The top strip follows one grammar —
+`[fingerprint of ]PRIMARY[, MOD][, SIZE]`, joined with a comma-space and with no
+trailing punctuation:
+
+* **PRIMARY** is the scheme name (`ETH`, `BTC`, `UUID`, `CESR`, `CIDv1`, `SSH`),
+  or — for self-describing prefix schemes — the framing prefix itself (`did:key`,
+  `urn:isbn`). When no scheme fired it is the encoding name (`hex`, `b64`) or
+  `text` for the UTF-8 fallback.
+* **MOD** carries the meaningful qualifiers (e.g. CESR primitive `Ed25519 nt`,
+  SSH `ed25519`, CID codec `dag-pb`) — shown only when they depart from the
+  silent default.
+* **SIZE** is shown in **bits** for decoded values (`hex, 256-bit`), in **bytes**
+  for the `text` UTF-8 fallback (`text, 56-byte`), and **omitted** for structured
+  identifiers whose size is fixed or a category error (DID, URN, UUID, ETH).
+
+Examples: `ETH`, `UUID`, `CESR, Blake3-256`, `CESR, Ed25519 nt`,
+`SSH, ed25519, 264-bit`, `CIDv1, dag-pb`, `hex, 256-bit`, `text, 56-byte`,
+`did:key`, `urn:isbn`, `fingerprint of b64, 712-bit`.
+
+The bottom strip shows any **bound checksum** as `...<suffix>` (optionally
+followed by ` (<note>)`). This checksum is **verified**: a parser surfaces it
+only after checking it, so an input whose structure matches a scheme but whose
+checksum is invalid is **rejected as an error**, never rendered with a bad
+checksum on display. See the [specification](spec.md) for the normative grammar
+and checksum rules.
 
 ## Consuming the fields
 
