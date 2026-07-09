@@ -29,6 +29,85 @@ class EIP55ChecksumError(ValueError):
         )
 
 
+class Base58CheckError(ValueError):
+    """
+    Raised by the base58check parsers (Bitcoin legacy, Litecoin legacy, Cardano
+    Byron) when the structure clearly matches — right leading character and
+    length — but the trailing 4-byte double-SHA256 checksum does not verify.
+
+    v14: a bound checksum is SHOWN in the label (the `...<suffix>` bottom
+    strip), so it must be VERIFIED; a mismatch is an error, not a value to
+    render with a bad checksum on display. Subclasses ValueError (like
+    EIP55ChecksumError) so existing ValueError handlers keep working. See
+    docs/spec.md "Checksum verification" and `this.i:v14lbl`.
+    """
+    def __init__(self, kind: str, address: str):
+        self.kind = kind
+        self.address = address
+        super().__init__(
+            f"{kind} address {address!r} fails its base58check "
+            f"(double-SHA256) checksum")
+
+
+class Bech32ChecksumError(ValueError):
+    """
+    Raised by the bech32 parsers (Bitcoin segwit `bc1`, Litecoin `ltc1`) when
+    the HRP + data clearly match the format but the BIP-173 / BIP-350 polymod
+    does not verify. Same v14 rationale as :class:`Base58CheckError`: the
+    format is shown/relied upon, so a bad checksum rejects rather than renders.
+    """
+    def __init__(self, kind: str, address: str):
+        self.kind = kind
+        self.address = address
+        super().__init__(
+            f"{kind} address {address!r} fails its bech32 checksum")
+
+
+class LEIChecksumError(ValueError):
+    """
+    Raised by parse_lei when a 20-char `<4 base36>00<...>` LEI-shaped input
+    fails the ISO/IEC 7064 MOD 97-10 checksum. v14: the structure (20 base36
+    chars with the reserved `00`) is a clear match, so a bad check-digit pair
+    is an error rather than a fall-through to a generic base36 encoding.
+    """
+    def __init__(self, lei: str):
+        self.lei = lei
+        super().__init__(f"LEI {lei!r} fails its MOD 97-10 checksum")
+
+
+def _base58_decode_bytes(s: str) -> bytes:
+    """Decode a base58 (Bitcoin alphabet) string to raw bytes, preserving
+    leading-zero bytes (each leading '1' is a 0x00 byte). Used only for
+    checksum verification; the visualized core is the original text."""
+    n = 0
+    for c in s:
+        v = BASE58_ALPHABET.find(c)
+        if v < 0:
+            # Not in the base58 alphabet — cannot be a valid base58check body.
+            return b""
+        n = n * 58 + v
+    body = n.to_bytes((n.bit_length() + 7) // 8, "big") if n else b""
+    pad = 0
+    for c in s:
+        if c == "1":
+            pad += 1
+        else:
+            break
+    return b"\x00" * pad + body
+
+
+def _base58check_ok(s: str) -> bool:
+    """True iff `s` decodes to `payload || checksum` where checksum is the
+    first 4 bytes of double-SHA256(payload). The near-universal base58check
+    construction used by Bitcoin/Litecoin legacy and Cardano Byron addresses."""
+    raw = _base58_decode_bytes(s)
+    if len(raw) < 5:
+        return False
+    payload, checksum = raw[:-4], raw[-4:]
+    digest = hashlib.sha256(hashlib.sha256(payload).digest()).digest()
+    return digest[:4] == checksum
+
+
 # Alphabet metadata. Each parser declares the alphabet of the `core` it
 # produces; the tokenizer reads `Parsed.alphabet` directly and dispatches
 # without re-guessing from the type name. (See spec-improvement-notes.md
@@ -557,11 +636,22 @@ def parse_bitcoin_address(text) -> Parsed:
     """
     m = BITCOIN_LEGACY_REGEX.match(text)
     if m:
+        # v14: the 4-byte double-SHA256 checksum is surfaced as the suffix, so
+        # it MUST verify. A structural match with a bad checksum rejects.
+        if not _base58check_ok(m.group(0)):
+            raise Base58CheckError("Bitcoin legacy", text)
         return Parsed("BTC legacy", BASE58, m.group(1), m.group(2), m.group(3))
     m = BITCOIN_SEGWIT_REGEX.match(text)
     if m:
-        # Bitcoin SegWit uses bech32 (BIP-173).
-        return Parsed("BTC SegWit", BECH32, m.group(1).lower(), m.group(2).lower(), None)
+        # Bitcoin SegWit uses bech32 (BIP-173). v14: verify the polymod (the
+        # specific parser previously skipped it) — a bad checksum rejects.
+        # group(1) is "bc1"/"tb1" (HRP + the '1' separator); the polymod HRP is
+        # the HRP alone, so strip the trailing separator before checking.
+        prefix = m.group(1).lower()
+        data = m.group(2).lower()
+        if _bech32_checksum_const(prefix.rstrip("1"), data) not in (1, 0x2bc830a3):
+            raise Bech32ChecksumError("Bitcoin segwit", text)
+        return Parsed("BTC SegWit", BECH32, prefix, data, None)
 
 def parse_ripple_address(text) -> Parsed:
     """
@@ -683,11 +773,21 @@ def parse_litecoin_address(text) -> Parsed:
     """
     m = LITECOIN_LEGACY_REGEX.match(text)
     if m:
+        # v14: Litecoin legacy is base58check; verify the double-SHA256
+        # checksum (surfaced implicitly by the format) — bad checksum rejects.
+        if not _base58check_ok(m.group(0)):
+            raise Base58CheckError("Litecoin legacy", text)
         return Parsed("LTC legacy", BASE58, m.group(1), m.group(2), None)
     m = LITECOIN_REGEX.match(text)
     if m:
-        # Modern Litecoin "ltc1..." uses bech32.
-        return Parsed("LTC", BECH32, m.group(1).lower(), m.group(2).lower(), None)
+        # Modern Litecoin "ltc1..." uses bech32. v14: verify the polymod (the
+        # specific parser previously skipped it) — a bad checksum rejects.
+        # group(1) is "ltc1"; the polymod HRP is "ltc" (strip the separator).
+        prefix = m.group(1).lower()
+        data = m.group(2).lower()
+        if _bech32_checksum_const(prefix.rstrip("1"), data) not in (1, 0x2bc830a3):
+            raise Bech32ChecksumError("Litecoin", text)
+        return Parsed("LTC", BECH32, prefix, data, None)
 
 def parse_bitcoin_cash_address(text) -> Parsed:
     """
@@ -699,6 +799,18 @@ def parse_bitcoin_cash_address(text) -> Parsed:
         # Bitcoin Cash uses CashAddr, which despite being commonly called
         # "base32" actually uses the bech32 alphabet (BIP-173 char set),
         # NOT RFC 4648 base32. Token alignment uses 5 bits/char either way.
+        #
+        # v14: verify the 40-bit CashAddr BCH checksum (a DIFFERENT code from
+        # bech32's polymod). group(1) is the optional "bitcoincash:"/"bchtest:"
+        # prefix (with the ':') or None; the checksum HRP is the prefix WITHOUT
+        # the colon, defaulting to "bitcoincash" for a bare q…/p… address. The
+        # payload (group 2, INCLUDING its 8 trailing checksum chars) is what the
+        # BCH code covers. A structural CashAddr match with a bad checksum is
+        # REJECTED, not rendered with an unverified suffix. See docs/spec.md
+        # "Checksum verification".
+        prefix = (m.group(1) or "bitcoincash:").rstrip(":").lower()
+        if not _cashaddr_verify(prefix, m.group(2)):
+            raise Bech32ChecksumError("Bitcoin Cash", text)
         return Parsed("BCH", BECH32, m.group(1), m.group(2).lower(), None)
 
 def parse_cardano_address(text) -> Parsed:
@@ -708,14 +820,34 @@ def parse_cardano_address(text) -> Parsed:
     """
     m = CARDANO_SHORT_BYRON_REGEX.match(text)
     if m:
-        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2), m.group(3))
+        # v14 NOTE: Cardano Byron addresses do NOT use a trailing base58check
+        # (double-SHA256) checksum field. Their integrity check is a CRC-32 over
+        # the CBOR-encoded address embedded INSIDE the decoded payload — there is
+        # NO trailing base58 checksum to split off. Earlier code peeled the last
+        # 6 base58 chars off as a `suffix`, which surfaced a "checksum" that is
+        # neither verified nor even a real checksum field. Per the v14 rule "only
+        # surface a bound checksum if it was VERIFIED", the whole Byron body is
+        # the core and suffix=None; we do NOT attempt CBOR/CRC-32 verification
+        # (out of scope). Shelley (bech32 addr1…) IS checksum-verified below.
+        # See docs/spec.md "Checksum verification" and reviews/v14-label-redesign.md.
+        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2) + m.group(3), None)
     m = CARDANO_LONG_BYRON_REGEX.match(text)
     if m:
-        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2), m.group(3))
+        # Byron long form — same CRC-32-in-CBOR rationale as above: no trailing
+        # base58 checksum field, so the whole body is the core, suffix=None.
+        return Parsed("ADA Byron", BASE58, m.group(1), m.group(2) + m.group(3), None)
     m = CARDANO_SHELLEY_REGEX.match(text)
     if m:
-        # Cardano Shelley uses bech32.
-        return Parsed("ADA Shelley", BECH32, m.group(1), m.group(2).lower(), m.group(3).lower())
+        # Cardano Shelley uses bech32. v14: verify the polymod on this specific
+        # path too (it previously skipped it) — a bad checksum rejects.
+        hrp = m.group(1)
+        # group(1) is "addr1"/"stake1"/"addr_test1"/… (HRP + the '1'
+        # separator); the polymod HRP is the HRP alone. The regex splits the
+        # 6-char checksum into group(3), so the polymod data is body+checksum.
+        data = (m.group(2) + m.group(3)).lower()
+        if _bech32_checksum_const(hrp.lower().rstrip("1"), data) not in (1, 0x2bc830a3):
+            raise Bech32ChecksumError("Cardano Shelley", text)
+        return Parsed("ADA Shelley", BECH32, hrp, m.group(2).lower(), m.group(3).lower())
 
 def parse_eos_address(text) -> Parsed:
     """
@@ -887,9 +1019,16 @@ def parse_lei(text) -> Parsed:
         return None
     upper = text.upper()
     if upper[4:6] != "00":
+        # Missing the reserved "00" -> not a clear LEI; fall through so a bare
+        # 20-char base36 string can still be recognized as an encoding.
         return None
     if not _lei_checksum_ok(upper):
-        return None
+        # v14: 20 base36 chars WITH the reserved "00" is an unambiguous LEI
+        # match, and the MOD 97-10 check digits are surfaced as the bound
+        # suffix — so a bad checksum REJECTS rather than falling through to a
+        # generic base36 encoding (which would render an invalid LEI). See
+        # docs/spec.md "Checksum verification".
+        raise LEIChecksumError(upper)
     return Parsed("LEI", BASE36, None, upper[:18], upper[18:])
 
 def parse_did(text) -> Parsed:
@@ -1051,6 +1190,43 @@ def _bech32_checksum_const(hrp, data):
     return _bech32_polymod(_bech32_hrp_expand(hrp) + values)
 
 
+# CashAddr generator constants (5 rows of the 40-bit BCH code used by Bitcoin
+# Cash — a DIFFERENT code from bech32's 30-bit BIP-173 polymod).
+_CASHADDR_GEN = (
+    0x98f2bc8e61, 0x79b76d99e2, 0xf33e5fb3c4, 0xae2eabe2a8, 0x1e4f43e470,
+)
+
+
+def _cashaddr_polymod(values):
+    """The 40-bit BCH checksum polymod used by Bitcoin Cash CashAddr (NOT the
+    bech32 polymod). `values` is a list of 5-bit ints. Valid iff it returns 0."""
+    c = 1
+    for d in values:
+        c0 = c >> 35
+        c = ((c & 0x07ffffffff) << 5) ^ d
+        for i in range(5):
+            if (c0 >> i) & 1:
+                c ^= _CASHADDR_GEN[i]
+    return c ^ 1
+
+
+def _cashaddr_verify(prefix, payload):
+    """Return True iff CashAddr `payload` (base32/bech32-charset body INCLUDING
+    the trailing 8 checksum chars) carries a valid BCH checksum under `prefix`
+    (lowercase, e.g. 'bitcoincash' / 'bchtest'). Bitcoin Cash's integrity check
+    is a 40-bit BCH code, not the bech32 polymod — hence a dedicated verifier.
+
+    values = [ord(x) & 0x1f for x in prefix] + [0] + [charset_index(x) for x
+    in payload]; valid iff _cashaddr_polymod(values) == 0. See docs/spec.md
+    "Checksum verification" and this.i:v14lbl."""
+    try:
+        body = [BECH32_ALPHABET.index(x) for x in payload.lower()]
+    except ValueError:
+        return False
+    values = [ord(x) & 0x1f for x in prefix] + [0] + body
+    return _cashaddr_polymod(values) == 0
+
+
 def parse_bech32_address(text) -> Parsed:
     """
     See if we can parse text as a generic, checksum-valid bech32 address —
@@ -1077,7 +1253,14 @@ def parse_bech32_address(text) -> Parsed:
     hrp = m.group(1).lower()
     data = m.group(2).lower()
     if _bech32_checksum_const(hrp, data) not in (1, 0x2bc830a3):
-        return None
+        # v14: a `<hrp>1<data>` string with 8+ bech32 chars is a clear bech32
+        # structural match, and the 6-char checksum is surfaced as the bound
+        # suffix — so an invalid polymod REJECTS rather than falling through to
+        # a bare bech32 encoding (which would render an address that fails its
+        # own checksum). This is the same "no entviz from an invalid checksum"
+        # rule the specific bc1/ltc1 parsers now follow. See docs/spec.md
+        # "Checksum verification".
+        raise Bech32ChecksumError("bech32", text)
     # Type is just "bech32"; the chain is named by the displayed prefix
     # (cosmos1/osmo1/…), not repeated in the type. See this.i:lbldedup.
     return Parsed("bech32", BECH32, hrp + "1", data[:-6], data[-6:])

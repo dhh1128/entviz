@@ -1,0 +1,10 @@
+{
+  "id": "err-bch-bad-checksum",
+  "entropy": "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "cashaddr-checksum"
+}

@@ -214,7 +214,7 @@
   "input_bytes": 44,
   "labels": {
     "bottom": null,
-    "top": "CESR Ed25519 nt pubkey:",
+    "top": "CESR, Ed25519 nt",
     "truncation_marker": false
   },
   "parts": [
@@ -231,7 +231,7 @@
   "scheme": "cesr",
   "size_basis": "decoded",
   "size_bits": 264,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

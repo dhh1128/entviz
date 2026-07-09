@@ -198,42 +198,24 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
         import base64
         from .entropy import BASE64URL
         core = base64.urlsafe_b64encode(raw_input.encode()).decode().rstrip('=')
-        # "txt(N)->b64url" surfaces in the per-entviz top label so the
-        # viewer knows the input wasn't directly tokenizable in any
-        # known alphabet and we re-encoded it as bytes. N = input chars.
-        type_name = f"txt({len(raw_input)})->b64url"
+        # UTF-8 fallback: the input wasn't tokenizable in any known alphabet, so
+        # it was re-encoded as base64url bytes. The visible label (`text,
+        # <N>-byte`) is projected from the characterization by render_label;
+        # the pipeline no longer fuses a per-parser type string here (v14).
         alphabet = BASE64URL  # fallback always produces urlsafe base64
         prefix = None
         suffix = None
         prefix_semantic = False
     else:
         core = parsed.core
-        type_name = parsed.type
         alphabet = parsed.alphabet
         prefix = parsed.prefix
         suffix = parsed.suffix
         prefix_semantic = parsed.prefix_semantic
-        # Length-bearing labels for the variable-length plain-alphabet
-        # types (hex / b64 / b64url). Rename base64* → b64* for
-        # consistency with the txt->b64url fallback shortening.
-        if type_name == "hex":
-            type_name = f"hex({len(core)})"
-        elif type_name == "base64":
-            type_name = f"b64({len(core)})"
-        elif type_name == "base64url":
-            type_name = f"b64url({len(core)})"
 
     tokens, is_truncated = tokenize_entropy(core, alphabet)
     if not tokens:
         raise ValueError("No tokens produced from input entropy.")
-
-    # v6: when the input exceeds 512 bits, tokenize_entropy returns 20
-    # tokens — 8 head (real entropy) + 4 middle (hex fingerprint readout) +
-    # 8 tail (real entropy). The label gets a loud `fingerprint of` prefix
-    # rendered in bold dark-red; assembly is done in _draw_label_strips where
-    # the styling lives. We carry the byte count separately so the label
-    # rendering doesn't have to peek at the raw input.
-    truncated_bytes = len(raw_input.encode("utf-8")) if is_truncated else None
 
     # v6 large inputs do NOT use fixed separator blanks. The 20 tokens keep
     # logical order (head 0..7, middle 8..11, tail 12..19) but blank cells are
@@ -393,7 +375,7 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # (reporting-only) and do not affect geometry or the raster. String axes are
     # emitted verbatim (null scheme/role -> empty string); size_bits as its
     # decimal; qualifiers/parts as compact JSON (the XML serializer escapes it).
-    from .characterize import characterize
+    from .characterize import characterize, render_label
     ch = characterize(raw_input)
     svg.set("data-encoding", ch["encoding"])
     svg.set("data-scheme", ch["scheme"] if ch["scheme"] is not None else "")
@@ -757,11 +739,20 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # when the parsed result has a suffix ("...<suffix>"). Both use the
     # cell-text font family and rendered size, filled #666 so they read
     # as a quiet label, not competing with the cells.
+    # v14: the visible label strips are a pure projection of the v13 entropy
+    # characterization through one grammar (render_label), NOT the old
+    # per-parser Parsed.type/prefix fusing. `ch` is the same characterization
+    # already emitted as data-* attributes above; the label reads exactly the
+    # fields a conformance consumer does. The styled `fingerprint of ` marker
+    # (bold dark-red) and the out-of-band note tspan are applied structurally
+    # in _draw_label_strips from the truncated/note flags. See docs/spec.md ->
+    # "Label strips" and reviews/v14-label-redesign.md.
+    top_text, _ = render_label(ch, truncated=is_truncated)
     _draw_label_strips(
         svg, grid_rect, gm, nucleus_height,
-        type_name=type_name, prefix=prefix, suffix=suffix,
+        top_text=top_text, suffix=suffix,
         text_size_px=label_text_px,
-        truncated_bytes=truncated_bytes,
+        truncated=is_truncated,
         note=note,
     )
 
@@ -789,30 +780,34 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
 
+_TRUNC_MARKER = "fingerprint of "
+
+
 def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
-                       type_name, prefix, suffix, text_size_px,
-                       truncated_bytes=None, note=None):
+                       top_text, suffix, text_size_px,
+                       truncated=False, note=None):
     """
-    Render the top "<Type>: <prefix>..." label strip (always) and, when
-    suffix is present, the bottom "...<suffix>" strip. Strips are
-    `nucleus_height` tall, separated from the grid and from the border
-    by GM. Both strips use monospace at `text_size_px`, filled #666.
-    Top is left-aligned to grid_rect.left; bottom is right-aligned to
-    grid_rect.right (so the ellipses on each point inward toward the
-    cells).
+    Render the top and bottom label strips (spec v14). Both strings are the
+    output of :func:`entviz.characterize.render_label` — a pure projection of
+    the entropy characterization through the v14 grammar
+    (``PRIMARY[, MOD]...[, SIZE]`` on top; ``...<suffix> (<note>)`` on the
+    bottom). This function only lays them out and applies the two structural
+    stylings the flat text can't carry.
 
-    v5: each strip is wrapped in its own data-channel group
-    ("label-top" / "label-bottom") so an overlay can highlight or
-    suppress the labels independently.
+    Strips are `nucleus_height` tall, separated from the grid and from the
+    border by GM. Both use monospace at `text_size_px`, filled #666. Top is
+    left-aligned to grid_rect.left; bottom is right-aligned to grid_rect.right
+    (so the ellipses on each point inward toward the cells).
 
-    When `truncated_bytes` is not None, the top label is prefixed with a
-    loud `fingerprint of ` marker rendered in bold dark-red (#a00000), with the
-    rest of the label following in the standard #666 non-bold style. The
-    marker and tail are emitted as two adjacent <text> elements inside
-    the label-top group so the styling cleanly differs while the line
-    still reads left-to-right. The byte count is omitted from the marker
-    because it is already present in the type-label parenthetical (e.g.
-    `hex(200)`, `b64(119)`).
+    v5: each strip is wrapped in its own data-channel group ("label-top" /
+    "label-bottom") so an overlay can highlight or suppress the labels
+    independently.
+
+    When `truncated` is set, `top_text` begins with the loud
+    ``fingerprint of `` marker; it is split back out and rendered in bold
+    dark-red (#a00000) as a leading <tspan>, with the remaining projected label
+    following in the standard #666 non-bold style, so the line still reads
+    left-to-right.
     """
     # font-family is inherited from the root <svg>; each label <text> carries
     # only a compact font-size presentation attribute (compacted by
@@ -820,25 +815,15 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
     font_size_attr = {"font-size": str(text_size_px)}
     # Top strip — always.
     top_g = etree.SubElement(svg, 'g', **{"data-channel": "label-top"})
-    if type_name:
-        rest_text = f"{type_name}:"
-        if prefix:
-            rest_text += f" {prefix}..."
-    else:
-        # A self-describing prefix (e.g. swh:1:rev:, gitoid:blob:sha256:) is
-        # the identifier on its own — show it alone, with no echoing type
-        # segment in front of it. See `this.i:lbldedup`.
-        rest_text = f"{prefix}..." if prefix else ""
     # v6: the top label band abuts the grid, so its text centers a
     # nucleus_height/2 above the grid — the same gap nucleus text has from the
     # nucleus's bottom edge. (The GM sits above the band, on the border side.)
     top_cy = grid_rect.top - nucleus_height / 2
-    if truncated_bytes is not None:
-        # Loud marker in bold dark red, then the standard label in #666 —
+    if truncated and top_text.startswith(_TRUNC_MARKER):
+        # Loud marker in bold dark red, then the projected label in #666 —
         # rendered as a bold-red <tspan> plus its tail inside ONE <text>, so
-        # they flow with exactly one space between them. (v5/v6.0 used two
-        # absolutely-positioned <text> elements with a guessed monospace
-        # advance, which overshot and left a ~2-space gap.)
+        # they flow with the projection's single trailing space intact.
+        rest_text = top_text[len(_TRUNC_MARKER):]
         label_el = etree.SubElement(
             top_g, 'text',
             x=str(grid_rect.left), y=str(top_cy),
@@ -849,7 +834,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
             label_el, 'tspan',
             fill='#a00000', **{"font-weight": "bold"},
         )
-        marker_tspan.text = "fingerprint of "
+        marker_tspan.text = _TRUNC_MARKER
         marker_tspan.tail = rest_text   # flows right after the marker, in #666
     else:
         el = etree.SubElement(
@@ -858,7 +843,7 @@ def _draw_label_strips(svg, grid_rect, gm, nucleus_height,
             fill='#666666',
             **{**font_size_attr, "dominant-baseline": "central"},
         )
-        el.text = rest_text
+        el.text = top_text
     # Bottom strip — when a suffix exists and/or a user note is supplied.
     # Layout (right-aligned to grid_rect.right): "...<suffix> (<note>)". The
     # suffix (algorithm-derived) is #666; the note (out-of-band, unverified)

@@ -212,7 +212,7 @@
   "input_bytes": 105,
   "labels": {
     "bottom": null,
-    "top": "did:key:...",
+    "top": "did:key",
     "truncation_marker": false
   },
   "parts": [
@@ -233,7 +233,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 384,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

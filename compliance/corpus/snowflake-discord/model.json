@@ -102,7 +102,7 @@
   "input_bytes": 17,
   "labels": {
     "bottom": null,
-    "top": "snowflake:",
+    "top": "snowflake",
     "truncation_marker": false
   },
   "parts": [
@@ -117,7 +117,7 @@
   "scheme": "snowflake",
   "size_basis": "decoded",
   "size_bits": 64,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

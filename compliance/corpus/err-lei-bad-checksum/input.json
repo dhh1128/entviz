@@ -1,0 +1,10 @@
+{
+  "id": "err-lei-bad-checksum",
+  "entropy": "5493001KJTIIGC8Y1R13",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "lei-checksum"
+}

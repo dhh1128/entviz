@@ -100,7 +100,7 @@
   "input_bytes": 11,
   "labels": {
     "bottom": null,
-    "top": "txt(11)->b64url:",
+    "top": "text, 11-byte",
     "truncation_marker": false
   },
   "parts": [
@@ -115,7 +115,7 @@
   "scheme": null,
   "size_basis": "utf8",
   "size_bits": 88,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

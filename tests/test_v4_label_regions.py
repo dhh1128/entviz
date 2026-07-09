@@ -26,69 +26,70 @@ def _labels(svg):
 
 
 def test_top_label_always_present_for_hex():
-    """Plain hex input shows 'hex(N):' where N is the length of the core.
+    """v14: a plain hex input shows the projected label 'hex, <bits>-bit'.
     Use chars including 6/7/8/9 so the input doesn't also match the EOS
     account-name regex (which is just [a-z1-5.])."""
-    svg = _doc(render("6789abcd6789abcd"))
+    svg = _doc(render("6789abcd6789abcd"))  # 16 hex chars -> 64 bits
     labels = _labels(svg)
     assert labels, "no label text found"
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "hex(16):", f"unexpected top label: {top.text!r}"
+    assert top.text == "hex, 64-bit", f"unexpected top label: {top.text!r}"
 
 
-def test_hex_with_0x_prefix_shows_count_and_prefix():
-    """For '0xdeadbeef': core='deadbeef' (8 chars), prefix='0x'.
-    Label = 'hex(8): 0x...'."""
-    svg = _doc(render("0xdeadbeefcafe6789"))
+def test_hex_with_0x_prefix_shows_projected_size():
+    """v14: '0x'-prefixed hex projects to 'hex, <bits>-bit' (the 0x
+    presentation prefix is normalized away; the label is a projection of the
+    characterization, not the parser's prefix)."""
+    svg = _doc(render("0xdeadbeefcafe6789"))  # body 'deadbeefcafe6789' = 64 bits
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    # 0x + 16 hex chars body = 'deadbeefcafe6789' (16 chars).
-    assert top.text == "hex(16): 0x..."
+    assert top.text == "hex, 64-bit"
 
 
-def test_txt_fallback_label_includes_input_byte_count():
-    """For UTF-8 → b64url fallback: 'txt(N)->b64url:' where N is the
-    length of the original input text (not the re-encoded core)."""
-    svg = _doc(render("hello world"))  # 11 chars (includes the space)
+def test_txt_fallback_label_is_text_with_byte_size():
+    """v14: the UTF-8 -> b64url fallback projects to 'text, <bytes>-byte'
+    (size over the ORIGINAL input bytes)."""
+    svg = _doc(render("hello world"))  # 11 bytes
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "txt(11)->b64url:"
+    assert top.text == "text, 11-byte"
 
 
-def test_base64_disproof_label_renamed_to_b64_with_count():
-    """When disproof picks base64 (input has '+' or '/'), label is
-    'b64(N):' where N is the char count of the core."""
-    # 12 chars with a '+' triggers base64 (not base64url).
+def test_base64_disproof_label_is_b64_with_size():
+    """v14: when disproof picks base64 (input has '+' or '/'), the label is
+    'b64, <bits>-bit'."""
+    # 12 chars with a '+' triggers base64 (not base64url). 12*6//8*8 = 72 bits.
     svg = _doc(render("ABCD+/EFGHIJ"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "b64(12):"
+    assert top.text == "b64, 72-bit"
 
 
-def test_base64url_disproof_label_renamed_to_b64url_with_count():
-    """When disproof picks base64url (input has '-' or '_'), label is
-    'b64url(N):'."""
-    # 12 chars with a '-' triggers base64url.
+def test_base64url_disproof_label_is_b64url_with_size():
+    """v14: when disproof picks base64url (input has '-' or '_'), the label is
+    'b64url, <bits>-bit'."""
+    # 12 chars with a '-' triggers base64url. 12*6//8*8 = 72 bits.
     svg = _doc(render("ABCD-_EFGHIJ"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "b64url(12):"
+    assert top.text == "b64url, 72-bit"
 
 
-def test_ethereum_top_label_includes_0x_prefix_and_ellipsis():
-    """For Ethereum: 'ETH: 0x...' (ticker abbreviation)."""
+def test_ethereum_top_label_is_bare_ticker():
+    """v14: Ethereum projects to just 'ETH' (a fixed-size address scheme
+    omits SIZE; the 0x presentation prefix is normalized away)."""
     svg = _doc(render("0x742d35cc6634c0532925a3b844bc454e4438f44e"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "ETH: 0x..."
+    assert top.text == "ETH"
 
 
 def test_uuid_top_label_no_prefix():
-    """UUID has no prefix; label is just 'UUID:'."""
+    """v14: UUID projects to just 'UUID' (no size, no trailing ':')."""
     svg = _doc(render("550e8400-e29b-41d4-a716-446655440000"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "UUID:"
+    assert top.text == "UUID"
 
 
 def test_bottom_label_only_present_with_suffix():
@@ -100,15 +101,15 @@ def test_bottom_label_only_present_with_suffix():
 
 
 def test_bitcoin_legacy_has_top_and_bottom_labels():
-    """Bitcoin legacy has both prefix and (true) suffix.
-    Top: 'BTC legacy: 1...'  Bottom: '...<4-char-base58-checksum>'."""
+    """v14: Bitcoin legacy projects PRIMARY 'BTC' on top (the legacy variant
+    is dropped, mainnet is silent, and a fixed-size address omits SIZE) and the
+    verified base58check checksum '...<4-char>' on the bottom."""
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     labels = _labels(svg)
     assert len(labels) == 2, f"expected 2 labels, got {len(labels)}"
     sorted_labels = sorted(labels, key=lambda t: float(t.get("y")))
     top, bottom = sorted_labels
-    assert top.text.startswith("BTC legacy: 1"), f"top: {top.text!r}"
-    assert top.text.endswith("..."), f"top: {top.text!r}"
+    assert top.text == "BTC", f"top: {top.text!r}"
     assert bottom.text.startswith("..."), f"bottom: {bottom.text!r}"
     # The suffix is 4 base58 chars; the label is "...XXXX" → length 7.
     assert len(bottom.text) == 7, f"bottom: {bottom.text!r}"
@@ -173,10 +174,11 @@ def test_disproof_alphabet_label_uses_alphabet_name():
     matched), the label shows the alphabet name, e.g. 'base32:', not
     'auto-detected:'."""
     # An uppercase base32-only string (no specific format prefix).
+    # v14: projects to 'base32, <bits>-bit' (24 chars * 5 // 8 * 8 = 120 bits).
     svg = _doc(render("ABCDEFGHIJKLMNOPQR234567"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "base32:"
+    assert top.text == "base32, 120-bit"
 
 
 def test_truncated_input_label_prefixed_with_loud_marker():
@@ -194,7 +196,8 @@ def test_truncated_input_label_prefixed_with_loud_marker():
     top_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
     assert top_g, "missing label-top group"
     joined = "".join(top_g[0].itertext())
-    assert "fingerprint of hex(200):" in joined, f"got: {joined!r}"
+    # v14: the projected label for a bare 800-bit hex is 'hex, 800-bit'.
+    assert "fingerprint of hex, 800-bit" in joined, f"got: {joined!r}"
 
 
 def test_non_truncated_input_label_has_no_loud_marker():

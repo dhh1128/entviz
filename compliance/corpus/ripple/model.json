@@ -170,7 +170,7 @@
   "input_bytes": 34,
   "labels": {
     "bottom": null,
-    "top": "XRP: r...",
+    "top": "XRP",
     "truncation_marker": false
   },
   "parts": [
@@ -189,7 +189,7 @@
   "scheme": "xrp",
   "size_basis": "decoded",
   "size_bits": 192,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

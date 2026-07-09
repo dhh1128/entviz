@@ -364,7 +364,7 @@
   "input_bytes": 119,
   "labels": {
     "bottom": null,
-    "top": "fingerprint of b64(119):",
+    "top": "fingerprint of b64, 712-bit",
     "truncation_marker": true
   },
   "parts": [
@@ -379,7 +379,7 @@
   "scheme": null,
   "size_basis": "decoded",
   "size_bits": 712,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": true,
   "user_note": null
 }

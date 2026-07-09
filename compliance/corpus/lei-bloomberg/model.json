@@ -130,7 +130,7 @@
   "input_bytes": 20,
   "labels": {
     "bottom": "...12",
-    "top": "LEI:",
+    "top": "LEI",
     "truncation_marker": false
   },
   "parts": [
@@ -149,7 +149,7 @@
   "scheme": "lei",
   "size_basis": "decoded",
   "size_bits": 96,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

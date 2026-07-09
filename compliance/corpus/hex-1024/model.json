@@ -364,7 +364,7 @@
   "input_bytes": 256,
   "labels": {
     "bottom": null,
-    "top": "fingerprint of hex(256):",
+    "top": "fingerprint of hex, 1024-bit",
     "truncation_marker": true
   },
   "parts": [
@@ -379,7 +379,7 @@
   "scheme": null,
   "size_basis": "decoded",
   "size_bits": 1024,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": true,
   "user_note": null
 }

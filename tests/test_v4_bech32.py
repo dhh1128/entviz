@@ -103,8 +103,10 @@ def test_bitcoin_segwit_p2wsh_parses():
 
 def test_cardano_shelley_parses_as_bech32():
     """Cardano Shelley addresses use bech32."""
-    # A real Cardano Shelley mainnet address
-    addr = "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"
+    # v14: a real checksum-valid Cardano Shelley address (the prior placeholder
+    # failed the now-enforced bech32 polymod). See docs/spec.md "Checksum
+    # verification".
+    addr = "addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kcmtwdac8zunnw36hvamc09a8klra0elsr0jfpr"
     p = parse(addr)
     assert p is not None
     assert p.type == "ADA Shelley"
@@ -113,7 +115,9 @@ def test_cardano_shelley_parses_as_bech32():
 
 def test_litecoin_modern_parses_as_bech32():
     """Modern Litecoin ltc1... addresses use bech32."""
-    addr = "ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5"
+    # v14: a real checksum-valid ltc1 address (the prior placeholder failed the
+    # now-enforced bech32 polymod).
+    addr = "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n9"
     p = parse(addr)
     assert p is not None
     assert p.alphabet is BECH32
@@ -146,6 +150,8 @@ def test_long_bech32_address_renders_without_error():
     """Regression test for the Cardano Shelley case that was crashing
     with IndexError because tokenize_entropy emitted 26 tokens."""
     from entviz.pipeline import render
-    addr = "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"
+    # v14: a real checksum-valid Shelley address (long enough to exercise the
+    # >512-bit truncation path that once crashed with IndexError).
+    addr = "addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kcmtwdac8zunnw36hvamc09a8klra0elsr0jfpr"
     svg = render(addr)
     assert svg.startswith("<svg")

@@ -170,7 +170,7 @@
   "input_bytes": 45,
   "labels": {
     "bottom": null,
-    "top": "urn:uuid:...",
+    "top": "urn:uuid",
     "truncation_marker": false
   },
   "parts": [
@@ -191,7 +191,7 @@
   "scheme": "urn",
   "size_basis": "utf8",
   "size_bits": 288,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

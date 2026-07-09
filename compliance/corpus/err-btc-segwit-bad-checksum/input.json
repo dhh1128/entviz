@@ -1,0 +1,10 @@
+{
+  "id": "err-btc-segwit-bad-checksum",
+  "entropy": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "bech32-checksum"
+}

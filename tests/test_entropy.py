@@ -12,18 +12,31 @@ expected_parsers = [
     ("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", parse_bitcoin_address), # Bitcoin P2PKH
     ("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2", parse_bitcoin_address), # Bitcoin P2PKH
     ("mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", parse_bitcoin_address), # Bitcoin P2PKH, testnet
-    ("nipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn", parse_bitcoin_address), # Bitcoin P2PKH, testnet
+    # v14: base58check/bech32 checksums are now VERIFIED, so the dispatch
+    # fixtures must be REAL valid addresses. The prior placeholders on the next
+    # two lines (a hand-flipped "nipc…" testnet clone and a truncated "bc1qrp…"
+    # / "LTC1q2V4…") failed their checksums and now correctly raise; they are
+    # replaced with real, checksum-valid addresses. See docs/spec.md
+    # "Checksum verification".
     ("3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy", parse_bitcoin_address), # Bitcoin P2SH
-    ("bc1qrp33g2q55j75r5psq4zhdjfx5u27q2sqjycr2xnwatqpzrqj", parse_bitcoin_address), # Bitcoin Bech32
+    ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", parse_bitcoin_address), # Bitcoin Bech32 (BIP-173)
     ("0x32Be343B94f860124dC4fEe278FDCBD38C102D88", parse_ethereum_address),
     ("rUocf1ixKzTuEe34kmVhRvGqNCofY1NJzV", parse_ripple_address),
-    ("LTC1q2V4Enf6z9nqLgqFZMA5GtRmZj9bsJ",  parse_litecoin_address),
-    ("bitcoincash:qqs3kax2g6r4swha54jpwelusnh3dkh7pvu23rzrru", parse_bitcoin_cash_address),
-    ("bchtest:qqs3kax2g6r4swha54jpwelusnh3dkh7pvu23rzrru", parse_bitcoin_cash_address),
-    ("qqs3kax2g6r4swha54jpwelusnh3dkh7pvu23rzrru", parse_bitcoin_cash_address),
+    ("LNXc9kUXRKAWgPLYnJ9pHwV89ngABHMhU4",  parse_litecoin_address), # LTC legacy (valid base58check)
+    # v14: CashAddr's 40-bit BCH checksum is now VERIFIED. The prior fixtures
+    # (qqs3kax2…) were placeholders that fail the checksum — and note the same
+    # body cannot be valid under both `bitcoincash:` and `bchtest:` because the
+    # prefix is folded into the checksum. Replaced with real valid addresses:
+    # the corpus P2PKH under mainnet + a bchtest re-checksum of the same 20-byte
+    # payload. The bare (no-prefix) form defaults to the `bitcoincash` HRP.
+    ("bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a", parse_bitcoin_cash_address),
+    ("bchtest:qpm2qsznhks23z7629mms6s4cwef74vcwvqcw003ap", parse_bitcoin_cash_address),
+    ("qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a", parse_bitcoin_cash_address),
     ("DdzFFzCqrht1D2Tv5F9HLtZHEd4P9Tddf9DFv3d4KXa2RxudcL4uHKWtc2HfiDopch5UHyZkXQx7", parse_cardano_address),
     ("Ae2tdPwUPEZ7SZaSCeU8sGZXGZ7YrVc96FnzYdZcLkbry4CqUKax9dNeEoe", parse_cardano_address),
-    ("addr1q7vggz4gzfn6c6xxp3q4t6gyg3e7azjrdms7hyhfpaam7hrcc2ha2lhxj2htfz7ndxhm6vfcvhx4zkszt2dfpqfy7w7sy72c2d",  parse_cardano_address),
+    # v14: valid Shelley bech32 address (the prior placeholder failed the
+    # now-enforced polymod). See docs/spec.md "Checksum verification".
+    ("addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kcmtwdac8zunnw36hvamc09a8klra0elsr0jfpr",  parse_cardano_address),
     ("eosio.token", parse_eos_address),
     ("GDFW2Z2IWGRJAJH5UNZ5B4PL5JY2X2BTHXVD5J7P64ICBRQJXP6VXABM", parse_stellar_address), # Stellar
     ("QmYwAPJzv5CZsnAzt8auVTLmk2d6y1ZH87oJZoYw1h7wQv", parse_ipfs_cid),  # CIDv0 (SHA-256)
@@ -92,6 +105,18 @@ def test_parsing():
                 # The parse_hex function is a bit of a special case, as it's a fallback for all hex-like inputs.
                 # Therefore, don't fail if it matches something that should be matched by another function.
                 if func == parse_hex and parse_func is not None: continue
+                # v14: the generic checksum-validated bech32 parser
+                # (parse_bech32_address) legitimately ALSO matches a valid
+                # segwit/Shelley address whose dedicated parser
+                # (parse_bitcoin_address / parse_litecoin_address /
+                # parse_cardano_address) runs FIRST in dispatch order and wins.
+                # The overlap is by design (both recognize a valid bech32
+                # checksum), so a generic match here is not a failure.
+                if (func == parse_bech32_address
+                        and parse_func in (parse_bitcoin_address,
+                                           parse_litecoin_address,
+                                           parse_cardano_address)):
+                    continue
                 fail(f"expected {func.__name__} to match, got {answer}")
             if answer:
                 if not answer.type: 

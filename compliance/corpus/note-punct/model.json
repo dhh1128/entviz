@@ -166,7 +166,7 @@
   "input_bytes": 40,
   "labels": {
     "bottom": "(a.b_c-d!)",
-    "top": "hex(40):",
+    "top": "hex, 160-bit",
     "truncation_marker": false
   },
   "parts": [
@@ -181,7 +181,7 @@
   "scheme": null,
   "size_basis": "decoded",
   "size_bits": 160,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": "a.b_c-d!"
 }

@@ -50,7 +50,12 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("btc-segwit", "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", {}),
     ("btc-segwit-p2wsh",
      "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3", {}),
-    ("litecoin", "ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5", {}),
+    # v14: replaced a placeholder ltc1 address that failed the (now-enforced)
+    # bech32 polymod with a real valid one — same 20-byte witness program as the
+    # canonical BIP-173 bc1qw508… P2WPKH example under the Litecoin HRP. (The old
+    # fixture only rendered because the specific ltc1 parser skipped the
+    # checksum.) See reviews/v14-label-redesign.md → checksum validation.
+    ("litecoin", "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n9", {}),
     ("bitcoincash", "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a", {}),
     ("cosmos", "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e", {}),
 
@@ -171,6 +176,30 @@ ERROR_VECTORS: list[tuple[str, str, dict, str]] = [
     # canonical spec vector flipped to lowercase).
     ("err-eip55-bad-checksum",
      "0x5aaeb6053F3E94C9b9A09f33669435E7Ef1BeAed", {}, "eip55-checksum"),
+    # v14 checksum verification: each is a valid render vector with a single
+    # checksum char corrupted, so the structure clearly matches the scheme but
+    # the (now-verified) bound checksum fails -> reject. See docs/spec.md
+    # "Checksum verification".
+    #   base58check double-SHA256 (Bitcoin legacy): last checksum char a->b.
+    ("err-btc-legacy-bad-checksum",
+     "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", {}, "base58check"),
+    #   bech32 polymod (Bitcoin segwit, specific bc1 parser): last char 4->5.
+    ("err-btc-segwit-bad-checksum",
+     "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", {}, "bech32-checksum"),
+    #   bech32 polymod (Litecoin ltc1, specific parser): last char 9->8.
+    ("err-ltc-bad-checksum",
+     "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n8", {}, "bech32-checksum"),
+    #   bech32 polymod (generic cosmos parser): last char e->f.
+    ("err-cosmos-bad-checksum",
+     "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363f", {}, "bech32-checksum"),
+    #   CashAddr 40-bit BCH code (Bitcoin Cash): the valid corpus address with
+    #   its last payload char corrupted a->q. NOT the bech32 polymod — Bitcoin
+    #   Cash uses a distinct 40-bit BCH checksum. See docs/spec.md.
+    ("err-bch-bad-checksum",
+     "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q", {}, "cashaddr-checksum"),
+    #   LEI MOD 97-10 (base36): last check digit 2->3.
+    ("err-lei-bad-checksum",
+     "5493001KJTIIGC8Y1R13", {}, "lei-checksum"),
     # user-note sanitization. The note is printable ASCII only, so the rejected
     # cases are now (a) too long, (b) a control character, (c) any non-ASCII
     # codepoint (which closes the homoglyph/bidi/zero-width surface).

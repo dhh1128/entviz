@@ -166,7 +166,7 @@
   "input_bytes": 50,
   "labels": {
     "bottom": null,
-    "top": "swh:1:rev:...",
+    "top": "swh:1:rev",
     "truncation_marker": false
   },
   "parts": [
@@ -188,7 +188,7 @@
   "scheme": "swhid",
   "size_basis": "decoded",
   "size_bits": 160,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

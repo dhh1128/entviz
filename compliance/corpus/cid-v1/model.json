@@ -270,7 +270,7 @@
   "input_bytes": 59,
   "labels": {
     "bottom": null,
-    "top": "CIDv1 dag-pb: b...",
+    "top": "CIDv1, dag-pb",
     "truncation_marker": false
   },
   "parts": [
@@ -293,7 +293,7 @@
   "scheme": "cid",
   "size_basis": "decoded",
   "size_bits": 288,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

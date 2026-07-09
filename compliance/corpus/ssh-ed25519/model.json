@@ -214,7 +214,7 @@
   "input_bytes": 97,
   "labels": {
     "bottom": null,
-    "top": "SSH ed25519: AAAAC3NzaC1lZDI1NTE5AAAA...",
+    "top": "SSH, ed25519, 264-bit",
     "truncation_marker": false
   },
   "parts": [
@@ -235,7 +235,7 @@
   "scheme": "ssh",
   "size_basis": "decoded",
   "size_bits": 264,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

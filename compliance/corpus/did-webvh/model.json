@@ -268,7 +268,7 @@
   "input_bytes": 71,
   "labels": {
     "bottom": null,
-    "top": "did:webvh:...",
+    "top": "did:webvh",
     "truncation_marker": false
   },
   "parts": [
@@ -289,7 +289,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 488,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

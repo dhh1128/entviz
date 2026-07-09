@@ -166,7 +166,7 @@
   "input_bytes": 26,
   "labels": {
     "bottom": null,
-    "top": "ULID:",
+    "top": "ULID",
     "truncation_marker": false
   },
   "parts": [
@@ -181,7 +181,7 @@
   "scheme": "ulid",
   "size_basis": "decoded",
   "size_bits": 128,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

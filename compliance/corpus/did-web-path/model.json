@@ -166,7 +166,7 @@
   "input_bytes": 36,
   "labels": {
     "bottom": null,
-    "top": "did:web:...",
+    "top": "did:web",
     "truncation_marker": false
   },
   "parts": [
@@ -187,7 +187,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 224,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

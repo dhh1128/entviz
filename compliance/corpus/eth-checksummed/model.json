@@ -166,7 +166,7 @@
   "input_bytes": 42,
   "labels": {
     "bottom": null,
-    "top": "ETH: 0x...",
+    "top": "ETH",
     "truncation_marker": false
   },
   "parts": [
@@ -185,7 +185,7 @@
   "scheme": "eth",
   "size_basis": "decoded",
   "size_bits": 160,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

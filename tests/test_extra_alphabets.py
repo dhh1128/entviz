@@ -6,8 +6,10 @@ checksum-validated bech32 (Cosmos-SDK chains). See `this.i:xtra4lph`.
 see the same this.i node for why each is ambiguous, would mislabel a large
 fraction of base64 inputs, or needs a larger design decision.)
 """
+import pytest
+
 from entviz.entropy import (
-    parse, parse_bech32_address, BASE32, BECH32,
+    parse, parse_bech32_address, BASE32, BECH32, Bech32ChecksumError,
 )
 
 
@@ -56,8 +58,13 @@ def test_hrp_names_the_chain_generically():
 
 
 def test_invalid_checksum_is_rejected():
+    # v14: a clear `<hrp>1<data>` bech32 match with a bad polymod REJECTS
+    # (raises) rather than returning None and falling through to a bare
+    # bech32 encoding — the checksum is surfaced as the suffix, so it must
+    # verify. See docs/spec.md "Checksum verification".
     bad = COSMOS[:-1] + ("q" if COSMOS[-1] != "q" else "p")
-    assert parse_bech32_address(bad) is None
+    with pytest.raises(Bech32ChecksumError):
+        parse_bech32_address(bad)
 
 
 def test_specific_bech32_formats_still_win():

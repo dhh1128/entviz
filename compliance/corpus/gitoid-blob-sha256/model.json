@@ -214,7 +214,7 @@
   "input_bytes": 83,
   "labels": {
     "bottom": null,
-    "top": "gitoid:blob:sha256:...",
+    "top": "gitoid:blob:sha256",
     "truncation_marker": false
   },
   "parts": [
@@ -236,7 +236,7 @@
   "scheme": "gitoid",
   "size_basis": "decoded",
   "size_bits": 256,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

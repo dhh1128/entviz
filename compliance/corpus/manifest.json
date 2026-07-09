@@ -1,6 +1,6 @@
 {
-  "spec_version": "v13",
-  "lib_version": "0.13.0",
+  "spec_version": "v14",
+  "lib_version": "0.14.0",
   "rasterizer": "cairosvg-2.9.0@scale2.0",
   "raster_scale": 2.0,
   "channel_tol": 16,
@@ -79,6 +79,12 @@
   ],
   "error_vectors": [
     "err-eip55-bad-checksum",
+    "err-btc-legacy-bad-checksum",
+    "err-btc-segwit-bad-checksum",
+    "err-ltc-bad-checksum",
+    "err-cosmos-bad-checksum",
+    "err-bch-bad-checksum",
+    "err-lei-bad-checksum",
     "err-note-too-long",
     "err-note-control",
     "err-note-nonascii",

@@ -293,6 +293,175 @@ def _parts_from_parsed(parsed) -> list[dict]:
     return parts
 
 
+# ---------------------------------------------------------------------------
+# Label projection (spec v14).
+#
+# The visible top/bottom label strips are a PURE PROJECTION of the eight
+# characterization fields through one grammar — no per-parser string fusing.
+# Every implementation renders the same strips by running this same function
+# over the shared fields. See docs/spec.md -> "Label strips" and
+# reviews/v14-label-redesign.md.
+#
+#   top    = [fingerprint of ]PRIMARY[, MOD]...[, SIZE]
+#   bottom = ...<suffix>[ (<note>)]
+#
+# Slot separator is ", " (comma-space); no trailing ':' or '...'.
+# ---------------------------------------------------------------------------
+
+# Bare-encoding display shortenings for the PRIMARY slot when scheme is null
+# and the basis is decoded (the encoding name IS the primary). Mirrors the
+# pre-v14 pipeline renaming base64->b64, base64url->b64url; the other alphabet
+# names (hex, base32, base58, bech32, crockford32, decimal) show verbatim.
+_ENCODING_PRIMARY = {
+    "base64": "b64",
+    "base64url": "b64url",
+}
+
+# scheme -> visible PRIMARY short-name for the non-self-describing schemes.
+# The characterization `scheme` field is lowercase (btc/eth/...); the label
+# uses the conventional display casing (BTC/ETH/UUID/...). CID is special-cased
+# (CIDv0 / CIDv1 from qualifiers.version); the self-describing prefix schemes
+# (did/urn/gitoid/swhid) reconstruct their prefix from qualifiers and never
+# reach this map.
+_SCHEME_PRIMARY = {
+    "eth": "ETH",
+    "btc": "BTC",
+    "ltc": "LTC",
+    "bch": "BCH",
+    "ada": "ADA",
+    "xrp": "XRP",
+    "stellar": "XLM",
+    "eos": "EOS",
+    "uuid": "UUID",
+    "ulid": "ULID",
+    "lei": "LEI",
+    "snowflake": "snowflake",
+    "ssh": "SSH",
+    "cesr": "CESR",
+    "bech32": "bech32",
+    "multihash": "multihash",
+}
+
+# Blockchain schemes whose network qualifier, when it departs from mainnet,
+# surfaces as a MOD (testnet loud; mainnet silent). The legacy/segwit `variant`
+# is DROPPED entirely (v14).
+_BLOCKCHAIN_SCHEMES = frozenset(
+    {"btc", "ltc", "bch", "ada", "eth", "xrp", "stellar", "eos", "bech32"})
+
+
+def _primary(ch: dict) -> str:
+    """The PRIMARY slot: the always-present head of the top label."""
+    scheme = ch["scheme"]
+    q = ch["qualifiers"]
+    if scheme is None:
+        # Bare encoding or UTF-8 fallback.
+        if ch["size_basis"] == "utf8":
+            return "text"
+        enc = ch["encoding"]
+        return _ENCODING_PRIMARY.get(enc, enc)
+    if scheme == "did":
+        return f"did:{q['method']}"
+    if scheme == "urn":
+        return f"urn:{q['nid']}"
+    if scheme == "gitoid":
+        # gitoid:<object>:<algorithm> (e.g. gitoid:blob:sha256).
+        return f"gitoid:{q.get('object', '')}:{q.get('algorithm', '')}"
+    if scheme == "swhid":
+        # swh:1:<object> (e.g. swh:1:rev).
+        return f"swh:1:{q.get('object', '')}"
+    if scheme == "cid":
+        return "CIDv0" if q.get("version") == 0 else "CIDv1"
+    return _SCHEME_PRIMARY.get(scheme, scheme)
+
+
+def _mods(ch: dict) -> list[str]:
+    """The MOD slots (zero or more): silent-default / loud-departure facets."""
+    scheme = ch["scheme"]
+    q = ch["qualifiers"]
+    mods: list[str] = []
+    if scheme == "cesr":
+        # The primitive with the redundant role word dropped: strip trailing
+        # " pubkey" (role=key/digest is implied by the primitive).
+        algo = q.get("algorithm", "")
+        if algo.endswith(" pubkey"):
+            algo = algo[: -len(" pubkey")]
+        if algo:
+            mods.append(algo)
+    elif scheme == "ssh":
+        algo = q.get("algorithm")
+        if algo:
+            mods.append(algo)
+    elif scheme == "cid":
+        # CIDv0 is dag-pb/sha2-256 by definition -> no MOD. CIDv1: codec always,
+        # hash only on departure from sha2-256.
+        if q.get("version") != 0:
+            codec = q.get("codec")
+            if codec:
+                mods.append(codec)
+            hash_name = q.get("hash")
+            if hash_name and hash_name != "sha2-256":
+                mods.append(hash_name)
+    elif scheme == "multihash":
+        hash_name = q.get("hash")
+        if hash_name and hash_name != "sha2-256":
+            mods.append(hash_name)
+    elif scheme in _BLOCKCHAIN_SCHEMES:
+        # Network only on departure (testnet); mainnet silent. Variant dropped.
+        network = q.get("network")
+        if network and network != "mainnet":
+            mods.append(network)
+    return mods
+
+
+def _size(ch: dict):
+    """The SIZE slot (zero or one), or None when omitted."""
+    scheme = ch["scheme"]
+    size_bits = ch["size_bits"]
+    if scheme is None:
+        if ch["size_basis"] == "utf8":
+            return f"{size_bits // 8}-byte"
+        return f"{size_bits}-bit"
+    if scheme in ("ssh", "multihash"):
+        return f"{size_bits}-bit"
+    return None
+
+
+def render_label(ch: dict, truncated: bool = False, suffix: str = None,
+                 note: str = None) -> tuple[str, str]:
+    """Project a characterization into the (top, bottom) label strips (v14).
+
+    Pure function of the eight characterization fields (plus the presentation
+    facts the fields don't carry: whether the input was >512-bit ``truncated``,
+    the bound ``suffix`` checksum, and the out-of-band user ``note``).
+
+    * ``top``    = ``[fingerprint of ]PRIMARY[, MOD]...[, SIZE]`` — ", " joined,
+      no trailing ``:`` or ``...``. The ``fingerprint of `` marker is added by
+      the renderer's styled prefix; it is reflected here so a text-only consumer
+      still sees it.
+    * ``bottom`` = ``...<suffix>`` then `` (<note>)`` — the bound (now-verified)
+      checksum and the user caption. Empty string when neither is present.
+
+    Returns plain strings; the renderer maps ``top``/``bottom`` onto the SVG
+    label strips (styling the marker and note tspans). See
+    ``reviews/v14-label-redesign.md`` and ``this.i:v14lbl``.
+    """
+    slots = [_primary(ch)]
+    slots.extend(_mods(ch))
+    size = _size(ch)
+    if size is not None:
+        slots.append(size)
+    top = ", ".join(slots)
+    if truncated:
+        top = "fingerprint of " + top
+
+    bottom = ""
+    if suffix:
+        bottom = f"...{suffix}"
+    if note:
+        bottom = f"{bottom} ({note})" if bottom else f"({note})"
+    return top, bottom
+
+
 def characterize(entropy: str) -> dict:
     """Characterize an entropy string into the structured model (spec v13).
 

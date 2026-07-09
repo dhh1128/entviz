@@ -12,9 +12,11 @@ LEI is defined by ISO 17442:
 This file is also the test home for the BASE36 alphabet singleton that LEI
 declares as its `Parsed.alphabet`.
 """
+import pytest
+
 from entviz.entropy import (
     parse, parse_lei, tokenize_entropy,
-    BASE36, BASE36_ALPHABET,
+    BASE36, BASE36_ALPHABET, LEIChecksumError,
 )
 
 
@@ -130,10 +132,16 @@ def test_invalid_character_rejected():
 
 
 def test_invalid_checksum_rejected():
-    """Take a valid LEI and flip the last digit so MOD 97-10 fails."""
+    """Take a valid LEI and flip the last digit so MOD 97-10 fails.
+
+    v14: a 20-char base36 string WITH the reserved '00' is an unambiguous LEI
+    match whose check digits are surfaced as the bound suffix, so a bad checksum
+    now REJECTS (raises) rather than returning None. See docs/spec.md "Checksum
+    verification"."""
     # Original valid: ...Y1R12. Change last digit to make it invalid.
     bad = "5493001KJTIIGC8Y1R13"
-    assert parse_lei(bad) is None
+    with pytest.raises(LEIChecksumError):
+        parse_lei(bad)
 
 
 def test_position_5_6_not_00_rejected():

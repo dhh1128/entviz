@@ -1,0 +1,10 @@
+{
+  "id": "err-btc-legacy-bad-checksum",
+  "entropy": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "base58check"
+}

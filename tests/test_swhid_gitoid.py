@@ -147,14 +147,17 @@ def test_gitoid_dispatches_through_parse():
 
 
 def test_no_type_label_renders_self_describing_prefix_alone():
-    # The top label must show the prefix on its own, with no echoing type
-    # ("SWHID"/"git object") in front of it. See this.i:lbldedup.
+    # v14: the top label PRIMARY is the self-describing prefix verbatim, with no
+    # body echo, no trailing ':' or '...', and no echoing type ("SWHID"/"git
+    # object") in front of it. See this.i:v14lbl / this.i:lbldedup.
     from entviz.pipeline import render
     svg = render("swh:1:rev:" + SHA1)
-    assert "swh:1:rev:..." in svg
+    assert ">swh:1:rev<" in svg
+    assert "swh:1:rev:..." not in svg
     assert "SWHID" not in svg
     svg2 = render("gitoid:blob:sha256:" + SHA256)
-    assert "gitoid:blob:sha256:..." in svg2
+    assert ">gitoid:blob:sha256<" in svg2
+    assert "gitoid:blob:sha256:..." not in svg2
     assert "git object" not in svg2
 
 

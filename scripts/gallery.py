@@ -67,10 +67,12 @@ SAMPLES = [
     ("Bech32 addresses", [
         ("Bitcoin SegWit P2WPKH",       "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"),
         ("Bitcoin SegWit P2WSH",        "bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3"),
-        ("Litecoin (ltc1)",             "ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5"),
+        # v14: real checksum-valid ltc1 / Shelley addresses (the prior gallery
+        # placeholders failed the now-enforced bech32 polymod and would raise).
+        ("Litecoin (ltc1)",             "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n9"),
         ("Bitcoin Cash CashAddr",       "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"),
         ("Cardano Shelley",
-         "addr1q9c0sj9wp29txqlt0qkc4cz76d5szl4xqgmgpw70ay9zkmskq7stm5kkjjjvrjz9p3kgxx0plzkphkn2yepg6w2zjphshtm0rl"),
+         "addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kcmtwdac8zunnw36hvamc09a8klra0elsr0jfpr"),
         ("Cosmos Hub (checksum-validated, HRP in label)",
          "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e"),
         ("Osmosis (same generic bech32 parser)",

@@ -3597,3 +3597,130 @@ Entviz = goal:
         card + paper/spec figures regen, then 4 ports (js/rs/java/go) reproduce
         Tier A against the regenerated corpus. Relates to
         [[entviz-multiimpl-plan]].
+
+    Label grammar as a characterization projection + verified checksums (v14) = decision:
+      id: v14lbl
+      status: drafted
+      why: >
+        2026-07-09. Two coupled v14 changes, both spec-observable -> SPEC_VERSION
+        v13->v14, lib 0.13.0->0.14.0. Builds on the v13 [[ch4rmod3l]]
+        characterization.
+
+        (1) LABEL = PROJECTION OF THE CHARACTERIZATION. Through v13 the top strip
+        was hand-fused per parser from Parsed.type/prefix ("CESR Ed25519 nt
+        pubkey:", "hex(64):", "txt(56)->b64url:", "ETH: 0x..."). v14 adds ONE
+        function render_label(characterization) -> (top, bottom) that projects the
+        8 shared fields through a single grammar:
+          top = [fingerprint of ]PRIMARY[, MOD]...[, SIZE]   (", " joined; NO
+                trailing ':' or '...').
+          PRIMARY: did/urn/gitoid/swhid -> the self-describing prefix verbatim
+            (did:key, urn:isbn, gitoid:blob:sha256, swh:1:rev); else the short
+            scheme name (ETH/BTC/UUID/CESR/CIDv0/CIDv1/...); else (scheme null)
+            "text" when size_basis=utf8, otherwise the encoding name (hex, b64,
+            ...; base64/base64url shortened to b64/b64url).
+          MOD (silent default / loud departure): CESR primitive minus trailing
+            " pubkey"; SSH algorithm; CID codec always + hash on departure from
+            sha2-256 (CIDv0 -> none); blockchain network only on testnet (mainnet
+            silent; variant DROPPED); multihash hash on departure. Nothing for
+            UUID/ULID/ETH/XRP/XLM/EOS/LEI/snowflake/bare.
+          SIZE: scheme null -> "<size_bits>-bit" (decoded) / "<size_bits/8>-byte"
+            (utf8); ssh & multihash -> "<size_bits>-bit"; all other schemes omit.
+        The pipeline no longer builds a type_name string; render() computes `ch`
+        once (already emitted as data-*) and passes it to render_label. The
+        _draw_label_strips styling (bold dark-red "fingerprint of " marker, gray
+        data-user-note note tspan) is preserved by re-splitting the flat text.
+        This SUPERSEDES the per-parser label rules in [[lbldedup]] (which stays
+        valid as the design *rationale* — silent-default/loud-departure,
+        no-echo-the-prefix — now expressed once in the grammar rather than fused
+        per parser).
+
+        Table-vs-field tension resolved: the design's before->after table wanted
+        ssh-ed25519 -> "256-bit", but the v13 size_bits field is 264 (the SSH core
+        is 44 base64 chars = 33 bytes: the fixed 24-char structural prefix stops 1
+        byte short of the 32-byte key, leaving the low key-length byte in the
+        core). Daniel picked FAITHFUL PROJECTION: label reads "264-bit" (matches
+        the data-size-bits attr; ports already emit 264), table corrected. Label
+        MUST equal a projection of the field, not a re-derived semantic size.
+
+        LABELS ARE EXCLUDED FROM THE TIER-B RASTER, so despite every top label
+        changing, NO golden.png changes from the label work — only Tier-A
+        model.json `labels` (+ the version stamp). Verified: git diff on
+        corpus/*/golden.png is EMPTY except the one fixture below.
+
+        (2) VERIFIED CHECKSUMS (reject on mismatch). A parser may SHOW a bound
+        checksum (bottom strip suffix) only if it VERIFIED it; a structural match
+        with a bad checksum now RAISES (an error vector), like the existing
+        [[3ip55rj1]] EIP-55 reject. New error classes subclass ValueError:
+        Base58CheckError, Bech32ChecksumError, LEIChecksumError.
+          * base58check (BTC/LTC legacy): base58-decode whole address, verify
+            trailing 4 bytes == dbl-SHA256(payload)[:4].
+          * bech32/bech32m: verify BIP-173/BIP-350 polymod on ALL paths. The
+            specific bc1/ltc1/Shelley parsers previously SKIPPED it; they now
+            verify. GOTCHA: their regex group(1) includes the '1' separator
+            ("bc1"/"ltc1"/"addr1"), but the polymod HRP is the HRP ALONE -> must
+            .rstrip("1") before _bech32_checksum_const. The generic cosmos parser
+            now RAISES (was: return None -> fall through to bare bech32).
+          * LEI: bad MOD 97-10 now REJECTS (was: return None -> generic base36).
+        DELIBERATELY NOT verified: Cardano BYRON (CRC-32 inside the CBOR payload,
+        NOT the trailing dbl-SHA256 tail — probed: real Byron addresses FAIL
+        _base58check_ok, so applying it would reject every real address) and
+        Bitcoin Cash CashAddr (its own 40-bit BCH checksum, not BIP-173). Left
+        recognized-but-unverified pending a correct per-scheme check. Accepted
+        trade-off (documented in spec): a bad-checksum base58/bech32 blob is
+        REJECTED, not rendered as bare base58/bech32 — the intended "no entviz
+        from an invalid checksum".
+
+        FIXTURE FIX (the ONLY raster change in v14): the corpus `litecoin` vector
+        ltc1qhw6dgkk52v9eqzukju7vrqpw0jt4wll6e6n4q5 FAILS the now-enforced polymod
+        (reference full-decode const = 0x1764e5c, not 1 — a placeholder that only
+        rendered because the specific parser skipped the checksum). Replaced with a
+        real valid address ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n9 (same
+        20-byte witness program as the canonical BIP-173 bc1qw508... P2WPKH under
+        the LTC HRP). Changes exactly ONE golden.png. Same stale-placeholder
+        replacement done in scripts/gallery.py (ltc1 + a fake Cardano Shelley) and
+        tests/test_entropy.py (a hand-flipped testnet clone, a truncated bc1, a
+        fake ltc1, a fake Shelley), plus one test-tolerance addition (the generic
+        bech32 parser legitimately co-matches a valid segwit/Shelley address whose
+        dedicated parser wins in dispatch order).
+
+        New corpus error vectors: err-btc-legacy/-btc-segwit/-ltc/-cosmos/-lei
+        -bad-checksum (each a valid vector with one checksum char corrupted).
+        Self-cert 89/89.
+
+        Blast radius: src/entviz/characterize.py (render_label + _primary/_mods/
+        _size + scheme/encoding maps), src/entviz/pipeline.py (call render_label,
+        drop type_name fusing), src/entviz/entropy.py (3 error classes +
+        _base58_decode_bytes/_base58check_ok + verification in bitcoin/litecoin/
+        cardano/bech32/lei parsers), src/entviz/__init__.py (versions),
+        compliance/corpus.py (litecoin fixture + 5 error vectors), docs/spec.md
+        (label-strip step -> grammar; normalization step -> Checksum verification;
+        error catalog; version), spec-change-log.md (v14 entry), tests (fixtures +
+        new label/reject tests), corpus + gallery + social card + paper/spec
+        figures regen, then 4 ports (js/rs/java/go on main; js on
+        feat/disclosure-lifecycle-ux) reproduce Tier A + the new error vectors.
+        RESIDUAL-GAP CLOSURE (follow-up, same Stage 0 commit): the two schemes
+        left "recognized-but-unverified" above are now closed.
+          * BCH CashAddr — implemented _cashaddr_verify(prefix, payload) +
+            _cashaddr_polymod (the 40-bit BCH code, GEN constants
+            0x98f2bc8e61/0x79b76d99e2/0xf33e5fb3c4/0xae2eabe2a8/0x1e4f43e470;
+            NOT the bech32 polymod). parse_bitcoin_cash_address now REJECTS a bad
+            checksum (Bech32ChecksumError "Bitcoin Cash"). HRP = prefix minus the
+            ':' (default "bitcoincash" for a bare q…/p… body); payload includes
+            its 8 checksum chars; charset indices via BECH32_ALPHABET (CashAddr
+            reuses the bech32 char set). Gate: corpus addr
+            bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a still validates
+            → BCH (same render, no png change); one-char-corrupted variant
+            rejects. New err vector err-bch-bad-checksum (last char a→q).
+          * Cardano BYRON — stopped surfacing a FALSE suffix. Byron has no
+            trailing base58 checksum field (its check is CRC-32 inside the CBOR),
+            so the old code peeling the last 6 base58 chars as `suffix` was
+            showing an unverified non-checksum. Now the whole body is the core and
+            suffix=None (both short Ae2… and long DdzFF… forms). We do NOT verify
+            the CRC-32 (out of scope) — the point is to never DISPLAY an
+            unverified checksum, satisfying the v14 rule. Shelley untouched
+            (already bech32-verified). No Byron corpus vector (unchanged).
+        Self-cert now 90/90 (+1 error vector: err-bch). Only golden.png change in
+        all of v14 remains the litecoin fixture fix above.
+
+        Relates to [[lbldedup]], [[sufxbind]], [[3ip55rj1]], [[ch4rmod3l]],
+        [[entviz-multiimpl-plan]].

@@ -258,7 +258,7 @@
   "input_bytes": 59,
   "labels": {
     "bottom": null,
-    "top": "did:pkh:...",
+    "top": "did:pkh",
     "truncation_marker": false
   },
   "parts": [
@@ -279,7 +279,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 408,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

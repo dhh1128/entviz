@@ -102,7 +102,7 @@
   "input_bytes": 16,
   "labels": {
     "bottom": null,
-    "top": "hex(16):",
+    "top": "hex, 64-bit",
     "truncation_marker": false
   },
   "parts": [
@@ -117,7 +117,7 @@
   "scheme": null,
   "size_basis": "decoded",
   "size_bits": 64,
-  "spec_version": "v13",
+  "spec_version": "v14",
   "truncated": false,
   "user_note": null
 }

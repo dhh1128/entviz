@@ -100,16 +100,17 @@ def test_no_truncated_marker_for_exactly_512_bit_input():
 
 
 def test_truncated_label_text_contains_type_with_byte_count():
-    """The marker reads `fingerprint of <Type>: ...`; the byte count lives in
-    the type-label parenthetical (e.g. `hex(200)`), not in the marker."""
-    long_hex = "ab" * 100  # 200-byte hex
+    """v14: the marker reads `fingerprint of PRIMARY[, MOD]…[, SIZE]`; for a
+    bare hex input the projected label's SIZE slot carries the value size
+    (`hex, 800-bit` for 200 hex chars = 800 bits)."""
+    long_hex = "ab" * 100  # 200 hex chars = 800 bits
     svg = etree.fromstring(render(long_hex).encode())
     label_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
     assert label_g
     joined = "".join(label_g[0].itertext())
     assert "fingerprint of" in joined
-    assert "hex(200):" in joined
-    # Exactly one space between the marker and the type label (the v6.0
+    assert "hex, 800-bit" in joined
+    # Exactly one space between the marker and the projected label (the v6.0
     # double-space bug came from absolute positioning with a guessed advance).
-    assert "fingerprint of hex(200):" in joined
+    assert "fingerprint of hex, 800-bit" in joined
     assert "fingerprint of  hex" not in joined

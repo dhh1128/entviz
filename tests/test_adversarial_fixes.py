@@ -124,9 +124,12 @@ def test_f4_bch_with_trailing_text_does_not_match_bch():
 
 
 def test_f4_legitimate_bch_still_matches():
-    """Exactly 42 bech32 chars after the optional prefix is the
-    legitimate BCH shape — must still be classified as BCH."""
-    text = "pqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+    """A legitimate 42-char bech32-charset CashAddr body must still be
+    classified as BCH. v14: the CashAddr 40-bit BCH checksum is now VERIFIED,
+    so the fixture must be a REAL valid address (the synthetic all-`q` body used
+    before enforcement now correctly fails its checksum, like the litecoin/
+    segwit placeholder fixtures)."""
+    text = "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a"
     assert len(text) == 42
     p = parse(text)
     assert p is not None
