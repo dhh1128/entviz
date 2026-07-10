@@ -60,8 +60,14 @@ SAMPLES = [
     ]),
     ("Blockchain addresses", [
         ("Ethereum",        "0x742d35cc6634c0532925a3b844bc454e4438f44e"),
-        ("Bitcoin legacy",  "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
-        ("Bitcoin (Satoshi genesis)", "1NSUpdRFAbn3Y2ZjN8nfNfJTpVTMo6gxa6"),
+        # The Satoshi genesis coinbase address is 1A1zP1eP… (block 0's reward
+        # output). The prior gallery used it under the plain "Bitcoin legacy"
+        # label and paired it with a bogus, checksum-invalid "genesis" address
+        # (1NSUpdRF…) that raised on render. Fixed: legacy now uses the canonical
+        # Bitcoin-wiki example P2PKH, and the genesis entry uses the real
+        # genesis address — both checksum-valid and distinct.
+        ("Bitcoin legacy",  "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"),
+        ("Bitcoin (Satoshi genesis)", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"),
         ("Ripple",          "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh"),
     ]),
     ("Bech32 addresses", [

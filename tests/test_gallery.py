@@ -76,6 +76,27 @@ def test_gallery_svg_matches_committed(section, filename, label, entropy, kwargs
         f"committed gallery SVG. The renderer/algorithm changed — {REGEN}.")
 
 
+@pytest.mark.parametrize("section,filename,label,entropy,kwargs", ENTRIES, ids=IDS)
+def test_gallery_entry_renders(section, filename, label, entropy, kwargs):
+    """Every curated gallery input MUST render without raising.
+
+    The gallery is a showcase, not a fuzz corpus: an entry that raises is a
+    broken sample (a bogus/invalid address, a mistyped checksum), not an
+    interesting edge case. gallery.py degrades a raise into an inline error
+    card so the page still builds, which means a broken sample can sit in the
+    committed gallery unnoticed. This guard makes "the whole gallery renders"
+    a CI invariant so curated inputs stay valid."""
+    try:
+        svg = render(entropy, **kwargs)
+    except Exception as e:  # noqa: BLE001 — the whole point is to surface any raise
+        raise AssertionError(
+            f"gallery entry {filename} ({label!r}) failed to render: "
+            f"{type(e).__name__}: {e}. Fix the sample input in scripts/gallery.py "
+            f"(the gallery is a curated showcase — every entry must render)."
+        ) from e
+    assert svg.lstrip().startswith("<svg"), f"{filename}: render() did not return an SVG"
+
+
 def test_gallery_dir_matches_entries():
     """No orphans, no missing: the committed SVG set equals what the generator
     would write (only entries that render successfully get a file)."""
