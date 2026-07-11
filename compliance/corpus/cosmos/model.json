@@ -172,7 +172,7 @@
   "input_bytes": 45,
   "labels": {
     "bottom": "...rk363e",
-    "top": "bech32",
+    "top": "bech32, cosmos1",
     "truncation_marker": false
   },
   "parts": [
@@ -197,7 +197,7 @@
   "scheme": "bech32",
   "size_basis": "decoded",
   "size_bits": 160,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

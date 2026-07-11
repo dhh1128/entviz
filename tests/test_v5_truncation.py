@@ -5,7 +5,7 @@ placed by the same median/quartile shift as short inputs.
 v6 changed the middle: it is now taken from the middle of the SHA-512
 fingerprint (digest bytes 24-35), rendered in the input's alphabet — see
 test_v6_fingerprint_middle.py for the behavior tests. This file keeps the
-token-layout and the loud `fingerprint of` truncation-marker tests.
+token-layout and the loud `+hash` truncation-marker tests.
 
 Spec authority: docs/spec.md "Large-input handling" and the marker step.
 """
@@ -66,21 +66,21 @@ def test_head_and_tail_collision_inputs_differ_in_middle_text():
     assert middle_texts(da) != middle_texts(db)
 
 
-# ---- Loud `fingerprint of` truncation marker ----------------------------
+# ---- Loud `+hash` truncation marker ----------------------------
 
 
 def test_truncated_marker_rendered_bold_dark_red():
     """For a >512-bit input the top label carries a bold dark-red
-    `fingerprint of` prefix segment."""
+    `+hash` prefix segment."""
     long_hex = "ab" * 100  # 200 hex chars = 100 bytes
     svg = etree.fromstring(render(long_hex).encode())
     candidates = svg.xpath('//*[local-name()="text" or local-name()="tspan"]')
     marker = None
     for el in candidates:
-        if el.text and el.text.startswith("fingerprint of"):
+        if el.text and el.text.startswith("+hash"):
             marker = el
             break
-    assert marker is not None, "no fingerprint of marker rendered"
+    assert marker is not None, "no +hash marker rendered"
     fill = marker.get("fill") or ""
     style = marker.get("style") or ""
     assert "#a00000" in (fill + style).lower()
@@ -95,12 +95,12 @@ def test_no_truncated_marker_for_exactly_512_bit_input():
     svg = etree.fromstring(render(core).encode())
     assert svg.get("data-truncated") is None
     for el in svg.xpath('//*[local-name()="text" or local-name()="tspan"]'):
-        if el.text and el.text.startswith("fingerprint of"):
+        if el.text and el.text.startswith("+hash"):
             pytest.fail(f"unexpected marker on 512-bit input: {el.text!r}")
 
 
 def test_truncated_label_text_contains_type_with_byte_count():
-    """v14: the marker reads `fingerprint of PRIMARY[, MOD]…[, SIZE]`; for a
+    """v14: the marker reads `+hash PRIMARY[, MOD]…[, SIZE]`; for a
     bare hex input the projected label's SIZE slot carries the value size
     (`hex, 800-bit` for 200 hex chars = 800 bits)."""
     long_hex = "ab" * 100  # 200 hex chars = 800 bits
@@ -108,9 +108,9 @@ def test_truncated_label_text_contains_type_with_byte_count():
     label_g = svg.xpath('//*[local-name()="g" and @data-channel="label-top"]')
     assert label_g
     joined = "".join(label_g[0].itertext())
-    assert "fingerprint of" in joined
+    assert "+hash" in joined
     assert "hex, 800-bit" in joined
     # Exactly one space between the marker and the projected label (the v6.0
     # double-space bug came from absolute positioning with a guessed advance).
-    assert "fingerprint of hex, 800-bit" in joined
-    assert "fingerprint of  hex" not in joined
+    assert "+hash hex, 800-bit" in joined
+    assert "+hash  hex" not in joined

@@ -1,6 +1,6 @@
 {
-  "spec_version": "v14",
-  "lib_version": "0.14.0",
+  "spec_version": "v15",
+  "lib_version": "0.15.0",
   "rasterizer": "cairosvg-2.9.0@scale2.0",
   "raster_scale": 2.0,
   "channel_tol": 16,

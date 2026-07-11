@@ -390,7 +390,12 @@ def _mods(ch: dict) -> list[str]:
     elif scheme == "ssh":
         algo = q.get("algorithm")
         if algo:
-            mods.append(algo)
+            # v15: shorten the ECDSA curve to its common short name for the
+            # label — "ecdsa-nistp256" -> "ecdsa-p256" (there is no rival
+            # non-NIST "p256"; the algorithm word stays, only the redundant
+            # standards-body prefix drops). The data-qualifiers `algorithm`
+            # field keeps the faithful SSH curve id ("ecdsa-nistp256").
+            mods.append(algo.replace("nistp", "p"))
     elif scheme == "cid":
         # CIDv0 is dag-pb/sha2-256 by definition -> no MOD. CIDv1: codec always,
         # hash only on departure from sha2-256.
@@ -426,33 +431,117 @@ def _size(ch: dict):
     return None
 
 
+# v15: large-input truncation marker. Prepended (bold dark-red, by the renderer)
+# to the top label when the text channel is a head/fingerprint-middle/tail
+# readout rather than a linear scan. Reads as "the value, augmented with a hash
+# of the parts that didn't fit" — the leading "+" is additive, not substitutive,
+# so it does not imply the whole picture is a digest. Replaces v14's
+# "fingerprint of ". Kept in sync with entviz.pipeline (which splits on it to
+# style the marker tspan). See docs/spec.md and this.i:v15pfxlbl.
+TRUNC_MARKER = "+hash "
+
+# ASCII elision marker for a truncated prefix slot (matches the bottom strip's
+# "...<suffix>" convention; no Unicode ellipsis, so the printable-ASCII / unicode
+# guard is satisfied and cross-implementation font behavior is uniform).
+_PREFIX_ELLIPSIS = "..."
+
+# Minimum number of LEADING prefix characters kept when the prefix is truncated.
+# The label-line budget can leave a big prefix (only SSH's ~24-52 char structural
+# header is ever this long) almost no room; without a floor it would collapse to
+# a bare "..." that shows nothing. Keeping a few head chars honors "show the first
+# few characters, then an ellipsis" — it tells the reader a long prefix was
+# elided rather than merely that *something* was. 4 is enough to read "there is a
+# real prefix here" without materially widening the strip.
+_PREFIX_MIN_HEAD = 4
+
+
+def _stripped_prefix(ch: dict):
+    """The literal front prefix that was stripped from the visualized core, or
+    ``None``.
+
+    This is a leading ``bind="none"`` part — a presentation sigil peeled off the
+    front (``0x``, ``bc1``, ``cosmos1``, Stellar ``G``, the SSH structural
+    header, …). A folded identity prefix (``bind="fold"``: did/urn/gitoid/swhid)
+    is NOT returned — it is already shown verbatim as the PRIMARY slot, so
+    echoing it again would double it. A ``bind="core"`` leading part (e.g. a
+    CESR derivation code, which is in the first cell) is likewise not a stripped
+    prefix.
+    """
+    parts = ch.get("parts") or []
+    if parts and parts[0].get("bind") == "none":
+        return parts[0]["text"]
+    return None
+
+
+def _fit_prefix(prefix: str, avail: int) -> str:
+    """Truncate the literal prefix slot to ``avail`` characters with a trailing
+    ``...`` elision marker.
+
+    The prefix is the sole ELASTIC label element (v15): PRIMARY/MOD/SIZE are
+    never truncated. ``avail`` is the character budget the grid leaves on the
+    label line after those slots. When the prefix does not fit, it is cut to
+    ``<head> + "..."``; the head length is floored at ``_PREFIX_MIN_HEAD`` so a
+    long prefix on a tight line (only SSH's structural header hits this) still
+    shows a few leading characters rather than collapsing to a bare ``...`` —
+    honoring "show the first few characters, then an ellipsis". A prefix that
+    fits is shown verbatim. The elision marker tells the reader the cells do NOT
+    begin at the character right after the visible prefix.
+    """
+    if len(prefix) <= avail:
+        return prefix
+    keep = max(avail - len(_PREFIX_ELLIPSIS), _PREFIX_MIN_HEAD)
+    return prefix[:keep] + _PREFIX_ELLIPSIS
+
+
 def render_label(ch: dict, truncated: bool = False, suffix: str = None,
-                 note: str = None) -> tuple[str, str]:
-    """Project a characterization into the (top, bottom) label strips (v14).
+                 note: str = None, line_chars: int = None) -> tuple[str, str]:
+    """Project a characterization into the (top, bottom) label strips (v15).
 
-    Pure function of the eight characterization fields (plus the presentation
+    Pure function of the eight characterization fields plus the presentation
     facts the fields don't carry: whether the input was >512-bit ``truncated``,
-    the bound ``suffix`` checksum, and the out-of-band user ``note``).
+    the bound ``suffix`` checksum, the out-of-band user ``note``, and the
+    monospace ``line_chars`` budget the grid leaves for the top strip (used only
+    to truncate the elastic prefix slot; ``None`` = do not truncate).
 
-    * ``top``    = ``[fingerprint of ]PRIMARY[, MOD]...[, SIZE]`` — ", " joined,
-      no trailing ``:`` or ``...``. The ``fingerprint of `` marker is added by
-      the renderer's styled prefix; it is reflected here so a text-only consumer
-      still sees it.
+    * ``top`` = ``[+hash ]PRIMARY[, MOD]...[, SIZE][, <prefix>]`` — ", " joined,
+      no trailing ``:``. The optional ``+hash `` marker is added by the
+      renderer's styled bold-red tspan; it is reflected here so a text-only
+      consumer still sees it. The trailing ``<prefix>`` slot (v15) echoes a
+      front prefix that was stripped from the visualized core (a ``bind="none"``
+      leading part) so the reader can reconcile the pasted value against the
+      cells; it is the only slot that may be truncated (to ``line_chars``) and
+      may then end in ``...``. Fold-prefix schemes (did/urn/gitoid/swhid) show
+      their prefix as PRIMARY and get no extra slot.
     * ``bottom`` = ``...<suffix>`` then `` (<note>)`` — the bound (now-verified)
-      checksum and the user caption. Empty string when neither is present.
+      checksum and the user caption. Empty string when neither is present. The
+      bottom strip already reconciles the *end* of the value; the top prefix
+      slot is its symmetric counterpart for the *front*.
 
     Returns plain strings; the renderer maps ``top``/``bottom`` onto the SVG
     label strips (styling the marker and note tspans). See
-    ``reviews/v14-label-redesign.md`` and ``this.i:v14lbl``.
+    ``docs/spec.md`` -> "Label strips" and ``this.i:v15pfxlbl``.
     """
     slots = [_primary(ch)]
     slots.extend(_mods(ch))
     size = _size(ch)
     if size is not None:
         slots.append(size)
+
+    prefix = _stripped_prefix(ch)
+    if prefix:
+        if line_chars is not None:
+            # Budget left for the prefix = the line budget minus the marker and
+            # the fixed PRIMARY/MOD/SIZE core (which never truncate) and the
+            # ", " that joins the prefix slot.
+            marker_len = len(TRUNC_MARKER) if truncated else 0
+            core_len = len(", ".join(slots))
+            avail = line_chars - marker_len - core_len - len(", ")
+            prefix = _fit_prefix(prefix, avail)
+        slots.append(prefix)
+
     top = ", ".join(slots)
     if truncated:
-        top = "fingerprint of " + top
+        top = TRUNC_MARKER + top
 
     bottom = ""
     if suffix:

@@ -391,7 +391,7 @@
   "scheme": null,
   "size_basis": "decoded",
   "size_bits": 512,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

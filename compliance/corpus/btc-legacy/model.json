@@ -172,7 +172,7 @@
   "input_bytes": 34,
   "labels": {
     "bottom": "...vfNa",
-    "top": "BTC",
+    "top": "BTC, 1",
     "truncation_marker": false
   },
   "parts": [
@@ -198,7 +198,7 @@
   "scheme": "btc",
   "size_basis": "decoded",
   "size_bits": 168,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

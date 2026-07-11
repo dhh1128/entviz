@@ -37,13 +37,13 @@ def test_top_label_always_present_for_hex():
 
 
 def test_hex_with_0x_prefix_shows_projected_size():
-    """v14: '0x'-prefixed hex projects to 'hex, <bits>-bit' (the 0x
-    presentation prefix is normalized away; the label is a projection of the
-    characterization, not the parser's prefix)."""
+    """v15: '0x'-prefixed hex projects to 'hex, <bits>-bit, 0x' — the stripped
+    '0x' front prefix is echoed as a trailing slot (so the reader sees the cells
+    start past it), not normalized away."""
     svg = _doc(render("0xdeadbeefcafe6789"))  # body 'deadbeefcafe6789' = 64 bits
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "hex, 64-bit"
+    assert top.text == "hex, 64-bit, 0x"
 
 
 def test_txt_fallback_label_is_text_with_byte_size():
@@ -75,13 +75,13 @@ def test_base64url_disproof_label_is_b64url_with_size():
     assert top.text == "b64url, 72-bit"
 
 
-def test_ethereum_top_label_is_bare_ticker():
-    """v14: Ethereum projects to just 'ETH' (a fixed-size address scheme
-    omits SIZE; the 0x presentation prefix is normalized away)."""
+def test_ethereum_top_label_is_ticker_with_prefix():
+    """v15: Ethereum projects to 'ETH, 0x' (a fixed-size address scheme omits
+    SIZE, but the stripped '0x' front prefix is echoed as a trailing slot)."""
     svg = _doc(render("0x742d35cc6634c0532925a3b844bc454e4438f44e"))
     labels = _labels(svg)
     top = min(labels, key=lambda t: float(t.get("y")))
-    assert top.text == "ETH"
+    assert top.text == "ETH, 0x"
 
 
 def test_uuid_top_label_no_prefix():
@@ -101,15 +101,16 @@ def test_bottom_label_only_present_with_suffix():
 
 
 def test_bitcoin_legacy_has_top_and_bottom_labels():
-    """v14: Bitcoin legacy projects PRIMARY 'BTC' on top (the legacy variant
-    is dropped, mainnet is silent, and a fixed-size address omits SIZE) and the
-    verified base58check checksum '...<4-char>' on the bottom."""
+    """v15: Bitcoin legacy projects PRIMARY 'BTC' with the stripped '1' version
+    prefix echoed ('BTC, 1'; legacy variant dropped, mainnet silent, fixed-size
+    address omits SIZE) on top, and the verified base58check checksum
+    '...<4-char>' on the bottom."""
     svg = _doc(render("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"))
     labels = _labels(svg)
     assert len(labels) == 2, f"expected 2 labels, got {len(labels)}"
     sorted_labels = sorted(labels, key=lambda t: float(t.get("y")))
     top, bottom = sorted_labels
-    assert top.text == "BTC", f"top: {top.text!r}"
+    assert top.text == "BTC, 1", f"top: {top.text!r}"
     assert bottom.text.startswith("..."), f"bottom: {bottom.text!r}"
     # The suffix is 4 base58 chars; the label is "...XXXX" → length 7.
     assert len(bottom.text) == 7, f"bottom: {bottom.text!r}"
@@ -182,7 +183,7 @@ def test_disproof_alphabet_label_uses_alphabet_name():
 
 
 def test_truncated_input_label_prefixed_with_loud_marker():
-    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud 'fingerprint of '
+    """v4→v5: the quiet '^…$ ' prefix is replaced by a loud '+hash '
     marker rendered in bold dark-red, followed by the standard
     '<Type>: ...' label in #666. The marker is a bold-red <tspan> and the
     rest is its tail, inside one <text>; this test concatenates all text
@@ -197,17 +198,17 @@ def test_truncated_input_label_prefixed_with_loud_marker():
     assert top_g, "missing label-top group"
     joined = "".join(top_g[0].itertext())
     # v14: the projected label for a bare 800-bit hex is 'hex, 800-bit'.
-    assert "fingerprint of hex, 800-bit" in joined, f"got: {joined!r}"
+    assert "+hash hex, 800-bit" in joined, f"got: {joined!r}"
 
 
 def test_non_truncated_input_label_has_no_loud_marker():
-    """v4→v5: short inputs render no 'fingerprint of' marker, same as
+    """v4→v5: short inputs render no '+hash' marker, same as
     they previously rendered no '^…$' prefix."""
     svg = _doc(render("deadbeefcafe1234"))  # 16 hex chars = 64 bits
     labels = _labels(svg)
     for t in labels:
         if t.text:
-            assert not t.text.startswith("fingerprint of"), f"got: {t.text!r}"
+            assert not t.text.startswith("+hash"), f"got: {t.text!r}"
             assert not t.text.startswith("^…$"), f"got: {t.text!r}"
 
 

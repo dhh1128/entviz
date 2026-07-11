@@ -264,7 +264,7 @@
   "input_bytes": 56,
   "labels": {
     "bottom": null,
-    "top": "XLM",
+    "top": "XLM, G",
     "truncation_marker": false
   },
   "parts": [
@@ -283,7 +283,7 @@
   "scheme": "stellar",
   "size_basis": "decoded",
   "size_bits": 272,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

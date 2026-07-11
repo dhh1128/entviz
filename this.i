@@ -3724,3 +3724,101 @@ Entviz = goal:
 
         Relates to [[lbldedup]], [[sufxbind]], [[3ip55rj1]], [[ch4rmod3l]],
         [[entviz-multiimpl-plan]].
+
+    Stripped-prefix label slot + +hash marker (v15) = decision:
+      id: v15pfxlbl
+      status: drafted
+      why: >
+        2026-07-10. Spec-observable label change -> SPEC_VERSION v14->v15, lib
+        0.14.0->0.15.0. Builds on [[v14lbl]] (the label is a projection of the
+        [[ch4rmod3l]] characterization) and REVERSES [[lbldedup]]'s
+        "no-echo-the-prefix" rule.
+
+        THE PROBLEM (Daniel, from the gallery). Cosmos/Osmosis cards were labeled
+        just "bech32" — the chain (cosmos/osmo) was invisible. Generalizing: every
+        scheme that STRIPS a front prefix off the value before visualizing
+        (bind="none" leading part) left the reader unable to reconcile "what I
+        pasted" against the cells, whose FIRST character silently differs from the
+        pasted first character. The type name (ETH/BTC/bech32) is NOT a
+        substitute: it says WHAT KIND, not WHICH CHARS were peeled off the front.
+        The bottom strip already reconciles the END (...<suffix>); v15 gives the
+        symmetric front reconciliation.
+
+        LOCKED PRINCIPLE (symmetry): the label must account for what was removed
+        from the FRONT exactly as the bottom strip accounts for what was removed
+        from the END. Grammar gains a trailing PREFIX slot:
+          top = [+hash ]PRIMARY[, MOD]...[, SIZE][, PREFIX]
+        PREFIX = the LITERAL stripped prefix = parts[0].text when parts[0].bind ==
+        "none" (0x, 1, bc1, ltc1, bitcoincash:, addr1, cosmos1/osmo1, Stellar
+        G/M, CID b/Qm, the SSH header). Examples: "ETH, 0x", "BTC, 1",
+        "bech32, cosmos1", "CIDv1, dag-pb, b", "XLM, G".
+
+        DESIGN CALLS (Daniel, over a long back-and-forth):
+          * ALWAYS SHOW BOTH prefix + type; DO NOT collapse redundancy. Redundancy
+            is judged by a NAIVE HUMAN reader: addr1/Cardano imply each other only
+            if you already know the mapping, so to a naive reader they are NOT
+            redundant. This SUBSUMES the earlier narrow "surface bech32 HRP as a
+            MOD" idea — the literal prefix "cosmos1" already carries the chain, so
+            no separate HRP mod (qualifiers.hrp still emitted in data-*, just not
+            projected). data-qualifiers is UNCHANGED across v15.
+          * FOLD prefixes (did/urn/gitoid/swhid, bind="fold") already ARE the
+            PRIMARY slot -> NO extra prefix slot (would double). bind="core"
+            leading part (CESR derivation code, in the first cell) -> not a
+            stripped prefix. So the slot fires iff parts[0].bind == "none".
+          * TRUNCATE-TO-FIT, placement "A" (trailing text slot, NOT a new
+            into-the-grid geometry). The prefix is the ONLY elastic element;
+            PRIMARY/MOD/SIZE never truncate (a long SSH type label overruns the
+            grid as before). Budget: line_chars = floor(grid_width /
+            (label_px * 0.6)). 0.6 em is a FIXED SPEC CONSTANT, not the renderer's
+            real monospace metric — otherwise the 5 impls (generic monospace
+            resolves to different fonts, DejaVu Mono=0.602, …) would truncate
+            differently and Tier-A labels would diverge. Font-size-invariant:
+            grid_w and label_px both scale with font_size_pt, so the char budget
+            depends only on grid COLS (~8.3 chars/col: 3-col ~25, 5-col ~42).
+          * BIG-PREFIX floor. SSH's structural header is 24-52 chars and its type
+            label ("SSH, ecdsa-p256, 528-bit") nearly fills the grid line, so the
+            naive budget collapses the prefix to a bare "..." (shows nothing).
+            Floor the kept head at _PREFIX_MIN_HEAD=4: "SSH, ed25519, 264-bit,
+            AAAA...". Daniel: "show the first few chars and then an ellipse … tells
+            the reader there are many prefix chars." ASCII "..." (not U+2026) to
+            satisfy the unicode guard and match the bottom "...<suffix>". SSH is
+            NOT a special case — it is just the one prefix long enough to hit the
+            floor; every non-SSH prefix (<=12 chars) shows verbatim.
+
+        +HASH MARKER (Daniel was long frustrated by "fingerprint of SSH,
+        ecdsa-nistp256, 528-bit" = 43 chars, overran a 4-col 275px canvas).
+        Renamed the v14 "fingerprint of " marker to "+hash " (bold dark-red
+        #a00000 kept). Rationale: the cells DO show the value's head+tail bytes,
+        with a hash folded into the MIDDLE only for the part too big to display —
+        so it is "the value + a hash" (the "+" is additive), NOT "a hash" (plain
+        "hash"/"fingerprint of" wrongly implies the whole picture is a digest —
+        Daniel's specific worry). ~9 chars shorter -> "+hash SSH, ecdsa-p256,
+        528-bit" = 30 chars, now fits. Also shortened the ECDSA curve in the
+        LABEL: ecdsa-nistp256 -> ecdsa-p256 (no rival non-NIST p256; "ecdsa" stays
+        — a naive reader needs the algorithm, "p256" is only the curve). Done in
+        _mods via algo.replace("nistp","p"); data-qualifiers.algorithm keeps the
+        faithful "ecdsa-nistp256".
+
+        IMPL. characterize.py: TRUNC_MARKER const, _stripped_prefix, _fit_prefix
+        (floor _PREFIX_MIN_HEAD, ASCII _PREFIX_ELLIPSIS), render_label gains
+        line_chars param + prefix slot; ssh _mods curve-shorten. pipeline.py:
+        LABEL_ADVANCE_EM=0.6, computes label_line_chars from grid_rect.size.width
+        and passes it; imports TRUNC_MARKER (single source, split-for-styling
+        can't drift). __init__ versions. NO data-* attr changes (label is a pure
+        projection of existing v13/v14 fields) -> Tier-A model.json `labels` +
+        golden.svg change for every prefix scheme + all truncated markers, but
+        LABELS ARE RASTER-EXCLUDED so ZERO golden.png changes (verified: git
+        status on compliance/corpus/**/golden.png empty).
+
+        Blast radius: src/entviz/{characterize,pipeline,__init__}.py; docs/spec.md
+        (label-strip grammar: PREFIX slot + truncation/budget + +hash + ecdsa-p256
+        MOD note), spec-change-log.md (v15 entry), this entry; tests
+        (test_v15_prefix_labels.py NEW; test_v14 label table updated + ssh split
+        out; test_v4_label_regions 0x/ETH/BTC labels; test_v5_truncation +
+        test_v4 "fingerprint of"->"+hash"); corpus + gallery + social card +
+        paper/spec figures regen; then 4 ports (js/rs/java/go) reproduce Tier A.
+        Gallery genesis-address bugfix (bogus 1NSUpdRF… -> real 1A1zP1eP…) +
+        test_gallery_entry_renders drift guard landed in a SEPARATE prior commit.
+
+        Relates to [[v14lbl]], [[lbldedup]], [[sufxbind]], [[ch4rmod3l]],
+        [[entviz-multiimpl-plan]].

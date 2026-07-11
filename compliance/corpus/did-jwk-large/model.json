@@ -364,7 +364,7 @@
   "input_bytes": 176,
   "labels": {
     "bottom": null,
-    "top": "fingerprint of did:jwk",
+    "top": "+hash did:jwk",
     "truncation_marker": true
   },
   "parts": [
@@ -385,7 +385,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 1344,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": true,
   "user_note": null
 }

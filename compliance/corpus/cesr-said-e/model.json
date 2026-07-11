@@ -231,7 +231,7 @@
   "scheme": "cesr",
   "size_basis": "decoded",
   "size_bits": 264,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

@@ -747,7 +747,15 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     # (bold dark-red) and the out-of-band note tspan are applied structurally
     # in _draw_label_strips from the truncated/note flags. See docs/spec.md ->
     # "Label strips" and reviews/v14-label-redesign.md.
-    top_text, _ = render_label(ch, truncated=is_truncated)
+    # v15: the top strip gains a trailing slot echoing the stripped front prefix
+    # (0x, bc1, cosmos1, the SSH header, …). The prefix is the only elastic
+    # element and is truncated to the character budget the grid leaves on the
+    # label line: line_chars = floor(grid_width / (label_px * LABEL_ADVANCE_EM)).
+    # LABEL_ADVANCE_EM is a fixed spec constant (NOT the renderer's real font
+    # metric) so every implementation truncates identically and the Tier-A label
+    # string is reproducible. See docs/spec.md -> "Label strips".
+    label_line_chars = int(grid_rect.size.width // (label_text_px * LABEL_ADVANCE_EM))
+    top_text, _ = render_label(ch, truncated=is_truncated, line_chars=label_line_chars)
     _draw_label_strips(
         svg, grid_rect, gm, nucleus_height,
         top_text=top_text, suffix=suffix,
@@ -780,7 +788,17 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
     return etree.tostring(svg, encoding='unicode', xml_declaration=False)
 
 
-_TRUNC_MARKER = "fingerprint of "
+# v15: the large-input marker moved to "+hash " (from "fingerprint of "), defined
+# once in characterize.TRUNC_MARKER and imported here so the split-for-styling
+# and the projected label can never drift.
+from .characterize import TRUNC_MARKER as _TRUNC_MARKER  # noqa: E402
+
+# v15: fixed monospace advance (em) used to size the top strip's character
+# budget for prefix truncation. A spec constant — NOT the renderer's real font
+# metric — so all implementations compute the same integer budget and the
+# Tier-A label string is reproducible. 0.6 em is the conventional monospace
+# advance; the raster is unaffected (labels are excluded from the Tier-B raster).
+LABEL_ADVANCE_EM = 0.6
 
 
 def _draw_label_strips(svg, grid_rect, gm, nucleus_height,

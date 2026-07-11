@@ -54,7 +54,7 @@ consumer can read them off any rendered entviz without a separate call.
     ```toml
     # Cargo.toml
     [dependencies]
-    entviz = "0.14"
+    entviz = "0.15"
     ```
 
     ```rust
@@ -95,7 +95,7 @@ consumer can read them off any rendered entviz without a separate call.
     <dependency>
       <groupId>io.github.dhh1128</groupId>
       <artifactId>entviz</artifactId>
-      <version>0.14.0</version>
+      <version>0.15.0</version>
     </dependency>
     ```
 
@@ -174,23 +174,35 @@ string.
 
 The text entviz draws is a **projection of the characterization fields**, not a
 separately hand-fused string. The top strip follows one grammar —
-`[fingerprint of ]PRIMARY[, MOD][, SIZE]`, joined with a comma-space and with no
-trailing punctuation:
+`[+hash ]PRIMARY[, MOD][, SIZE][, PREFIX]`, joined with a comma-space and with no
+trailing `:`:
 
 * **PRIMARY** is the scheme name (`ETH`, `BTC`, `UUID`, `CESR`, `CIDv1`, `SSH`),
   or — for self-describing prefix schemes — the framing prefix itself (`did:key`,
   `urn:isbn`). When no scheme fired it is the encoding name (`hex`, `b64`) or
   `text` for the UTF-8 fallback.
 * **MOD** carries the meaningful qualifiers (e.g. CESR primitive `Ed25519 nt`,
-  SSH `ed25519`, CID codec `dag-pb`) — shown only when they depart from the
-  silent default.
+  SSH `ed25519` / `ecdsa-p256`, CID codec `dag-pb`) — shown only when they depart
+  from the silent default.
 * **SIZE** is shown in **bits** for decoded values (`hex, 256-bit`), in **bytes**
   for the `text` UTF-8 fallback (`text, 56-byte`), and **omitted** for structured
   identifiers whose size is fixed or a category error (DID, URN, UUID, ETH).
+* **PREFIX** (v15) echoes the **literal front prefix stripped from the visualized
+  core** (`0x`, `bc1`, `cosmos1`, Stellar `G`, the SSH header, …) so a reader can
+  reconcile the pasted value against the cells, whose first character is
+  otherwise silently different. Shown *in addition to* the type name
+  (`ETH, 0x`; `ADA, addr1`; `bech32, cosmos1`); it is the only slot that
+  truncates — a long prefix (in practice only SSH's structural header) is cut to
+  `<head>...`. Folded identity prefixes (did/urn/gitoid/swhid) are not repeated;
+  they are already the PRIMARY slot.
 
-Examples: `ETH`, `UUID`, `CESR, Blake3-256`, `CESR, Ed25519 nt`,
-`SSH, ed25519, 264-bit`, `CIDv1, dag-pb`, `hex, 256-bit`, `text, 56-byte`,
-`did:key`, `urn:isbn`, `fingerprint of b64, 712-bit`.
+The `+hash ` marker (bold dark-red) replaces v14's `fingerprint of ` for inputs
+over 512 bits, where the middle cells are a fingerprint readout rather than input
+bytes — the value augmented with a hash, not a hash.
+
+Examples: `ETH, 0x`, `UUID`, `CESR, Blake3-256`, `CESR, Ed25519 nt`,
+`SSH, ed25519, 264-bit, AAAA...`, `CIDv1, dag-pb, b`, `hex, 256-bit`,
+`text, 56-byte`, `did:key`, `urn:isbn`, `bech32, cosmos1`, `+hash b64, 712-bit`.
 
 The bottom strip shows any **bound checksum** as `...<suffix>` (optionally
 followed by ` (<note>)`). This checksum is **verified**: a parser surfaces it

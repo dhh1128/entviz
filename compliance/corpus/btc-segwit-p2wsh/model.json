@@ -270,7 +270,7 @@
   "input_bytes": 62,
   "labels": {
     "bottom": null,
-    "top": "BTC",
+    "top": "BTC, bc1",
     "truncation_marker": false
   },
   "parts": [
@@ -292,7 +292,7 @@
   "scheme": "btc",
   "size_basis": "decoded",
   "size_bits": 288,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

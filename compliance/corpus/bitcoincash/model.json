@@ -214,7 +214,7 @@
   "input_bytes": 54,
   "labels": {
     "bottom": null,
-    "top": "BCH",
+    "top": "BCH, bitcoincash:",
     "truncation_marker": false
   },
   "parts": [
@@ -235,7 +235,7 @@
   "scheme": "bch",
   "size_basis": "decoded",
   "size_bits": 208,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

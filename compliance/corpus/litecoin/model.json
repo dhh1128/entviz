@@ -208,7 +208,7 @@
   "input_bytes": 43,
   "labels": {
     "bottom": null,
-    "top": "LTC",
+    "top": "LTC, ltc1",
     "truncation_marker": false
   },
   "parts": [
@@ -229,7 +229,7 @@
   "scheme": "ltc",
   "size_basis": "decoded",
   "size_bits": 192,
-  "spec_version": "v14",
+  "spec_version": "v15",
   "truncated": false,
   "user_note": null
 }

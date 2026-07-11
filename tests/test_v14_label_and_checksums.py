@@ -23,8 +23,11 @@ from entviz.pipeline import render
 # ---------------------------------------------------------------------------
 
 # The locked before→after table (reviews/v14-label-redesign.md): the projected
-# TOP label for each worked input. Truncated (>512-bit) inputs carry the
-# leading 'fingerprint of ' marker.
+# TOP label for each worked input. Truncated (>512-bit) inputs carry the leading
+# '+hash ' marker (v15, renamed from 'fingerprint of '). These cases use the pure
+# render_label() with no line_chars budget, so any prefix slot is shown in full
+# (never truncated) — the grid-budget truncation is covered in
+# tests/test_v15_prefix_labels.py.
 _TOP_LABEL_CASES = {
     # id: (input, expected_top)
     "cesr-aid-b": ("BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx", "CESR, Ed25519 nt"),
@@ -39,18 +42,18 @@ _TOP_LABEL_CASES = {
     "did-key-ed25519": (
         "did:key:z6MkhaXgBZDvotDkL5257faiztiGiC2QtKLGpbnnEGta2doK", "did:key"),
     "urn-isbn": ("urn:isbn:0451450523", "urn:isbn"),
+    # v15: schemes that strip a front prefix now echo it as a trailing slot
+    # (the CID multibase 'b', the '0x'/'bc1'/'1' sigils). SSH (whose prefix
+    # truncates against the grid budget) is tested separately in
+    # tests/test_v15_prefix_labels.py — its pure-vs-rendered forms differ.
     "cid-v1": (
         "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi",
-        "CIDv1, dag-pb"),
+        "CIDv1, dag-pb, b"),
     "cid-v0": (
-        "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "CIDv0"),
-    "ssh-ed25519": (
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY"
-        "+0nKlS5pTkkXY user@example.com",
-        "SSH, ed25519, 264-bit"),
-    "eth": ("0x742d35cc6634c0532925a3b844bc454e4438f44e", "ETH"),
-    "btc-segwit": ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "BTC"),
-    "btc-legacy": ("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "BTC"),
+        "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG", "CIDv0, Qm"),
+    "eth": ("0x742d35cc6634c0532925a3b844bc454e4438f44e", "ETH, 0x"),
+    "btc-segwit": ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "BTC, bc1"),
+    "btc-legacy": ("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "BTC, 1"),
     "uuid": ("550e8400-e29b-41d4-a716-446655440000", "UUID"),
     "lei": ("5493001KJTIIGC8Y1R12", "LEI"),
     "snowflake": ("80351110224678912", "snowflake"),
@@ -63,7 +66,7 @@ _TOP_LABEL_CASES = {
     "b64-large": (
         "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvkLpZUVjlW8zG3p4G7m7Q1xQfP"
         "8aZ8WUEpiE8WxC8mTLg3aN8gqK2y1zGfKbXc9p2YtNvJ5h0sX",
-        "fingerprint of b64, 712-bit"),
+        "+hash b64, 712-bit"),
 }
 
 
@@ -101,12 +104,14 @@ def test_pipeline_renders_projected_top_label(vid):
     assert joined == expected, f"{vid}: rendered {joined!r}, want {expected!r}"
 
 
-def test_top_label_has_no_trailing_colon_or_ellipsis():
+def test_top_label_has_no_trailing_colon():
+    # The v14 grammar dropped the trailing ':'. (v15: a truncated PREFIX slot may
+    # legitimately end in '...' as an elision marker, so the no-trailing-'...'
+    # rule no longer holds in general; these untruncated cases still never do.)
     for entropy, _expected in _TOP_LABEL_CASES.values():
         ch = characterize(entropy)
         top, _ = render_label(ch, truncated=_is_truncated(entropy))
         assert not top.endswith(":"), top
-        assert not top.endswith("..."), top
 
 
 def test_bottom_label_is_bound_checksum_then_note():
@@ -128,7 +133,9 @@ def test_ssh_size_is_faithful_field_projection():
     ch = characterize(entropy)
     assert ch["size_bits"] == 264
     top, _ = render_label(ch)
-    assert top == "SSH, ed25519, 264-bit"
+    # v15: with no line_chars budget the stripped SSH header is appended in full;
+    # the SIZE slot is still the faithful 264, not a re-derived 256.
+    assert top.startswith("SSH, ed25519, 264-bit, ")
 
 
 # ---------------------------------------------------------------------------
