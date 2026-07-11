@@ -2994,6 +2994,17 @@ Entviz = goal:
             alphabet, 5-bit injectivity, exact second-digest value, and
             primary-digest independence. See [[v6fpmid1]].
 
+            v15 editorial (reviews/spec-editorial-findings.md, N1): the
+            DOMAIN_TAG-constancy obligation had been mis-placed inside a
+            "Note (non-normative)." in spec.md, so it carried NO force by
+            the spec's own Notation rule despite guarding this hard
+            invariant (any change breaks every >512-bit comparison).
+            Promoted to a normative MUST/MUST NOT in the middle-group
+            bullet where DOMAIN_TAG is defined; the note now carries only
+            the etymology of the "v6" tag. Do NOT move the obligation back
+            into a note. Impl behavior unchanged (it always used the exact
+            tag) — this was a normative-framing fix, not a design change.
+
         Head/Tail Are Anchors, Not A Representative Sample = decision:
           id: v6htscal
           why: >
