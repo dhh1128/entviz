@@ -85,9 +85,11 @@ SAMPLES = [
          "osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t"),
     ]),
     ("SSH public keys", [
-        ("ssh-ed25519 (comment in input, dropped from entviz)",
+        ("ssh-ed25519 — label reads 264-bit: the 256-bit key plus one structural "
+         "byte base64 alignment can't shed; input comment dropped from entviz",
          "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY+0nKlS5pTkkXY user@example.com"),
-        ("ssh-rsa 3072-bit (comment in input, dropped from entviz)",
+        ("ssh-rsa (3072-bit key) — label reads 3096-bit: the modulus carries ~3 "
+         "bytes of SSH mpint sign / length framing; input comment dropped from entviz",
          "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDSD+oM4kLidAptE5pjRA8OBIWNysc9reQJjK"
          "egek2jATA3bSvKdq/wdQtpbihEx5OlKMo//V/8QpAIjCSsBaMb6G/e/D5kC9wCjnYJ"
          "J68+34L+H5Fx1Ofuiz3BidgssINw/qbV0u1vrCop+ggs6lkl+pIwa+9kPriD9xdowC"
@@ -97,7 +99,9 @@ SAMPLES = [
          "+WyAOKLxIUKflTWaIcYKBqmfaxz64Gm2lDbF0+9r/0Xf//P8TFDWFo9bo4loIukgjt"
          "wQmp8Kn6ngEKj8gS3vLApZ3wN18q3emtglyQEmO+9VXckK4NPOqAzwOu7rQbr7oEPS"
          "6HrnY3PKe9JD570= alice@workstation"),
-        ("ecdsa-sha2-nistp256 (no comment)",
+        ("ecdsa-sha2-nistp256 — label reads 528-bit: a P-256 public key is a "
+         "~520-bit EC point (0x04‖X‖Y), not a 256-bit value; the 256 names the "
+         "field, not the key encoding; no comment",
          "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBNSBA0Md9M/Cwp0J32Rvk/aiElw77t6l9YQbMmJSP4PfybRxeGP4fqsrIvr6ckdRms5N8Bp/kvug/iAgX6OK59E="),
     ]),
     ("Base32 addresses (RFC 4648)", [

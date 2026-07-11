@@ -3822,3 +3822,56 @@ Entviz = goal:
 
         Relates to [[v14lbl]], [[lbldedup]], [[sufxbind]], [[ch4rmod3l]],
         [[entviz-multiimpl-plan]].
+
+    SSH core sizing: why size_bits != nominal key size (principled, leave as-is) = decision:
+      id: s5hs1ze
+      status: drafted
+      why: >
+        2026-07-11. Daniel noticed the gallery's 3 SSH cards show a label bit-count
+        that diverges from the key's nominal size: ed25519 264 (not 256), rsa 3096
+        (not 3072), ecdsa-nistp256 528 (not 256). He pressed the right question:
+        is the SSH parser including non-key framing out of a carefully articulated
+        principle, or are we just being lazy (a sloppy fixed strip)? Answer after
+        reading the parser: PRINCIPLED, not lazy — but with a real base64-forced
+        residual. Recorded so this isn't re-litigated ("weird SSH bit counts, let's
+        rewrite the parser").
+
+        The parser (entropy.py SSH_KEY_TYPES) uses per-type HAND-TUNED prefixes,
+        not a fixed strip: ecdsa 52 chars (type-string + curve-name + point-length
+        fields), rsa 28 (type-string + exponent + 3 of 4 modulus-length bytes),
+        ed25519 24 (type-string + 3 of 4 key-length bytes). The prefix is
+        deliberately EXTENDED past the type-string to eat the constant
+        length-prefix bytes of the next field, so head cells start on per-key
+        entropy instead of identical `AAA…` cells on every key of a type (the code
+        comment already reasoned about this). So the strip is as tight as it can be.
+
+        The residual (core > nominal key) has THREE principled causes:
+          1. base64 3-byte alignment. We visualize the normalized TEXT, never
+             decoded bytes ([[h4shtext]] anti-malleability), so the cut must land
+             on a 4-char/3-byte boundary — can't cut mid-byte and re-encode. When a
+             header's byte length isn't a multiple of 3 (ed25519's is 19), one
+             CONSTANT structural byte (0x20 = "length 32", identical on every
+             ed25519 key) stays rather than amputating a key byte. 33B core -> 264.
+             Leaving 1 constant byte beats eating entropy.
+          2. wire-format encoding overhead. RSA's modulus is an mpint with a
+             leading 0x00 sign byte; that + the leftover length byte is 3072->3096.
+             Those bytes really are in the blob.
+          3. encoded key vs field size (the big one). An ECDSA public key is an EC
+             POINT 0x04‖X‖Y = 65B ≈ 520 bits for P-256, which the 52-char prefix
+             exposes cleanly (no junk). "256" in nistp256 names the field/security
+             level, NOT the point encoding — so 528 is the HONEST size of what's
+             drawn; the caption's implied "256" is the loose shorthand.
+
+        DECISION (Daniel): the core is the right thing to visualize; LEAVE the
+        parser AND the label as-is (faithful projection of size_bits, per
+        [[v14lbl]]). Do NOT strip further — a tighter cut either misaligns base64
+        (eats entropy) or needs decode-then-re-encode (breaks text-hashing).
+        Considered & rejected: dropping the SIZE slot for SSH; re-deriving a
+        "nominal key size" via a full wire parse. Instead, EXPLAIN the divergence
+        where readers meet it: the 3 gallery SSH card captions now spell out each
+        gap (264 = key + 1 base64-alignment byte; 3096 = modulus + mpint/length
+        framing; 528 = the ~520-bit EC point, field≠encoding), and entropy.py's
+        SSH_KEY_TYPES block gained a "why size_bits != nominal" comment. Pure
+        docs/caption change — regenerated gallery (caption drives the SVG filename
+        slug), no algorithm/output change. Extends the ed25519-only note in
+        [[v14lbl]]. Relates to [[h4shtext]], [[cr0ckmid]].

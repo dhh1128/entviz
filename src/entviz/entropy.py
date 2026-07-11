@@ -277,6 +277,30 @@ SSH_KEY_TYPES = [
     # variable, nothing more is structurally constant.
     ("dss",            "AAAAB3NzaC1kc3M",         15),
 ]
+# Why the visualized core (and hence size_bits) is NOT the nominal key size.
+# The prefix strips as much *constant framing* as it can, but three things keep
+# the core from equaling the headline "256-bit"/"3072-bit"/etc., and all three
+# are correct, not lazy:
+#   1. base64 alignment. The prefix can only end on a 4-char / 3-byte boundary
+#      (we visualize the normalized TEXT, never decoded bytes — see the
+#      hash-the-text rule / this.i:h4shtext — so we cannot cut mid-byte and
+#      re-encode). When a header's byte length isn't a multiple of 3 (ed25519's
+#      is 19), one constant structural byte (the 0x20 = "length 32", identical
+#      on every ed25519 key) stays in the core rather than amputating real key
+#      entropy. So ed25519 = 33 core bytes = 264 bits, not 256. Leaving one
+#      constant byte beats eating a key byte.
+#   2. wire-format encoding overhead. RSA stores its modulus as an mpint with a
+#      leading 0x00 sign byte; that plus the leftover length byte is the
+#      3072 -> 3096 gap. Those bytes are really in the key blob.
+#   3. encoded key vs. field size. An ECDSA public key is an EC *point*
+#      (0x04 ‖ X ‖ Y = 65 bytes ≈ 520 bits for P-256), which the 52-char prefix
+#      exposes cleanly. The "256" in nistp256 names the field/security level,
+#      NOT the point encoding, so 528 is the honest size of what is drawn.
+# Net: the core is the right thing to visualize; size_bits faithfully reports
+# "bits of core" (this.i:v14lbl, this.i:s5hs1ze). We deliberately do NOT strip
+# further — a tighter cut would either misalign base64 (eating entropy) or
+# require decode-then-re-encode (breaking text-hashing). The gallery SSH card
+# captions explain the divergence to readers.
 # Generic fallback: any AAAA-prefixed base64 blob.
 # Anchored ^…$ as defense-in-depth (review F4): currently only reached as
 # a fallback inside parse_ssh_key after SSH_LINE_REGEX (which IS anchored)
