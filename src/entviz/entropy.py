@@ -1730,7 +1730,9 @@ def tokenize_entropy(core: str, alphabet) -> tuple[list[Token], bool]:
 
 def get_median_token(tokens: list[Token]) -> Token:
     """
-    Identify the first token in the sorted list that contains the median value.
+    Identify the token at the median position of the ASCII-sorted list — the
+    element at 0-based index floor((n - 1) / 2), where n is the token count.
+    (For an even count this is the first token of the middle pair.)
     Sort by ASCII order with a secondary sort by token index.
     """
     if not tokens: return None
