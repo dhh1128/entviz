@@ -1,7 +1,7 @@
 """
 Full entviz rendering pipeline: entropy string → SVG string.
 
-Implements the v6 algorithm specified in docs/spec.md (the authoritative
+Implements the algorithm specified in docs/spec.md (the authoritative
 spec); this.i records the "why" behind each decision referenced in the
 inline comments below.
 
@@ -543,22 +543,23 @@ def render(entropy_text: str, target_ar: float = 1.0, font_size_pt: int = 12,
                 attrs["data-edge-color"] = edge_color
         cell_groups[ci] = etree.SubElement(nuclei_g, 'g', **attrs)
 
-    # V3-4: per-token cell-text rendered size. Reference drives all
-    # geometry; rendered size shrinks for 6-char tokens (4-bit alphabets:
-    # hex, decimal) so the text fits inside the 3×nucleus_height-wide
-    # nucleus. Per spec: 4-char tokens render at reference size; 6-char
-    # tokens render at 0.75× reference.
+    # Cell-text rendered size is keyed on the INPUT ALPHABET, not on each
+    # cell's own character count: geometry is fixed, and text shrinks to 0.75×
+    # for the 4-bit alphabets (hex, decimal; 6-char tokens) so it fits the
+    # 3×nucleus_height-wide nucleus. This one size applies to EVERY cell of
+    # that alphabet, including a short final token (a 4-char trailing hex token
+    # still renders at 0.75×), so siblings stay visually consistent. The 4-char
+    # alphabets render at reference size.
     cell_text_pt = (
         round(font_size_pt * 0.75)
         if alphabet.bits_per_char == 4 else font_size_pt
     )
     cell_text_px = cell_text_pt * _DPI / 72
     label_text_px = round(font_size_pt * 0.75) * _DPI / 72
-    # The v9 fingerprint-middle cells always render 5 Crockford base32 chars
-    # regardless of the input alphabet, so they use the 5-char (0.80×) rendered
-    # size (per the generalized rule max(0.75, min(1.0, 4/token_chars)) = 0.80
-    # for 5 chars) even when the input's own tokens are 4 chars. Bigger and
-    # roomier than v6's 6-hex 0.75×. Without this the glyphs overflow the nucleus.
+    # The fingerprint-middle cells always render 5 Crockford base32 chars
+    # regardless of the input alphabet, so they are sized from THEIR OWN
+    # alphabet (5 chars -> 0.80× via max(0.75, min(1.0, 4/5))), even when the
+    # input's own tokens are 4 chars. Without this the glyphs overflow the nucleus.
     fp_middle_text_px = round(font_size_pt * 0.80) * _DPI / 72
 
     # Layer 3: every cell's nucleus rect + text, drawn on top of edges

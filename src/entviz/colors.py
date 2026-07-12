@@ -38,12 +38,12 @@ POSSIBLE_EDGE_COLORS = [
 
 def select_visual_style(median_token, second_quartile_token=None) -> VisualStyle:
     """
-    v4: pick the entviz background from the 4 background candidates using
-    the median ftok's low 2 bits (unchanged from v3). The remaining 4 of
-    [white, gold, red, blue, black] are the quartile-mark palette. v4 has
-    no entviz-wide edge color — filled surround boxes use the per-cell
-    nucleus background color instead. `second_quartile_token` is kept in
-    the signature for call-site compatibility and ignored.
+    Pick the entviz background from the 4 background candidates using the
+    median ftok's low 2 bits. The remaining 4 of [white, gold, red, blue,
+    black] are the quartile-mark palette. There is no entviz-wide edge color
+    — filled surround boxes use the per-cell nucleus background color instead.
+    `second_quartile_token` is kept in the signature for call-site
+    compatibility and ignored.
     """
     color_idx = median_token.quant & 0x03
     bg_color = POSSIBLE_EDGE_COLORS[color_idx]

@@ -1,4 +1,4 @@
-"""Tests for the spec-v13 entropy characterization model.
+"""Tests for the entropy characterization model.
 
 Asserts the structured characterization fields (encoding / scheme / role /
 qualifiers / size_basis / size_bits / parts+bind / entropy_type) for the worked

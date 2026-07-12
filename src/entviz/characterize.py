@@ -1,4 +1,4 @@
-"""Entropy characterization model (spec v13).
+"""Entropy characterization model.
 
 The parser (:mod:`entviz.entropy`) produces a ``Parsed`` display record whose
 ``type`` string fuses several orthogonal facts (scheme, semantic role,
@@ -44,7 +44,7 @@ from .entropy import (
     DECIMAL,
 )
 
-# Closed role enum (spec v13). Nothing outside this set may appear.
+# Closed role enum. Nothing outside this set may appear.
 ROLE_KEY = "key"
 ROLE_SIGNATURE = "signature"
 ROLE_DIGEST = "digest"
@@ -294,7 +294,7 @@ def _parts_from_parsed(parsed) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Label projection (spec v14).
+# Label projection.
 #
 # The visible top/bottom label strips are a PURE PROJECTION of the eight
 # characterization fields through one grammar — no per-parser string fusing.
@@ -477,7 +477,7 @@ def _fit_prefix(prefix: str, avail: int) -> str:
     """Truncate the literal prefix slot to ``avail`` characters with a trailing
     ``...`` elision marker.
 
-    The prefix is the sole ELASTIC label element (v15): PRIMARY/MOD/SIZE are
+    The prefix is the sole ELASTIC label element: PRIMARY/MOD/SIZE are
     never truncated. ``avail`` is the character budget the grid leaves on the
     label line after those slots. When the prefix does not fit, it is cut to
     ``<head> + "..."``; the head length is floored at ``_PREFIX_MIN_HEAD`` so a
@@ -495,7 +495,7 @@ def _fit_prefix(prefix: str, avail: int) -> str:
 
 def render_label(ch: dict, truncated: bool = False, suffix: str = None,
                  note: str = None, line_chars: int = None) -> tuple[str, str]:
-    """Project a characterization into the (top, bottom) label strips (v15).
+    """Project a characterization into the (top, bottom) label strips.
 
     Pure function of the eight characterization fields plus the presentation
     facts the fields don't carry: whether the input was >512-bit ``truncated``,
@@ -552,7 +552,7 @@ def render_label(ch: dict, truncated: bool = False, suffix: str = None,
 
 
 def characterize(entropy: str) -> dict:
-    """Characterize an entropy string into the structured model (spec v13).
+    """Characterize an entropy string into the structured model.
 
     Returns a plain JSON-serializable dict with keys: ``encoding``, ``scheme``,
     ``role``, ``qualifiers``, ``size_basis``, ``size_bits``, ``parts``,
