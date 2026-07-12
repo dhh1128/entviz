@@ -3886,3 +3886,78 @@ Entviz = goal:
         docs/caption change — regenerated gallery (caption drives the SVG filename
         slug), no algorithm/output change. Extends the ed25519-only note in
         [[v14lbl]]. Relates to [[h4shtext]], [[cr0ckmid]].
+
+    Spec Phase-2 structural reorg (pipeline-order spine) = decision:
+      id: sp3cre0rg
+      status: drafted
+      why: >
+        2026-07-11. The v15 spec was a "frankenstein of 15 AI passes": Conformance
+        preceded the algorithm (forward-referencing undefined quantities), input
+        parsing was split three ways, large-input handling was stated 4x, the six
+        channels were narrated 3x, and the Cell Rendering Algorithm sat dead last
+        though invoked mid-algorithm. Phase 2 reorganized docs/spec.md to a
+        human-authored target spine (reviews/spec-target-outline.md) in four parts:
+        A Framing (non-normative), B Producing an entviz (normative, PIPELINE
+        ORDER), C Conformance & verification (normative, now LAST so everything it
+        cites is already defined), D Appendices. This was executed as MOVES AND
+        MERGES, not a rewrite: normative sentences carried verbatim. Verified by a
+        hard invariant — the multiset of RFC-2119-keyword lines is identical
+        old->new (every requirement R001-R092 present exactly once, unweakened);
+        957 tests green; zero dead anchors. No behavioral/output change, so the
+        spec stays v15 (no version bump). See reviews/spec-requirements-inventory.md
+        (the invariant) and reviews/spec-editorial-findings.md (faults A-H).
+
+        THREE structural decisions that touch reading-meaning, recorded so they
+        are not "fixed" back:
+          1. Conformance moved to the END (Part C). Its subsection headings
+             (Equivalence relation, SVG profile, etc.) kept their exact text so
+             their GitHub anchor slugs — and the one external link from
+             spec-change-log.md#entropy-characterization — survive unbroken.
+          2. Grid & geometry is placed BEFORE Fingerprint-derived structure.
+             The first draft of this reorg put Fingerprint-derived first (per the
+             outline), which created a one-way forward reference: blank-cell
+             placement uses "cell count", "grid", and "cell index", all defined
+             only in Grid & geometry, while Grid & geometry references nothing
+             from the fingerprint section. Resolved 2026-07-11 by an UNBIASED
+             A/B subagent that read both orderings blind and chose grid-first
+             decisively (zero used-before-defined terms; "define the container,
+             then place its contents"). Do not reorder back without re-running
+             that comparison — the dependency is asymmetric and pins grid-first.
+          3. Casual avalanche (v10) is no longer a standalone section — it folds
+             into "Rendering one cell" as a non-normative preamble note serving
+             the Edge-color and Blank-fill substeps (outline decision b). Its
+             anchor #casual-avalanche-v10 is retired; links repoint to
+             #rendering-one-cell.
+        Also: the Guarantees overview was trimmed to purpose-only (six channels
+        named + jobs, mechanics removed — outline decision a); Entropy
+        characterization merged out of Conformance into Input normalization
+        (anchor #entropy-characterization preserved); "Why the fingerprint hashes
+        text" moved beside the fingerprint step. Relates to [[c0nf0rm1]],
+        [[h4shtext]], [[v14lbl]], [[entviz-multiimpl-plan]].
+
+    Cell-text sizing is per-alphabet, not per-token-char = decision:
+      id: c3llsize
+      status: drafted
+      why: >
+        2026-07-11. A conceptual-drift audit had the Java port "fix" the
+        cell-text sizing from per-alphabet to the spec's per-token-char-count
+        wording; it broke 20 golden cases and exposed a real SPEC-vs-REFERENCE
+        conflict. Ground truth (pipeline.py): cell_text_pt is keyed on
+        `alphabet.bits_per_char` (4-bit hex/decimal -> 0.75x, else reference),
+        applied to EVERY cell of that alphabet — including a SHORT FINAL TOKEN
+        (a 4-char trailing hex token still renders 0.75x, not enlarged). The
+        Crockford middle cells are separately 0.80x (sized from their own
+        5-char alphabet). The spec PROSE said "from that cell's own token
+        character count — NOT the input alphabet", which mis-sizes a partial
+        hex token to 1.0x. Daniel's ruling: KEEP per-alphabet (he wants the
+        partial token consistent with its siblings), and CORRECT THE SPEC to
+        describe it — the sizing follows the alphabet the cell's text is written
+        in (input alphabet for head/tail, Crockford for the middle). This is
+        the prime-directive fix (spec describes the impls): zero output/golden
+        change, no version bump; per-alphabet was already what all 5 impls +
+        the corpus do. The per-token framing was only ever a mislabel (even
+        pipeline.py's own comment said "per-token" over per-alphabet code).
+        Kept the R089 MUST (middle cells sized independently) and R090 MAY
+        (an entviz MAY mix sizes) verbatim. Also fixed the render-model prose
+        "size class (full vs 0.75x)" -> three classes (full, 0.80x, 0.75x).
+        Relates to [[cr0ckmid]], [[sp3cre0rg]], [[h4shtext]].
