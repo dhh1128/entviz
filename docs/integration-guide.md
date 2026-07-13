@@ -17,8 +17,15 @@ recognition aid, never a substitute for a byte-for-byte equality check — a mat
 only means no difference was found at the resolution you looked.)
 
 The same algorithm is implemented, and **certified against a shared conformance
-corpus**, in five languages: Python (the reference), Rust, Go, Java, and
-TypeScript/JavaScript (with a React component).
+corpus**, in five languages — [Python](https://github.com/dhh1128/entviz) (the
+reference), [Rust](https://github.com/dhh1128/entviz-rs),
+[Go](https://github.com/dhh1128/entviz-go),
+[Java](https://github.com/dhh1128/entviz-java), and
+[TypeScript/JavaScript](https://github.com/dhh1128/entviz-js) (with a
+[React component](https://www.npmjs.com/package/@entviz/react)) — plus a
+**[live browser playground](https://dhh1128.github.io/entviz-js/)**. The full
+[directory of implementations](https://github.com/dhh1128/entviz#implementations)
+lists every package and its API docs.
 
 ## Quickstart per language
 
@@ -27,7 +34,7 @@ Every implementation exposes a `render` entry point that takes an entropy string
 All five also expose a public `characterize` function that returns the structured
 [characterization](#the-characterization-model) directly. In **every**
 implementation, the eight characterization fields are also emitted onto the root
-`<svg>` as [`data-*` attributes](#reading-the-fields-off-a-rendered-svg), so a
+`<svg>` as [`data-*` attributes](#consuming-the-fields), so a
 consumer can read them off any rendered entviz without a separate call.
 
 === "Python"
@@ -130,6 +137,20 @@ consumer can read them off any rendered entviz without a separate call.
     const ch = characterize("550e8400-e29b-41d4-a716-446655440000");
     // -> { encoding: "hex", scheme: "uuid", role: "identifier", qualifiers: {},
     //      sizeBasis: "decoded", sizeBits: 128, parts: [...], entropyType: "uuid" }
+    ```
+
+    **React** — `@entviz/react` wraps the renderer in components (the fastest path
+    for a UI; see [Using the React components](#using-the-react-components)):
+
+    ```sh
+    npm install @entviz/react @entviz/core react
+    ```
+
+    ```tsx
+    import { Entviz } from "@entviz/react";
+
+    // Render one value as a comparable SVG:
+    <Entviz value="550e8400-e29b-41d4-a716-446655440000" targetAr={1.5} note="git" />
     ```
 
 ## The characterization model
@@ -246,16 +267,32 @@ These are advisory metadata that add no ink (the closed SVG profile explicitly
 permits extra `data-*` attributes), so emitting them changes nothing a viewer
 sees.
 
-### Reference UI consumption: the React pill
+### Using the React components
 
-The React `<EntvizPill/>` in `@entviz/react` is the reference pattern for
-consuming the characterization in a UI. It reads the **structured fields** rather
-than parsing the label string — this is the exact pain the characterization was
-introduced to remove. The pill is deliberately bare: it shows a constant badge
-plus the trusted type, and affords locate / expand / copy — never an equality
-verdict (recognition ≠ verification). Model your own UI on the same principle:
-drive presentation from the structured fields, and never let a glance at a pill
-stand in for a real comparison.
+For web and mobile UIs — the most common way to embed entviz —
+[`@entviz/react`](https://www.npmjs.com/package/@entviz/react) wraps the core
+renderer in ready-made components. **[Try them all in the live playground](https://dhh1128.github.io/entviz-js/)**,
+then reach for:
+
+* **`<Entviz>`** — render one value as a comparable SVG. Props: `value`,
+  `targetAr`, `fontSizePt`, `note`, `title`, `style`, `onError` (see the
+  [quickstart](#quickstart-per-language) above).
+* **`<EntvizCompare>`** — render *two* values and surface any visible difference.
+  This is the core comparison use case, built for you — the "dedicated comparison
+  UI" the manual procedure below otherwise stands in for.
+* **`<EntvizPill>`** — a compact badge driven by the **structured
+  characterization**, not by parsing the label string (the exact pain the
+  characterization removes). It shows a constant badge plus the trusted type and
+  affords locate / expand / copy — **never an equality verdict** (recognition ≠
+  verification).
+* **`<EntvizVoiceCompare>`** — the read-aloud comparison flow (name the color-bar
+  band letters in order) for verifying two values over a voice call.
+
+Whatever you build, model it on the pill's principle: **drive presentation from
+the structured fields, and never let a glance at a badge stand in for a real
+comparison.** For full props and source, see the
+[`@entviz/react` README](https://github.com/dhh1128/entviz-js/tree/main/packages/react)
+and the [entviz-js repo](https://github.com/dhh1128/entviz-js).
 
 ## Conformance
 
@@ -297,6 +334,7 @@ entvizes should:
   checks only one landmark is the easiest to fool.
 
 The **read-aloud** convention — naming the color-bar band letters in order —
-gives two people a channel for comparing entvizes over a voice call. For the full
-treatment of the perceptual channels and the comparison model, see
-[Thoughts About Comparing](spec.md#thoughts-about-comparing) in the spec.
+gives two people a channel for comparing entvizes over a voice call (and drives
+`<EntvizVoiceCompare>`). For the full treatment of the perceptual channels and the
+comparison model, see [The channels at a glance](spec.md#the-channels-at-a-glance)
+in the spec.
