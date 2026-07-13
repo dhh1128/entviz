@@ -296,6 +296,29 @@ A T1+T5+T6 attacker (see `threat-model.md`) who could previously collide only th
 
     >Using more entropy than the example we've been building, just to show how this works in more complicated situations: 256 bits of entropy is 44 base-64 characters or 11 tokens. 11 tokens can be rendered as a grid with 6 columns and 2 rows (rounding *token count* to 12; aspect ratio (6·3):(2·2) = 18:4 = 9:2), 4 columns and 3 rows (12:6 = 2:1), 3 columns and 4 rows (9:8), or 2 columns and 6 rows (6:12 = 1:2). Given a *target aspect ratio* of 1:1, the grid layout with an aspect ratio closest to 1:1 but not less than 1:1 is the one with 3 columns and 4 rows.
 
+    The following pseudocode is **non-normative**; it illustrates the rule above and mirrors the reference `choose_grid`. A cell is 3:2, so a `cols × rows` grid has aspect ratio `(cols · 3) / (rows · 2)`:
+
+    ```
+    # tightest[rows] = the fewest cols that hold token_count in >= 2 rows
+    tightest = {}
+    for cols in 2 .. token_count:
+        rows = ceil(token_count / cols)
+        if rows < 2: continue                   # a single row is invalid
+        if rows not in tightest or cols < tightest[rows]:
+            tightest[rows] = cols               # keep only the tight layout (fewest blanks)
+
+    if tightest is empty:                       # token_count <= 2: no natural 2x2+ layout
+        return grid(cols=2, rows=2)             # force 2x2; the spare cells become blanks
+
+    candidates = [(cols, rows, (cols*3)/(rows*2)) for (rows, cols) in tightest]
+    at_or_above = [g for g in candidates if g.ar >= target_ar]
+    if at_or_above:                             # closest to target without dropping below it
+        return argmin(at_or_above, key = g.ar - target_ar)
+    return argmax(candidates, key = g.ar)       # target unreachable: fall back to the widest
+    ```
+
+    The "tightest cols per row count" dedup is what makes the choice unambiguous: without it a target above every achievable ratio would pick a wasteful layout (e.g. 10×2 for 11 tokens — 9 blanks) instead of the tight 6×2 (1 blank). The final `argmax` fallback is the one case where the result is *below* the target — chosen only when no 2×2+ layout reaches it.
+
     ![grid options](assets/grid-options.svg)
 
     **Figure 7.** Choosing the grid whose aspect ratio is closest to the target.
@@ -359,9 +382,9 @@ A T1+T5+T6 attacker (see `threat-model.md`) who could previously collide only th
 
 1. Sort the used ftoks in **ASCII order** — case-sensitive bytewise (lexicographic) comparison of the ftok's base64url text. Since base64url characters are all in the ASCII range, this is equivalent to UTF-8 bytewise comparison. Shorter strings sort before longer strings that share their full content as a prefix (standard lexicographic ordering; partial ftoks therefore sort below full ftoks that begin with the same chars). Use a secondary sort by *ftok index*, in case the same ftok appears in more than one place. Identify the ftok at the median position of the ASCII-sorted list — the element at 0-based index ⌊(*token count* − 1) / 2⌋. (For an even *token count* this is the first ftok of the middle pair.) Call this the **median ftok**.
 
-1. Also sort the used ftoks by the ASCII order of their mirror image (with a secondary sort on the ftok index, in case the same ftok appears in more than one place). For example, if an ftok is "a4W6", its sort key would be "6W4a". If the number of used ftoks is not evenly divisible by 4, act as if 4 - (*token count* mod 4) blank items existed at the bottom of the list. Now divide the sorted list into 4 sections and call each section a **quartile**. Identify the first ftok in each quartile and call it the **first quartile ftok**, the **second quartile ftok**, and so on.
+1. Also sort the used ftoks by the ASCII order of their mirror image (with a secondary sort on the ftok index, in case the same ftok appears in more than one place). For example, if an ftok is "a4W6", its sort key would be "6W4a". If the number of used ftoks is not evenly divisible by 4, act as if 4 - (*token count* mod 4) blank items existed at the bottom of the list. These padding items are placeholders with no value and no sort key; they occupy only the bottom slots and are never selected as a quartile's first ftok — if a quartile's first slot falls in the padding region, that quartile simply has no ftok (its quartile mark and any fingerprint-edge recoloring are skipped). Now divide the sorted list into 4 sections and call each section a **quartile**. Identify the first ftok in each quartile and call it the **first quartile ftok**, the **second quartile ftok**, and so on.
 
-1. If *token count* is less than *cell count*, the grid will have blank cells. We want to use blank cells to create visual gaps in a consistent way that is more meaningful than simply putting all the blanks at the beginning or end, because this will aid comparison. Each used ftok corresponds to a token (and therefore to a cell); use that correspondence to locate the cells named below. Insert a blank cell at the *cell index* of the token corresponding to the *median ftok* by incrementing the *cell index* of all tokens whose *token index* >= that token's *token index*. This essentially shifts these tokens to the right or down in the grid. If *token count* + 1 is still less than *cell count*, insert a second blank cell before the cell of the last ftok in the ASCII-sorted list, again shifting cells that render after. If *token count* + 2 is still less than *cell count*, insert a third blank cell before the cell of the first ftok in the ASCII-sorted list, again shifting cells that render after. Do not perform more than 3 shifts. (Inputs greater than 512 bits use this *same* rule: their 20 head/middle/tail tokens are placed in a grid with spare cells — a 4×6 grid at `target_ar = 1.0` — and blanks are inserted by the same median/ASCII-endpoint shifts. There are no fixed separator blanks; see the large-input handling subsection.)
+1. If *token count* is less than *cell count*, the grid will have blank cells. We want to use blank cells to create visual gaps in a consistent way that is more meaningful than simply putting all the blanks at the beginning or end, because this will aid comparison. Each used ftok corresponds to a token (and therefore to a cell); use that correspondence to locate the cells named below. Insert a blank cell at the *cell index* of the token corresponding to the *median ftok* by incrementing the *cell index* of all tokens whose *token index* >= that token's *token index*. This essentially shifts these tokens to the right or down in the grid. If *token count* + 1 is still less than *cell count*, insert a second blank cell before the cell of the last ftok in the ASCII-sorted list, again shifting cells that render after. If *token count* + 2 is still less than *cell count*, insert a third blank cell before the cell of the first ftok in the ASCII-sorted list, again shifting cells that render after. Do not perform more than 3 shifts. The ASCII-sorted list is computed **once** (in the median-ftok step above), on the original ftok identities, and all three potential shifts consult that same list; a shift changes only tokens' *cell indices*, never their *token indices* — the stable identity that keys the ftok-to-token correspondence. (Inputs greater than 512 bits use this *same* rule: their 20 head/middle/tail tokens are placed in a grid with spare cells — a 4×6 grid at `target_ar = 1.0` — and blanks are inserted by the same median/ASCII-endpoint shifts. There are no fixed separator blanks; see the large-input handling subsection.)
 
 ### Palette and entviz background color
 
