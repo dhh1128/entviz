@@ -158,9 +158,9 @@ BASE36_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # of entropy. See `this.i:sn0wfl4k` for the design rationale.
 DECIMAL_ALPHABET = "0123456789"
 
-# Named alphabet singletons. BASE32 is still deferred — types whose core
-# uses base32 (Bitcoin Cash CashAddr, Stellar, IPFS CID v1) still
-# declare BASE64 as a placeholder.
+# Named alphabet singletons. Stellar and IPFS CID v1 declare BASE32;
+# Bitcoin Cash CashAddr declares BECH32. The one remaining narrow-alphabet
+# placeholder is parse_eos_address, which declares BASE64 (see its own note).
 HEX       = Alphabet("hex",       HEX_ALPHABET,        4)
 BASE58    = Alphabet("base58",    BASE58_ALPHABET,     6)  # ~5.86 bits true; treated as 6 for token alignment
 BASE64    = Alphabet("base64",    BASE64_ALPHABET,     6)

@@ -812,10 +812,11 @@ Entviz = goal:
             through to the base64 fallback path. The regexes now
             use a proper bech32 character class.
 
-            BASE32 alphabet (5 bits/char, alphabet A-Z2-7) is still
-            deferred: Bitcoin Cash CashAddr, Stellar, IPFS CID v1
-            continue to use the BASE64 placeholder until a separate
-            commit adds BASE32.
+            (Resolved since this node was written: the BASE32 alphabet
+            (5 bits/char, A-Z2-7) was added — Stellar and IPFS CID v1 now
+            declare BASE32, and Bitcoin Cash CashAddr declares BECH32. The
+            one remaining narrow-alphabet placeholder is EOS, which declares
+            BASE64; see its inline note in entropy.py.)
 
             Default token_len rule simplified from
               "24 // bits_per_char if 24 % bits_per_char == 0 else 5"

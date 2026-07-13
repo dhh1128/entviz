@@ -425,6 +425,27 @@ resolved or made obsolete by the v4/v5/v6 reworks:
   digest, not per-cell edges), **D14** (v4 removed the SCS line below the grid).
 - **Still genuinely open:** D1–D5, D7, D8, D10, D11.
 
+**Status reconciled again at v15 (2026-07-13).** The conformance suite +
+RFC-2119 pass + Phase-2 reorg + this polish closed most of the remaining set:
+- **Resolved by the v7–v15 work:** **D4** (font pinning — the `font-family`
+  fallback chain, `MUST NOT` bare `monospace`, is the chosen answer);
+  **D5** (numeric-precision — the *Numeric serialization* section: ±0.01px
+  tolerance, round-ties-even acceptable, compact form, no exponential);
+  **D8** (ellipse rasterization — Tier-B pins one reference rasterizer at a
+  fixed DPI, which *is* "pick one"); **D10** (normative/explanatory split —
+  RFC-2119 markers + `Note`/`Rationale` + the Part A non-normative / Part B–C
+  normative structure); **D11** (conformance vectors + goldens — the
+  `compliance/corpus/*` model.json + golden.svg/png + three tiers).
+- **Resolved by the 2026-07-13 polish pass (this commit):** **D2** (grid-selection
+  pseudocode added, mirroring `choose_grid`); **D3** (blank-insertion ordering —
+  now states the ASCII sort is computed once and shifts change only `cell_index`);
+  **D7** (quartile padding — now states padding items have no value/sort key and
+  are never a quartile's first ftok).
+- **Still genuinely open:** **D1 only** — a standalone normative parser spec
+  (ABNF + type-detection precedence + canonical test vectors) instead of deferring
+  to the Python reference. This is its own writing project, not a spec edit; greenlight
+  separately. **D9/D12–D17** remain resolved/obsolete as noted above.
+
 ### D1. Full parser spec for input normalization
 The current v3 draft defers entropy-type detection and normalization
 to the Python reference implementation in `entviz/entropy.py` (~300
