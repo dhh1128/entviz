@@ -20,7 +20,7 @@ monochrome displays still get a reliable signal.
 
 ## Explore
 
-- **[Specification](spec.md)** — the full algorithm (current: v5): normalization,
+- **[Specification](spec.md)** — the full algorithm (current: v15): normalization,
   tokenization, the fingerprint, geometry, and every visual channel.
 - **[Gallery](gallery.html)** — entvizes across real input types (UUIDs, hex,
   blockchain addresses, SSH keys, ULIDs, LEIs, snowflakes) and avalanche pairs.
@@ -31,11 +31,26 @@ monochrome displays still get a reliable signal.
 A [threat model](threat-model.md) covering the comparison guarantees is also
 available.
 
+## Implementations
+
+entviz is a language-independent specification; every implementation below passes
+the same shared conformance corpus. **[▶ Try it live in the browser](https://dhh1128.github.io/entviz-js/)**
+— the JavaScript/React playground lets you render a value and compare two.
+
+| Language | Repository | Package | API docs |
+|---|---|---|---|
+| **Python** (reference) | [entviz](https://github.com/dhh1128/entviz) | [PyPI `entviz`](https://pypi.org/project/entviz/) | this site + [`spec.md`](spec.md) |
+| **Rust** | [entviz-rs](https://github.com/dhh1128/entviz-rs) | [crates.io `entviz`](https://crates.io/crates/entviz) | [docs.rs](https://docs.rs/entviz) |
+| **TypeScript / JS** | [entviz-js](https://github.com/dhh1128/entviz-js) | [npm `@entviz/core`](https://www.npmjs.com/package/@entviz/core) | [TypeDoc](https://dhh1128.github.io/entviz-js/api/) |
+| **React** | [entviz-js `packages/react`](https://github.com/dhh1128/entviz-js/tree/main/packages/react) | [npm `@entviz/react`](https://www.npmjs.com/package/@entviz/react) | — |
+| **Java** | [entviz-java](https://github.com/dhh1128/entviz-java) | [Maven `io.github.dhh1128:entviz`](https://central.sonatype.com/artifact/io.github.dhh1128/entviz) | [javadoc.io](https://javadoc.io/doc/io.github.dhh1128/entviz) |
+| **Go** | [entviz-go](https://github.com/dhh1128/entviz-go) | [pkg.go.dev](https://pkg.go.dev/github.com/dhh1128/entviz-go) | [pkg.go.dev](https://pkg.go.dev/github.com/dhh1128/entviz-go) |
+
 ## At a glance
 
 - Losslessly represents up to 512 bits in the text channel; larger inputs show
-  head + fingerprint-selected middle slices + tail, and bind the whole input
-  through the fingerprint.
+  head + a domain-separated fingerprint readout in the middle + tail, and bind
+  the whole input through the fingerprint.
 - Amplifies single-bit differences via a SHA-512 fingerprint, even when the
   input itself has no avalanche effect.
 - Usable under red-green, blue-yellow, and complete color blindness.

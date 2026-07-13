@@ -6,12 +6,25 @@
 [![PyPI](https://img.shields.io/pypi/v/entviz)](https://pypi.org/project/entviz/)
 [![Python versions](https://img.shields.io/pypi/pyversions/entviz)](https://pypi.org/project/entviz/)
 
-Entviz is a tool for visualizing high-entropy values (like cryptographic keys, UUIDs, or blockchain addresses) into a grid of colored shapes and text, making it easy for humans to compare them. This is its reference implementation in python. There are also implementations in [javascript/react](https://www.npmjs.com/package/@entviz/core) and [rust](https://crates.io/crates/entviz). 
+Entviz is a tool for visualizing high-entropy values (like cryptographic keys, UUIDs, or blockchain addresses) into a grid of colored shapes and text, making it easy for humans to compare them. This is its reference implementation in Python; there are conformant implementations in Rust, TypeScript/JS + React, Java, and Go, plus a **[live browser playground](https://dhh1128.github.io/entviz-js/)** — see [Implementations](#implementations) below.
 
 <figure markdown="span">
   ![An entviz rendering of this repository's root commit hash](assets/root-commit-entviz.svg){ width="320" }
   <figcaption>This repository itself, rendered as an entviz of its own root commit hash.</figcaption>
 </figure>
+
+## Implementations
+
+entviz is a language-independent [specification](docs/spec.md); every implementation below passes the same shared conformance corpus. **[▶ Try it live in the browser](https://dhh1128.github.io/entviz-js/)** — the JS/React playground renders a value and compares two.
+
+| Language | Repository | Package | API docs |
+|---|---|---|---|
+| **Python** (reference) | this repo | [PyPI `entviz`](https://pypi.org/project/entviz/) | [docs site](https://dhh1128.github.io/entviz/) |
+| **Rust** | [entviz-rs](https://github.com/dhh1128/entviz-rs) | [crates.io `entviz`](https://crates.io/crates/entviz) | [docs.rs](https://docs.rs/entviz) |
+| **TypeScript / JS** | [entviz-js](https://github.com/dhh1128/entviz-js) | [npm `@entviz/core`](https://www.npmjs.com/package/@entviz/core) | [TypeDoc](https://dhh1128.github.io/entviz-js/api/) |
+| **React** | [entviz-js `packages/react`](https://github.com/dhh1128/entviz-js/tree/main/packages/react) | [npm `@entviz/react`](https://www.npmjs.com/package/@entviz/react) | — |
+| **Java** | [entviz-java](https://github.com/dhh1128/entviz-java) | [Maven `io.github.dhh1128:entviz`](https://central.sonatype.com/artifact/io.github.dhh1128/entviz) | [javadoc.io](https://javadoc.io/doc/io.github.dhh1128/entviz) |
+| **Go** | [entviz-go](https://github.com/dhh1128/entviz-go) | [pkg.go.dev](https://pkg.go.dev/github.com/dhh1128/entviz-go) | [pkg.go.dev](https://pkg.go.dev/github.com/dhh1128/entviz-go) |
 
 ## Install
 
@@ -30,9 +43,10 @@ rasterizer required.
 
 ## Comparing two entvizes
 
-> **Note:** This is interim guidance. A dedicated comparison UI (a React
-> component that aligns two entvizes and highlights differences) is planned;
-> until then, follow the manual procedure below.
+> **Tip:** For an interactive UI, the [`@entviz/react`](https://www.npmjs.com/package/@entviz/react)
+> component and the **[live playground](https://dhh1128.github.io/entviz-js/)** let you render and
+> compare two entvizes in the browser. The manual procedure below applies anywhere you have only the
+> static SVGs.
 
 entviz is built for **comparison**, not memorization. To check whether two
 values are the same:
