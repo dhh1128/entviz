@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Cut an entviz release: bump version, regenerate the gallery, commit, tag, push.
 
+HUMAN-run by default: pushes to main and tags are reserved for a human
+maintainer. An AI agent may run this script ONLY when a human has explicitly
+instructed it to cut a release.
+
 Usage:
     python3 scripts/release.py                     # patch bump, default message
     python3 scripts/release.py -m "fix overlay"    # patch bump, custom message
