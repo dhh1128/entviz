@@ -280,11 +280,16 @@ then reach for:
 * **`<EntvizCompare>`** — render *two* values and surface any visible difference.
   This is the core comparison use case, built for you — the "dedicated comparison
   UI" the manual procedure below otherwise stands in for.
-* **`<EntvizPill>`** — a compact badge driven by the **structured
+* **`<EntvizPill>`** — a compact inline pill driven by the **structured
   characterization**, not by parsing the label string (the exact pain the
-  characterization removes). It shows a constant badge plus the trusted type and
-  affords locate / expand / copy — **never an equality verdict** (recognition ≠
-  verification).
+  characterization removes). It shows the value's type (as a per-role **icon**, or
+  text) and affords locate / expand / copy. In the default **wild** posture it makes
+  **no equality claim** (recognition ≠ verification) and carries no value-derived
+  visual. A host that owns a trusted, single-origin corpus (e.g. its own KERI KEL)
+  can opt a same-origin value set — via a per-value **trust posture** — into
+  value-derived **recognition aids** (a mnemonic, a colorbar cap, a color tint) that
+  make recurrence scannable; verification still routes through the compare flow. See
+  the [threat model](threat-model.md#display-posture-wild-vs-corpus).
 * **`<EntvizVoiceCompare>`** — the read-aloud comparison flow (name the color-bar
   band letters in order) for verifying two values over a voice call.
 

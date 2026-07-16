@@ -53,6 +53,52 @@ style bleed) merely by existing on the same page.
 
 ---
 
+## Display posture: wild vs corpus
+
+The collapsed pill (`<EntvizPill>`, `@entviz/react`) has two display postures. This
+model — and everything else in this document — describes the **wild** posture, which
+is the default.
+
+**Wild (default, adversarial).** The pill carries *zero identity bits*: no value
+characters, no value-derived visual. It affords locate / expand / copy but no equality
+judgment. This is the posture for any value whose provenance the reader cannot vouch
+for — cross-channel, untrusted, the setting this whole document assumes.
+
+**Corpus (host-declared, trusted).** A host that owns a *closed, single-origin,
+already-trusted* body of values — e.g. a KERI KEL rendered from the user's own machine —
+may opt a same-origin value set into value-derived **recognition aids**: a short
+mnemonic, a value-hued colorbar cap, a background color tint, and a full-value hover
+preview. These make it easy to see that the same value recurs in many places.
+
+Why the corpus posture does not break this model:
+
+* **Recognition ≠ verification still holds.** The aids are *rule-out, not rule-in*: two
+  *different* aids prove *different* values at a glance; two *matching* aids prove
+  nothing — sameness still routes through the comparison flow. The aids never assert
+  equality.
+* **The hover preview is not the grinding vector (T1/T6).** That vector is a *short*
+  (~8-char) head+tail teaser, which is both glanceable and grindable. The preview shows
+  the *whole* identifier (≤ ~100 chars); a hundreds-of-bits prefix cannot be
+  vanity-ground. A short inline teaser stays forbidden in both postures.
+* **Trust is HOST-declared, not reader-declared.** The posture is set in code, per
+  value, by the party that knows the provenance — never by an end-user toggle. So the
+  residual threat shifts from "the reader is fooled by a glance" to "the *host*
+  misdeclares a foreign value as corpus" — a first-party bug, greppable and auditable
+  (every trusting pill references a trust object), not a social-engineering surface. A
+  pill exposes **no** affordance to change its own posture.
+* **Earned promotion is the only runtime elevation.** A value may rise wild→corpus at
+  runtime *only* by the user completing a successful *formal comparison* (the seeded
+  walk / voice ceremony) — verification is the price of trust; a click never is.
+  (Reserved for a later version.)
+
+**New consideration — posture mixing.** If wild and corpus pills share one screen, a
+reader could mistake a wild pill for a trusted one. Mitigations: the posture is
+per-value provenance (so a screen is usually uniform), and the corpus aids are visually
+distinct from a bare wild pill (which shows only a type icon). A host mixing foreign and
+owned values should keep the foreign ones wild.
+
+---
+
 ## User note (out-of-band caption)
 
 The optional `--note` caption (see `spec.md` "User note" and
