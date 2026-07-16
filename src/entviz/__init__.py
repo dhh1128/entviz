@@ -20,4 +20,4 @@ version. See AGENTS.md.
 """
 
 SPEC_VERSION = "v15"
-__version__ = "0.15.0"
+__version__ = "0.15.1"
