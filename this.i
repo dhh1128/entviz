@@ -2806,7 +2806,7 @@ Entviz = goal:
             to grid AR); gold (not an arbitrary yellow) for the white-bg
             fill. Tests in tests/test_v6_blank_map.py.
 
-        Blank-Cell Map: Shape Cue + Position Attributes = decision:
+        Blank-Cell Map — Shape Cue + Position Attributes = decision:
           id: v8blnkmp
           why: >
             Two v8 changes to the blank-cell map, from the 2026-06-08 review
@@ -3835,7 +3835,7 @@ Entviz = goal:
         Relates to [[v14lbl]], [[lbldedup]], [[sufxbind]], [[ch4rmod3l]],
         [[entviz-multiimpl-plan]].
 
-    SSH core sizing: why size_bits != nominal key size (principled, leave as-is) = decision:
+    SSH core sizing — why size_bits != nominal key size (principled, leave as-is) = decision:
       id: s5hs1ze
       status: drafted
       why: >
