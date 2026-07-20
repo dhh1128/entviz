@@ -153,6 +153,14 @@ SAMPLES = [
         ("Verification key (D, Ed25519)",         "DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx"),
         ("Ed25519 signature (0B)",
          "0BLwV6fEpOzY9iHsR2bAlKvU5eDoNyX8hGrQ1a_kJuT4dCnMxW7gFqP0Z-jItS3cBmLwV6fEpOzY9iHsR2bAlKvU"),
+        # Indexer table (issue #36): the indexed sigs a KEL actually carries —
+        # controller/witness signatures. `A` + one index char (fs 88); the
+        # code+index stay in the core so they drive the cells. Shown beside the
+        # non-indexed 0B above to make the Matter-vs-Indexer distinction visible.
+        ("Ed25519 indexed sig (A — KEL controller sig)",
+         "ABCfhtCBiEx9ZZov6qDFWtAVn4bQgYhMfWWaL-qgxVrQFZ-G0IGITH1lmi_qoMVa0BWfhtCBiEx9ZZov6qDFWtAV"),
+        ("secp256k1 indexed sig (C)",
+         "CCCfhtCBiEx9ZZov6qDFWtAVn4bQgYhMfWWaL-qgxVrQFZ-G0IGITH1lmi_qoMVa0BWfhtCBiEx9ZZov6qDFWtAV"),
     ]),
     ("Snowflake IDs (Twitter/Discord/Mastodon)", [
         ("Discord docs example",         "80351110224678912"),

@@ -1,0 +1,10 @@
+{
+  "id": "cesr-datetime",
+  "entropy": "1AAG2020-08-22T17c50c09d988921p00c00",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

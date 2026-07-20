@@ -83,6 +83,21 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("cesr-aid-d", "DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx", {}),
     ("cesr-aid-b", "BKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx", {}),
     ("cesr-said-e", "EBfdlu8R27Fbx_ehrqwImnK_8Cm79sqbAQ4caaZG_LFv", {}),
+    # CESR Indexer table (issue #36): indexed signatures — the controller /
+    # witness sigs a KEL carries. Recognized via (hard-code, fs), tried after
+    # Matter so length decides Matter-vs-Indexer (this.i:idxs1gs0). Two length
+    # classes: hs1/fs88 (Ed25519 'A' + 1 index char) and hs2/fs156 (Ed448 '0A'
+    # + dual index). role=signature. Vectors from keripy Siger (authoritative).
+    ("cesr-idx-sig-ed25519",
+     "ABCfhtCBiEx9ZZov6qDFWtAVn4bQgYhMfWWaL-qgxVrQFZ-G0IGITH1lmi_qoMVa0BWfhtCBiEx9ZZov6qDFWtAV",
+     {}),
+    ("cesr-idx-sig-ed448",
+     "0ACCAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5",
+     {}),
+    # Dater (Matter code 1AAG): a CESR datetime. Recognized only to LABEL it
+    # (not `raw`); a datetime is low-entropy and human-readable, so it is
+    # deliberately role-less (role=null, NOT the key default). See this.i:idxs1gs0.
+    ("cesr-datetime", "1AAG2020-08-22T17c50c09d988921p00c00", {}),
     ("ssh-ed25519",
      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDtJVH9hM+2DyhmgRZBfeIDoVqCTbXY+0nKlS5pTkkXY user@example.com",
      {}),

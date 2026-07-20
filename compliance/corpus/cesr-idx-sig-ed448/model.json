@@ -1,0 +1,387 @@
+{
+  "bg_color": "#2f3fbf",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#8200d0",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 881770,
+      "text": "0ACC",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#030201",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 14549497,
+      "text": "AQID",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": true,
+      "nucleus_bg": "#2f3fbf",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 7737081,
+      "text": "6wjnd",
+      "text_size_px": 13.333
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": true,
+      "nucleus_bg": "#2f3fbf",
+      "quartile": 1,
+      "row": 2,
+      "surround_bits": 8859646,
+      "text": "29ba2",
+      "text_size_px": 13.333
+    },
+    "12": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": true,
+      "nucleus_bg": "#2f3fbf",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 8112764,
+      "text": "cr19r",
+      "text_size_px": 13.333
+    },
+    "13": {
+      "blank": true,
+      "blank_map": false,
+      "col": 1,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 3
+    },
+    "14": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#242322",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 16471341,
+      "text": "IiMk",
+      "text_size_px": 16.0
+    },
+    "15": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#272625",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 14155453,
+      "text": "JSYn",
+      "text_size_px": 16.0
+    },
+    "16": {
+      "blank": true,
+      "blank_map": false,
+      "col": 0,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 4
+    },
+    "17": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#2a2928",
+      "quartile": 4,
+      "row": 4,
+      "surround_bits": 13512228,
+      "text": "KCkq",
+      "text_size_px": 16.0
+    },
+    "18": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#2d2c2b",
+      "quartile": 3,
+      "row": 4,
+      "surround_bits": 6744273,
+      "text": "Kywt",
+      "text_size_px": 16.0
+    },
+    "19": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#302f2e",
+      "quartile": null,
+      "row": 4,
+      "surround_bits": 10136864,
+      "text": "Li8w",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#060504",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 4614036,
+      "text": "BAUG",
+      "text_size_px": 16.0
+    },
+    "20": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#333231",
+      "quartile": null,
+      "row": 5,
+      "surround_bits": 3345452,
+      "text": "MTIz",
+      "text_size_px": 16.0
+    },
+    "21": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#363534",
+      "quartile": null,
+      "row": 5,
+      "surround_bits": 970568,
+      "text": "NDU2",
+      "text_size_px": 16.0
+    },
+    "22": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#393837",
+      "quartile": null,
+      "row": 5,
+      "surround_bits": 9886871,
+      "text": "Nzg5",
+      "text_size_px": 16.0
+    },
+    "23": {
+      "blank": true,
+      "blank_map": false,
+      "col": 3,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 5
+    },
+    "3": {
+      "blank": true,
+      "blank_map": true,
+      "col": 3,
+      "fingerprint": false,
+      "map_max": [
+        2,
+        0
+      ],
+      "map_min": [
+        0,
+        0
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#090807",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 5102599,
+      "text": "BwgJ",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#0c0b0a",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 16189392,
+      "text": "CgsM",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#0f0e0d",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 3451808,
+      "text": "DQ4P",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#121110",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 9587786,
+      "text": "EBES",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#151413",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 16674340,
+      "text": "ExQV",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": true,
+      "nucleus_bg": "#2f3fbf",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 10029388,
+      "text": "5y4x3",
+      "text_size_px": 13.333
+    }
+  },
+  "color_bar": [
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 2
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 2,
+    "right": 10,
+    "slots": 16
+  },
+  "cols": 4,
+  "ellipse": {
+    "anchor": [
+      88.0,
+      147.0
+    ],
+    "rotation": 24.0,
+    "rx": 63.169,
+    "ry": 109.897
+  },
+  "encoding": "base64url",
+  "entropy_type": "cesr",
+  "input_bytes": 156,
+  "labels": {
+    "bottom": null,
+    "top": "+hash CESR, Ed448 idx sig",
+    "truncation_marker": true
+  },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "0ACCAQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKywtLi8wMTIzNDU2Nzg5"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "Ed448 idx sig"
+  },
+  "role": "signature",
+  "rows": 6,
+  "scheme": "cesr",
+  "size_basis": "decoded",
+  "size_bits": 936,
+  "spec_version": "v15",
+  "truncated": true,
+  "user_note": null
+}

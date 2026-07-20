@@ -1,6 +1,6 @@
 {
   "spec_version": "v15",
-  "lib_version": "0.15.0",
+  "lib_version": "0.15.1",
   "rasterizer": "cairosvg-2.9.0@scale2.0",
   "raster_scale": 2.0,
   "channel_tol": 16,
@@ -37,6 +37,9 @@
     "cesr-aid-d",
     "cesr-aid-b",
     "cesr-said-e",
+    "cesr-idx-sig-ed25519",
+    "cesr-idx-sig-ed448",
+    "cesr-datetime",
     "ssh-ed25519",
     "swhid-rev",
     "swhid-cnt",

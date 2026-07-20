@@ -1,0 +1,193 @@
+{
+  "bg_color": "#e7be00",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#0600d4",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 11796399,
+      "text": "1AAG",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#b44ddb",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 9970921,
+      "text": "2020",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#3e4ffb",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 9687557,
+      "text": "-08-",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#f564db",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 16639483,
+      "text": "22T1",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#74ceed",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 12437352,
+      "text": "7c50",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#5d4f73",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 6640243,
+      "text": "c09d",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#3dcff7",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 7363297,
+      "text": "9889",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ffffff",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#745adb",
+      "quartile": 1,
+      "row": 2,
+      "surround_bits": 10972600,
+      "text": "21p0",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#34cdd1",
+      "quartile": 2,
+      "row": 2,
+      "surround_bits": 1483839,
+      "text": "0c00",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 0
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 1
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 2
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 4,
+    "right": 9,
+    "slots": 12
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      208.0,
+      147.0
+    ],
+    "rotation": 180.0,
+    "rx": 109.897,
+    "ry": 94.321
+  },
+  "encoding": "base64url",
+  "entropy_type": "cesr",
+  "input_bytes": 36,
+  "labels": {
+    "bottom": null,
+    "top": "CESR, datetime",
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "1AAG2020-08-22T17c50c09d988921p00c00"
+    }
+  ],
+  "qualifiers": {
+    "algorithm": "datetime"
+  },
+  "role": null,
+  "rows": 3,
+  "scheme": "cesr",
+  "size_basis": "decoded",
+  "size_bits": 216,
+  "spec_version": "v15",
+  "truncated": false,
+  "user_note": null
+}
