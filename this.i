@@ -3962,3 +3962,79 @@ Entviz = goal:
         (an entviz MAY mix sizes) verbatim. Also fixed the render-model prose
         "size class (full vs 0.75x)" -> three classes (full, 0.80x, 0.75x).
         Relates to [[cr0ckmid]], [[sp3cre0rg]], [[h4shtext]].
+
+    CESR Indexer table + Dater recognition = decision:
+      id: idxs1gs0
+      why: >
+        2026-07-20 (issue #36). The CESR recognizer covered only a subset of the
+        Matter table, so KEL indexed signatures (the Indexer table) and the Dater
+        (datetime, Matter code 1AAG) fell through parse_cesr -> None -> the
+        base64url `raw` fallback. cesrview hands each atomic CESR primitive of a
+        KEL to an entviz pill, so every controller/witness signature and every
+        first-seen-replay datetime rendered as `raw`. Two requests bundled in the
+        issue, given OPPOSITE dispositions by measuring each against purpose
+        ([[e1ntv1z0]]: compare HIGH-ENTROPY strings; docs/spec.md:11 names
+        "signatures" explicitly, names nothing temporal):
+
+          1. INDEXED SIGNATURES — accepted in full. A 64-byte controller/witness
+             signature is exactly the material entviz exists for. The Indexer
+             table is STRUCTURALLY different from Matter: qb64 = hard-code +
+             index + material, so the chars after the hard code vary with the
+             index and cannot be a fixed leading-substring row. Recognition keys
+             on (hard-code, full-size fs) ONLY, tried AFTER Matter so (code,len)
+             — never leading char alone — decides Matter-vs-Indexer (A is a
+             Matter seed@44 and an Indexer sig@88; 0A/0B are Matter@24/88 and
+             Ed448 indexer sigs@156; length always separates). CESR_INDEXER_CODES
+             ported wholesale from keripy IdrDex so it cannot drift. All 16
+             variants (current-only "Crt", "Big" dual-index) collapse to FOUR
+             labels by algorithm — "Ed25519 idx sig", "secp256k1 idx sig",
+             "secp256r1 idx sig", "Ed448 idx sig". "idx sig" not "indexed sig":
+             "sig" is the established terse convention (all 6 prior CESR sig
+             labels use it; the full word "signature" is only the role VALUE),
+             and "idx sig" still contains "sig" so [[ch4rmod3l]]'s
+             _CESR_SIG_MARKERS maps it to role=signature with no other change.
+             The crt/big distinction is a KEL-indexing internal, not a different
+             high-entropy object, and the code+index chars stay in the core so
+             they still drive the cells — collapsing labels loses no visual
+             discrimination.
+
+          2. DATER / datetime — DECLINED the issue's "visualize datetimes"
+             framing; recognize only to LABEL correctly. A datetime is
+             low-entropy and directly human-readable — the antithesis of what
+             entviz compares (you just READ a date). But a WRONG `raw` label is
+             worse than a right one, so parse_cesr recognizes 1AAG@36 (it is a
+             Matter code with a fixed 4-char prefix + fixed size, so it is just a
+             row in CESR_4_BYTE_CODES — no special path; its ISO-8601 body is
+             base64url after CESR's :->c .->d +->p substitutions). The label is
+             "datetime" -> strip reads "CESR, datetime". Crucially it is
+             ROLE-LESS: _cesr_role special-cases datetime -> None BEFORE the
+             ROLE_KEY default (a datetime has no place in the closed enum
+             {key,signature,digest,address,identifier}, and the default would
+             have mislabeled it key). Also DECLINED the issue's "bulk-port the
+             rest of MtrDex for completeness" — entviz is not a general CESR
+             decoder; it recognizes high-entropy primitives to LABEL them, so
+             low-entropy structural codes (seqner/number/tag/version) are added
+             only if a concrete downstream mislabeling harm justifies it, and
+             then role-less like the Dater.
+
+        SPEC IMPACT: not a version bump. The spec describes the recognizer
+        MECHANISM (code stays in core, binds fingerprint, role from the generic
+        recognizer — [[s3mpr3fx]], [[h4shtext]]) and uses B/C/D/E as EXAMPLES,
+        not a normative catalog; the code table is impl detail like the
+        LEI/ULID/blockchain parsers. The ONE spec-governed behavior touched is
+        the datetime role, so a one-line NON-NORMATIVE note was added to the role
+        principle: a recognized primitive outside the enum is role=null, not a
+        key default (pins it for the ports, since the reference _cesr_role
+        defaults to key and a naive port would diverge). GOLDENS/GALLERY:
+        additive only — a whole-repo audit found NO existing golden/gallery/test
+        input collides with the new recognition (no 88-char base64url starting
+        A-F, no 36-char 1AAG string), and the full suite (965 tests inc. the
+        gallery/figure/social-card drift guards) passed with zero regenerated
+        artifacts, confirming nothing existing reclassified. ROLLOUT: reference
+        first with unit tests only (tests/test_issue36_indexer_dater.py); the
+        four ports (entviz-js/-go/-java/-rs) mirror CESR_INDEXER_CODES + the
+        Dater row + the datetime-role-null rule NEXT; shared compliance/corpus
+        vectors and any gallery entry are added only AFTER the ports land, so a
+        staggered rollout never fails cross-impl conformance (each impl is
+        compared to its own characterization). Relates to [[e1ntv1z0]],
+        [[ch4rmod3l]], [[s3mpr3fx]], [[h4shtext]], [[entviz-multiimpl-plan]].

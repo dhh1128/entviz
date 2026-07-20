@@ -121,9 +121,22 @@ _CESR_DIGEST_MARKERS = (
 )
 _CESR_SIG_MARKERS = ("sig",)
 
+# CESR primitives that are recognized but carry NO role in the closed enum
+# {key, signature, digest, address, identifier}. A Dater ("datetime") is a
+# low-entropy, directly human-readable temporal value — entviz recognizes it
+# only to LABEL it correctly (not `raw`), NOT to endorse visualizing it as
+# entropy. It MUST short-circuit to role=None here rather than fall through to
+# the ROLE_KEY default below. See docs/spec.md role principle and
+# this.i:idxs1gs0. (Checked before the sig/digest markers so a future temporal
+# primitive whose name happened to contain one of those substrings stays
+# role-less.)
+_CESR_NONENTROPY_MARKERS = ("datetime",)
+
 
 def _cesr_role(name: str):
     low = name.lower()
+    if any(m.lower() in low for m in _CESR_NONENTROPY_MARKERS):
+        return None
     if any(m.lower() in low for m in _CESR_SIG_MARKERS):
         return ROLE_SIGNATURE
     if any(m.lower() in low for m in _CESR_DIGEST_MARKERS):
