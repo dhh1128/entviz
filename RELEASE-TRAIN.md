@@ -139,7 +139,8 @@ These block nothing and are blocked by nothing. Pick them up whenever.
 
 ### The paper and the vendoring posture
 
-Tracked outside `tick`, in `entviz-work-agenda.md` (untracked, repo root) under `Q-8VQC`:
+Tracked outside `tick`, in [`reviews/vendoring-posture.md`](reviews/vendoring-posture.md)
+under `Q-8VQC`:
 
 - The vendoring model. `papers/amp-diff.md` is a hand-copied derivative of
   `docs/entviz-paper.md` with a sha256 pin on the *upstream* file only, so a papers-side edit is
