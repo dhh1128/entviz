@@ -98,11 +98,11 @@ It changes rendered output for every bech32-family value and moves four golden r
 
 | Stage | Repo | Tick | State |
 |---|---|---|---|
-| 1 | `entviz` | `4dua` | Landed. Release pending. |
-| 2 | `entviz-js` | `4vmj` | Blocked on the tag. |
-| 2 | `entviz-go` | `6543` | Blocked on the tag. |
-| 2 | `entviz-java` | `32yv` | Blocked on the tag. |
-| 2 | `entviz-rs` | `5a5x` | Blocked on the tag. |
+| 1 | `entviz` | `4dua` | **Done.** `v0.16.0` tagged and pushed 2026-08-04; CI, docs deploy and the PyPI release workflow all green. |
+| 2 | `entviz-js` | `4vmj` | Unblocked. |
+| 2 | `entviz-go` | `6543` | Unblocked. |
+| 2 | `entviz-java` | `32yv` | Unblocked. Note: `mvn` is not on this machine's PATH; a user-space Maven lives at `~/opt/apache-maven-3.9.16/bin/mvn`. |
+| 2 | `entviz-rs` | `5a5x` | Unblocked. |
 | 3 | all four | — | Not started; deliberate, one at a time. |
 
 All four ports were at v15 before this change, so v16 is one hop for each — there is no
