@@ -2,3 +2,4 @@
 kind: todo
 created: 2026-07-31T22:36Z
 
+- 2026-08-04T04:50Z Split 2026-08-04 into per-repo ticks; closing this one. Spec/cross-port half -> entviz 4dua (v16 HRP fold, approved, in progress). Python-side DoS sibling -> entviz 4jvs. entviz-js halves -> 34mr (F1+F2, the HIGH closed-profile/compareSvg cluster), 2rf4 (F5+F6+F7+F8, prefix-blind affirmative verdicts), 6p7t (F3+F9, quadratic decode), 7nye (F10, redirect provenance). The at-risk report was rescued: it is now committed at entviz-js reviews/security-scan-2026-07-31/, and the self-ignoring CLAUDE-SECURITY-20260731-170021/ directory is gone. NOTE the report's F4 preconditions claim addr1/stake1 keep the checksum inside the core and are unaffected — that is FALSE for the python reference, where the Cardano Shelley parser surfaces the checksum as a suffix and addr1/addr_test1 over one payload do collide (verified 2026-08-03). Re-check the JS Cardano parser when doing 2rf4.
