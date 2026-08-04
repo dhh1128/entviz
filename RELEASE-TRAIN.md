@@ -99,11 +99,27 @@ It changes rendered output for every bech32-family value and moves four golden r
 | Stage | Repo | Tick | State |
 |---|---|---|---|
 | 1 | `entviz` | `4dua` | **Done.** `v0.16.0` tagged and pushed 2026-08-04; CI, docs deploy and the PyPI release workflow all green. |
-| 2 | `entviz-js` | `4vmj` | Unblocked. |
-| 2 | `entviz-go` | `6543` | Unblocked. |
-| 2 | `entviz-java` | `32yv` | Unblocked. Note: `mvn` is not on this machine's PATH; a user-space Maven lives at `~/opt/apache-maven-3.9.16/bin/mvn`. |
-| 2 | `entviz-rs` | `5a5x` | Unblocked. |
+| 2 | `entviz-js` | `4vmj` | **Done**, local commit `e17645b`, unpushed. Tier A+B 99/99. |
+| 2 | `entviz-go` | `6543` | **Done**, local commit `7d64c46`, unpushed. Tier A+B 99/99. |
+| 2 | `entviz-java` | `32yv` | **Done**, local commits `9efd231`+`47b029a`, unpushed. Tier A+B 99/99. |
+| 2 | `entviz-rs` | `5a5x` | **Done**, local commit `458f07c`, unpushed. Tier A+B 99/99. |
 | 3 | all four | — | Not started; deliberate, one at a time. |
+
+All four counts were re-verified centrally against the corpus, not taken from the ports' own
+reports. Nothing is pushed.
+
+**This machine's JVM toolchain is incomplete** and both facts cost an agent time: `mvn` is not
+on `PATH` (user-space Maven at `~/opt/apache-maven-3.9.16/bin/mvn`), and the system JDK is a
+*JRE* — there is no `javac` anywhere, so Maven fails with "release version 21 not supported".
+A Temurin JDK 21 sits at `~/opt/jdk-21.0.12+8`; export `JAVA_HOME` to it.
+
+**Two ports had no Cardano parser at all.** `entviz-go` and `entviz-java` fell through to the
+generic bech32 parser for `addr1…`, so it characterized as scheme `bech32` rather than `ada` —
+a pre-existing divergence from the reference that was invisible until v16 added the
+`cardano-shelley` vectors. Both ports now carry a ported `parse_cardano_address`, Byron
+branches included. Byron and `stake1` have no corpus vector, so those paths are covered by the
+ports' own tests and by model-for-model cross-checks against the reference, not by a golden.
+Worth adding corpus vectors for them.
 
 All four ports were at v15 before this change, so v16 is one hop for each — there is no
 catch-up debt underneath it.
@@ -133,6 +149,7 @@ These block nothing and are blocked by nothing. Pick them up whenever.
 | Quadratic BigInt decode reachable ahead of the input cap | `entviz-js` | `6p7t` |
 | URL fetch follows redirects while the shown provenance origin does not | `entviz-js` | `7nye` |
 | The 64 KiB cap's stated cost model is wrong (703 ms measured vs ~14 ms documented) | `entviz` | `4jvs` |
+| A Bitcoin **testnet** address is characterized and labeled as **mainnet** — and v16's corpus ships that wrong value as a golden | `entviz` | `6gde` |
 | Review-panel adversarial pass over the code — best run *after* a spec change lands | `entviz` | `25ac` |
 | `tick init` (the repo has a published paper and is a vendoring upstream) | `entviz-adversarial` | — |
 | Merge issue #23 with the `locateAction` translation tick | `entviz-js` | `74sc` |
