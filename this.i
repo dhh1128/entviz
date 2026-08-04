@@ -2108,6 +2108,100 @@ Entviz = goal:
         which is exactly what makes mechanism 1 bind the in-core
         discriminator without any decode step).
 
+    The bech32 HRP Is Identity and Folds = decision:
+      id: hrpb1nd
+      status: drafted
+      why: >
+        v16, 2026-08-04. The [[s3mpr3fx]] sweep of 2026-06-06 enumerated
+        CESR, the LEI LOU, SWHID/gitoid, multibase and multicodec — and
+        MISSED the bech32 HRP. Not a judgment call: the generic bech32
+        parser landed in de3cd39 on 2026-06-04 and [[xtra4lph]] recorded
+        "`<hrp>1` is the prefix, the 6-char checksum is the suffix" two
+        days BEFORE the rule that would have classified it existed. Every
+        identity discriminator added since has been folded (did:/urn: in
+        v11). The HRP was the sole survivor of the pre-rule habit.
+
+        Surfaced by a Claude Security scan of entviz-js (2026-07-31,
+        finding F4), which reported it as a JS bug. It was not: the
+        python reference behaved identically, so the SPEC was what needed
+        deciding. Verified 2026-08-03 by rendering npub1<payload> and
+        nsec1<same payload> — a nostr public key and the SECRET key —
+        through render(): every channel byte-identical (cells, surround,
+        nucleus, edge colors, ellipse, colour bar, blank map, quartiles),
+        differing only in the 12px grey label. Same for cosmos1/osmo1 and
+        for Cardano addr1/addr_test1.
+
+        THE RULE APPLIED. Swap test ([[s3mpr3fx]]): substituting one HRP
+        for another leaves every data character untouched — only the
+        6-char checksum, which is the SUFFIX not the body, is recomputed
+        — and the meaning changes (chain, network, key role). Identity
+        branch, unambiguously. The re-encode escape hatch does not apply:
+        that clause is the tell of an ENCODING selector (multibase f<->b
+        forces hex<->base32), and nothing here re-encodes.
+
+        A second, independent argument from internal consistency:
+        [[sufxbind]] defines a BOUND suffix as one that cannot vary while
+        the entropy is fixed. The bech32 checksum demonstrably DOES vary
+        while the core is fixed — that IS the npub/nsec construction. So
+        the pre-v16 model called the HRP "no identity bits" and a
+        checksum over that HRP "bound to the entropy," and both cannot be
+        true. Folding restores sufxbind's own definition: the checksum is
+        then genuinely bound to prefix||core.
+
+        MECHANISM 2 (fold), not mechanism 1 (in-core), and not by
+        preference: the HRP alphabet is [a-z] plus the `1` separator, and
+        bech32's charset excludes b, i, o AND 1. `cosmos1` cannot live in
+        a BECH32-declared core without breaking tokenization.
+
+        SCOPE. Folded on every bech32 path: generic <hrp>1, Bitcoin
+        segwit bc1/tb1, Litecoin ltc1, Cardano Shelley addr1/stake1/
+        addr_test1. The segwit and ltc1 parsers ALSO had to give up the
+        checksum: they kept it inside the core, which inflated size_bits
+        and bound the HRP BY ACCIDENT (this is why bc1/tb1 did not
+        collide pre-v16 while the generic and Cardano paths did). Moving
+        the checksum out without folding would have CREATED a bc1/tb1
+        collision, so the two changes are one change.
+
+        CASHADDR IS THE EXCEPTION, deliberately. Its prefix is OPTIONAL
+        (a bare q…/p… body defaults to `bitcoincash`), so folding the
+        literal prefix would make one address and its own prefixed
+        spelling diverge — a benign notational difference reading as an
+        entropy difference, which is exactly what [[c4s3norm]] forbids.
+        Folding a SYNTHESIZED canonical prefix instead would put text in
+        `parts` the input never contained, breaking the label's job of
+        reconciling the pasted value against the cells. Doing it properly
+        needs a literal-vs-canonical prefix distinction the model does
+        not have. And CashAddr does not need it: its 8-char checksum
+        stays in the core and covers the prefix, so bitcoincash:X and
+        bchtest:X already differ. Revisit only if that distinction is
+        introduced for another reason.
+
+        LABEL CONSEQUENCE (the wrinkle that made this more than a
+        one-line change). [[v15pfxlbl]] omitted a folded prefix from the
+        trailing PREFIX slot on the grounds that it is "already the
+        PRIMARY slot" — true for did:key/urn:isbn/swh:1:cnt, where
+        PRIMARY literally IS the prefix. A bech32 HRP's PRIMARY is the
+        scheme name (`bech32`, `BTC`, `ADA`), so the same rule would have
+        DELETED the HRP from the label entirely — leaving it in no text
+        channel at all, which is strictly worse than the bug being fixed.
+        The rule is now exact: drop the slot only when the prefix minus a
+        trailing `:` equals the PRIMARY string.
+
+        RESIDUAL GAP, NOT NEW AND NOT CLOSED HERE. A fold binds the
+        gestalt but never the cells, and spec.md's *Rendering one cell*
+        note says the cells are the only read-aloud carrier for short
+        inputs — which every bech32 address is. So a cells-only
+        read-aloud STILL cannot separate cosmos1 from osmo1. This was
+        already true of did:/urn:/SWHID/gitoid; v16 makes the spec say so
+        (the text channel's "read it aloud and all information is
+        transferred" claim was false for folded prefixes) and requires
+        any read-aloud or comparison-text procedure to include the label
+        prefix. Making the COMPARISON TEXT actually carry it is separate
+        work: entviz tick 4dua part 7, entviz-js tick 2rf4 (findings
+        F5-F8, where compareComparisonText affirms `identical` from cell
+        text alone and a Complete walk over a <=512-bit value contains no
+        gestalt steps at all).
+
     Fingerprint Hashes Text, Not Decoded Bytes = decision:
       id: h4shtext
       status: drafted

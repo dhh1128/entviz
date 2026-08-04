@@ -730,7 +730,14 @@ def parse_bitcoin_address(text) -> Parsed:
         data = m.group(2).lower()
         if _bech32_checksum_const(prefix.rstrip("1"), data) not in (1, 0x2bc830a3):
             raise Bech32ChecksumError("Bitcoin segwit", text)
-        return Parsed("BTC SegWit", BECH32, prefix, data, None)
+        # v16: the HRP is identity (bc1 mainnet vs tb1 testnet), bound by
+        # prefix-fold; the 6-char checksum leaves the core and becomes the
+        # shown suffix, as every other verified checksum already does
+        # (`this.i:sufxbind`). Until v16 this parser kept the checksum inside
+        # the core, which bound the HRP only by accident — moving it out
+        # without folding would have made bc1 and tb1 collide.
+        return Parsed("BTC SegWit", BECH32, prefix, data[:-6], data[-6:],
+                      prefix_semantic=True)
 
 def parse_ripple_address(text) -> Parsed:
     """
@@ -866,7 +873,10 @@ def parse_litecoin_address(text) -> Parsed:
         data = m.group(2).lower()
         if _bech32_checksum_const(prefix.rstrip("1"), data) not in (1, 0x2bc830a3):
             raise Bech32ChecksumError("Litecoin", text)
-        return Parsed("LTC", BECH32, prefix, data, None)
+        # v16: same treatment as Bitcoin segwit above — fold the identity HRP,
+        # move the verified checksum out of the core and into the suffix.
+        return Parsed("LTC", BECH32, prefix, data[:-6], data[-6:],
+                      prefix_semantic=True)
 
 def parse_bitcoin_cash_address(text) -> Parsed:
     """
@@ -890,6 +900,20 @@ def parse_bitcoin_cash_address(text) -> Parsed:
         prefix = (m.group(1) or "bitcoincash:").rstrip(":").lower()
         if not _cashaddr_verify(prefix, m.group(2)):
             raise Bech32ChecksumError("Bitcoin Cash", text)
+        # v16 EXCEPTION — CashAddr is deliberately NOT folded, and keeps its
+        # 8-char checksum inside the core. Two reasons, in order of weight.
+        # (1) It is not vulnerable: the checksum covers the prefix and lives in
+        # the core, so `bitcoincash:X` and `bchtest:X` already have different
+        # cores. That is the same accidental binding v16 removes from segwit —
+        # but here removing it has a cost the other parsers do not pay.
+        # (2) The CashAddr prefix is OPTIONAL (a bare `q…`/`p…` body defaults to
+        # `bitcoincash`), so folding the literal prefix would make a bare
+        # address and its prefixed spelling — the same address — fingerprint
+        # differently, while folding a synthesized canonical prefix would put
+        # text in `parts` that the user never typed and break the label's job of
+        # reconciling the pasted value against the cells. Getting this right
+        # needs a literal-vs-canonical prefix distinction the model does not
+        # have yet; see tick 4dua.
         return Parsed("BCH", BECH32, m.group(1), m.group(2).lower(), None)
 
 def parse_cardano_address(text) -> Parsed:
@@ -926,7 +950,11 @@ def parse_cardano_address(text) -> Parsed:
         data = (m.group(2) + m.group(3)).lower()
         if _bech32_checksum_const(hrp.lower().rstrip("1"), data) not in (1, 0x2bc830a3):
             raise Bech32ChecksumError("Cardano Shelley", text)
-        return Parsed("ADA Shelley", BECH32, hrp, m.group(2).lower(), m.group(3).lower())
+        # v16: the HRP is identity — `addr1` mainnet vs `addr_test1` testnet
+        # over one payload were byte-identical entvizes before the fold, and a
+        # payment vs a stake address differ the same way. Bound by prefix-fold.
+        return Parsed("ADA Shelley", BECH32, hrp, m.group(2).lower(),
+                      m.group(3).lower(), prefix_semantic=True)
 
 def parse_eos_address(text) -> Parsed:
     """
@@ -1318,11 +1346,15 @@ def parse_bech32_address(text) -> Parsed:
     HRP becomes part of the type label (e.g. "bech32 cosmos"), so the chain
     is named from the input itself rather than a hard-coded list.
 
-    The `<hrp>1` is split off as the non-entropy prefix; the 6-char checksum
-    is the suffix (as for LEI / Bitcoin-legacy); the remaining bech32 data is
-    the core, declared BECH32. Specific bech32 formats (Bitcoin segwit,
-    Litecoin, Cardano, Bitcoin Cash) have dedicated parsers that run first.
-    See `this.i:xtra4lph`.
+    The `<hrp>1` is split off as an IDENTITY-BEARING prefix bound by
+    prefix-fold (v16, `prefix_semantic=True`): the same data payload under a
+    different HRP denotes a different value — a different chain, a different
+    network, or a nostr `npub` vs `nsec` — and the HRP is not in the bech32
+    alphabet, so it cannot ride in the core. The 6-char checksum is the suffix
+    (as for LEI / Bitcoin-legacy); the remaining bech32 data is the core,
+    declared BECH32. Specific bech32 formats (Bitcoin segwit, Litecoin,
+    Cardano, Bitcoin Cash) have dedicated parsers that run first.
+    See `this.i:xtra4lph`, `this.i:s3mpr3fx`, `this.i:hrpb1nd`.
     """
     if not text:
         return None
@@ -1342,7 +1374,8 @@ def parse_bech32_address(text) -> Parsed:
         raise Bech32ChecksumError("bech32", text)
     # Type is just "bech32"; the chain is named by the displayed prefix
     # (cosmos1/osmo1/…), not repeated in the type. See this.i:lbldedup.
-    return Parsed("bech32", BECH32, hrp + "1", data[:-6], data[-6:])
+    return Parsed("bech32", BECH32, hrp + "1", data[:-6], data[-6:],
+                  prefix_semantic=True)
 
 def parse_ipfs_cid(text) -> Parsed:
     """

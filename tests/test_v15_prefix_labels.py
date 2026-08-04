@@ -94,11 +94,29 @@ def test_rendered_top_label(vid):
 
 def test_fold_prefix_schemes_do_not_double_the_prefix():
     # A did:/urn:/gitoid:/swhid: prefix shows once (as PRIMARY), never twice.
+    # v16: _stripped_prefix now RETURNS a folded prefix (the bech32 HRP has to
+    # reach the label, and its PRIMARY is `bech32`, not the HRP). The
+    # no-doubling rule moved into render_label, which drops the slot only when
+    # PRIMARY already displays that exact prefix — which is these four schemes.
     for vid in ("did-key", "urn-isbn", "gitoid", "swhid"):
         entropy, _ = _RENDERED[vid]
         top = _top(entropy)
         assert top.count(top.split(":")[0]) == 1 or "," not in top, top
-        assert _stripped_prefix(characterize(entropy)) is None, vid
+        prefix = _stripped_prefix(characterize(entropy))
+        assert prefix is not None, vid
+        assert prefix.rstrip(":") == top.split(", ")[0], vid
+        assert not top.endswith(f", {prefix}"), vid
+
+
+def test_folded_bech32_hrp_still_reaches_the_label():
+    # v16: the HRP is folded into the fingerprint, but PRIMARY is the scheme
+    # name, so the HRP must still be echoed in the trailing prefix slot — it is
+    # the label, and only the label, that carries it as text.
+    for entropy, expected in (
+        ("cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e", "bech32, cosmos1"),
+        ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4", "BTC, bc1"),
+    ):
+        assert _top(entropy) == expected, entropy
 
 
 # --- SSH: the structural header is a long prefix -> truncates against the line ---

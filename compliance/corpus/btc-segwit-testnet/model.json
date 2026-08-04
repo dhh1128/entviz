@@ -1,0 +1,202 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ffa803",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 3200371,
+      "text": "qw50",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#00743b",
+      "quartile": 1,
+      "row": 0,
+      "surround_bits": 3577726,
+      "text": "8d6q",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#bb8ccc",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 3911522,
+      "text": "ejxt",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#442a6a",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 10405384,
+      "text": "dg4y",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#22e2a0",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 15147872,
+      "text": "5r3z",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ddd9e8",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 9780473,
+      "text": "arva",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#881f19",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 14301766,
+      "text": "ry0c",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ee9da1",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 11275695,
+      "text": "5xw7",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#66adb5",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 14615122,
+      "text": "k",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 11,
+    "right": 11,
+    "slots": 14
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      208.0,
+      27.0
+    ],
+    "rotation": 180.0,
+    "rx": 115.089,
+    "ry": 47.593
+  },
+  "encoding": "bech32",
+  "entropy_type": "btc",
+  "input_bytes": 42,
+  "labels": {
+    "bottom": "...xpjzsx",
+    "top": "BTC, tb1",
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "tb1"
+    },
+    {
+      "bind": "core",
+      "text": "qw508d6qejxtdg4y5r3zarvary0c5xw7k"
+    },
+    {
+      "bind": "none",
+      "text": "xpjzsx"
+    }
+  ],
+  "qualifiers": {
+    "network": "mainnet",
+    "variant": "segwit"
+  },
+  "role": "address",
+  "rows": 3,
+  "scheme": "btc",
+  "size_basis": "decoded",
+  "size_bits": 160,
+  "spec_version": "v16",
+  "truncated": false,
+  "user_note": null
+}

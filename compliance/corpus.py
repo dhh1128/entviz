@@ -59,6 +59,28 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("bitcoincash", "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6a", {}),
     ("cosmos", "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e", {}),
 
+    # --- v16 HRP-fold siblings: each of these shares its DATA PAYLOAD with the
+    # vector above it and differs ONLY in the human-readable part. Before v16
+    # the HRP was dropped from the fingerprint, so every one of these pairs
+    # rendered byte-identically apart from the small grey label — a Cosmos
+    # address and its Osmosis spelling, mainnet and testnet Bitcoin, mainnet and
+    # testnet Cardano, and a nostr public key and the secret key with the same
+    # payload. They are ordinary render vectors rather than a new
+    # distinctness-pair concept precisely because the goldens now differ: any
+    # port that reproduces both goldens has necessarily bound the HRP.
+    ("osmo", "osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t", {}),
+    ("btc-segwit-testnet", "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", {}),
+    ("cardano-shelley",
+     "addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kc"
+     "mtwdac8zunnw36hvamc09a8klra0elsr0jfpr", {}),
+    ("cardano-shelley-testnet",
+     "addr_test1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kc"
+     "mtwdac8zunnw36hvamc09a8klra0els30xwlp", {}),
+    ("nostr-npub",
+     "npub1802mpadp48s09v7y6hn0wzqe9ga5chtw07qfz23mf3wkuluqjy3swt0n8f", {}),
+    ("nostr-nsec",
+     "nsec1802mpadp48s09v7y6hn0wzqe9ga5chtw07qfz23mf3wkuluqjy3szayjpu", {}),
+
     # --- base32 (Stellar, IPFS CIDv1) ---
     ("stellar", "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM", {}),
     ("cid-v1", "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", {}),

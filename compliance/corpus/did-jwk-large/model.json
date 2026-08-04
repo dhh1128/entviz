@@ -385,7 +385,7 @@
   "scheme": "did",
   "size_basis": "utf8",
   "size_bits": 1344,
-  "spec_version": "v15",
+  "spec_version": "v16",
   "truncated": true,
   "user_note": null
 }

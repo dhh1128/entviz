@@ -289,10 +289,10 @@ def _describe_from_parsed(parsed):
 def _parts_from_parsed(parsed) -> list[dict]:
     """Reading-order [{text, bind}] parts (Wrinkle 4).
 
-    * A folded identity prefix (did:/urn:/gitoid:/swh: scheme, prefix_semantic)
-      -> bind="fold".
-    * Any other shown prefix (presentation framing: 0x, Qm, b, G, 1, HRP,
-      SSH structural bytes, bech32 <hrp>1) -> bind="none".
+    * A folded identity prefix (did:/urn:/gitoid:/swh: scheme, and from v16 the
+      bech32 <hrp>1 / CashAddr prefix; prefix_semantic) -> bind="fold".
+    * Any other shown prefix (presentation framing: 0x, Qm, b, G, 1,
+      SSH structural bytes) -> bind="none".
     * The core (incl. in-core discriminators like a CESR code) -> bind="core".
     * A shown suffix (base58check/LEI checksum) -> bind="none".
     """
@@ -472,16 +472,26 @@ def _stripped_prefix(ch: dict):
     """The literal front prefix that was stripped from the visualized core, or
     ``None``.
 
-    This is a leading ``bind="none"`` part — a presentation sigil peeled off the
-    front (``0x``, ``bc1``, ``cosmos1``, Stellar ``G``, the SSH structural
-    header, …). A folded identity prefix (``bind="fold"``: did/urn/gitoid/swhid)
-    is NOT returned — it is already shown verbatim as the PRIMARY slot, so
-    echoing it again would double it. A ``bind="core"`` leading part (e.g. a
-    CESR derivation code, which is in the first cell) is likewise not a stripped
-    prefix.
+    This is a leading part bound ``none`` or ``fold`` — either a presentation
+    sigil peeled off the front (``0x``, Stellar ``G``, the SSH structural
+    header, …) or a folded identity prefix (``did:key:``, ``urn:isbn:``,
+    ``swh:1:cnt:``, and from v16 the bech32 ``cosmos1``/``bc1``/``addr1`` HRP).
+    Either way the cells do not begin at the character the reader pasted, so the
+    label has to say what was removed.
+
+    The slot is dropped by the caller only when the PRIMARY slot *already*
+    displays this prefix — the did/urn/gitoid/swhid case, where PRIMARY is
+    literally ``did:key`` — so it is never shown twice and never lost. Before
+    v16 the rule was "``bind="none"`` only", which was equivalent while every
+    folded prefix was also the PRIMARY; folding the bech32 HRP breaks that
+    coincidence, because a Cosmos address's PRIMARY is ``bech32`` and the HRP
+    would otherwise vanish from the label entirely (`this.i:hrpb1nd`).
+
+    A ``bind="core"`` leading part (e.g. a CESR derivation code, which is in
+    the first cell) is not a stripped prefix.
     """
     parts = ch.get("parts") or []
-    if parts and parts[0].get("bind") == "none":
+    if parts and parts[0].get("bind") in ("none", "fold"):
         return parts[0]["text"]
     return None
 
@@ -541,6 +551,10 @@ def render_label(ch: dict, truncated: bool = False, suffix: str = None,
         slots.append(size)
 
     prefix = _stripped_prefix(ch)
+    if prefix and prefix.rstrip(":") == slots[0]:
+        # PRIMARY already displays this prefix verbatim (did:key, urn:isbn,
+        # swh:1:cnt, gitoid:blob:sha256). Showing it again would double it.
+        prefix = None
     if prefix:
         if line_chars is not None:
             # Budget left for the prefix = the line budget minus the marker and

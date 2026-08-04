@@ -88,8 +88,15 @@ def test_bitcoin_segwit_parses_as_bech32():
     assert p is not None
     assert p.type == "BTC SegWit"
     assert p.alphabet is BECH32
-    # Core = address minus the "bc1" prefix
-    assert p.core == "qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+    # Core = address minus the "bc1" prefix AND minus the 6-char bech32
+    # checksum, which v16 moved out of the core and into the suffix (it is a
+    # bound checksum like every other; before v16 it sat in the core, where it
+    # bound the HRP by accident). The HRP itself is now folded into the
+    # fingerprint rather than dropped.
+    assert p.core == "qw508d6qejxtdg4y5r3zarvary0c5xw7k"
+    assert p.suffix == "v8f3t4"
+    assert p.prefix == "bc1"
+    assert p.prefix_semantic is True
 
 
 def test_bitcoin_segwit_p2wsh_parses():

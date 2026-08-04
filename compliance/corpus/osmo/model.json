@@ -1,0 +1,203 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#000100",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 13525540,
+      "text": "qqqs",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#443020",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 673862,
+      "text": "yqcy",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#000605",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 9184600,
+      "text": "q5rq",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#998070",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 34689,
+      "text": "wzqf",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#000b0a",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 7304651,
+      "text": "pg9s",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#ffffff",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#eed0c0",
+      "quartile": 4,
+      "row": 1,
+      "surround_bits": 11491493,
+      "text": "crgw",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        0,
+        0
+      ],
+      "map_min": [
+        1,
+        0
+      ],
+      "quartile": null,
+      "row": 2
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#11100f",
+      "quartile": 2,
+      "row": 2,
+      "surround_bits": 5890826,
+      "text": "pugp",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#332111",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 2043886,
+      "text": "zysn",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 2
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 4,
+    "right": 9,
+    "slots": 14
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      208.0,
+      107.0
+    ],
+    "rotation": 84.0,
+    "rx": 52.79,
+    "ry": 43.335
+  },
+  "encoding": "bech32",
+  "entropy_type": "bech32",
+  "input_bytes": 43,
+  "labels": {
+    "bottom": "...tdz28t",
+    "top": "bech32, osmo1",
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "fold",
+      "text": "osmo1"
+    },
+    {
+      "bind": "core",
+      "text": "qqqsyqcyq5rqwzqfpg9scrgwpugpzysn"
+    },
+    {
+      "bind": "none",
+      "text": "tdz28t"
+    }
+  ],
+  "qualifiers": {
+    "hrp": "osmo"
+  },
+  "role": "address",
+  "rows": 3,
+  "scheme": "bech32",
+  "size_basis": "decoded",
+  "size_bits": 160,
+  "spec_version": "v16",
+  "truncated": false,
+  "user_note": null
+}
