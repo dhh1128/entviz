@@ -28,7 +28,7 @@ The **[Conformance](#conformance)** section defines what it means to produce a c
 
 #### Requirements
 * Work in environments that can draw bitmapped or vector graphics.
-* Losslessly represent all bits of entropy up to 512 bits. For larger inputs, losslessly represent the head and tail in the text channel and bind the entire input through the fingerprint (see [Large-input handling](#large-input-handling)).
+* Losslessly represent all bits of entropy up to 512 bits — in the cells, except for a folded identity prefix, which is carried in the label strip rather than the cells (see *How identity material is bound*). For larger inputs, losslessly represent the head and tail in the text channel and bind the entire input through the fingerprint (see [Large-input handling](#large-input-handling)).
 * Make it easy to read the entropy value out loud without the reader losing track of where they are.
 * Support efficient partial comparisons (spot-checking).
 * Guarantee that input entropy with even minor differences produces obvious visual differences, even when the input lacks an avalanche effect of its own.
@@ -54,7 +54,9 @@ Most of the entviz is drawn from the fingerprint rather than from the entropy di
 
 Each entviz conveys its entropy through **six channels**. Some are lossless carriers of the input; others are fingerprint-driven and exist to make differences pop at a glance. No single channel is meant to be the sole comparison method — they reinforce one another.
 
-**1. Text.** Each entviz conveys its entropy fully and independently, in a first visual channel, as text. If the text is read aloud, *taking into account case-sensitivity*, all information is transferred. Text is tokenized into cells organized into a grid, read left-to-right and top-to-bottom. For inputs of 512 bits or less this channel is fully lossless; for larger inputs it shows the head and tail plus a fingerprint readout in the middle (see [Large-input handling](#large-input-handling)). The text channel does not, by itself, provide a visual avalanche effect: two inputs differing by a single character show nearly identical text. Its role is verbatim fidelity, not difference amplification.
+**1. Text.** Each entviz conveys its entropy fully and independently, in a first visual channel, as text. If the text is read aloud, *taking into account case-sensitivity*, all information is transferred. Text is tokenized into cells organized into a grid, read left-to-right and top-to-bottom.
+
+*One exception, stated precisely because it is easy to miss.* A **folded identity prefix** — a SWHID or gitoid object-type, `did:<method>:`, `urn:<nid>:`, a bech32 `<hrp>1` (see *How identity material is bound*) — is displayed in the **label strip**, never in the cells. The cells carry the core alone, so two values differing only in a folded prefix have **identical cell text**, and the difference surfaces only in the fingerprint-driven channels. The prefix is still part of the entviz's text; what is not true is that the *cells* alone carry it. Any read-aloud, comparison-text, or guided-comparison procedure MUST therefore include the label strip's prefix, and MUST NOT affirm that two values are the same on cell text alone when either carries a folded prefix. For inputs of 512 bits or less this channel is fully lossless; for larger inputs it shows the head and tail plus a fingerprint readout in the middle (see [Large-input handling](#large-input-handling)). The text channel does not, by itself, provide a visual avalanche effect: two inputs differing by a single character show nearly identical text. Its role is verbatim fidelity, not difference amplification.
 
 *Note: when reading entviz text aloud, the convention is to precede each capital letter with the one-syllable prefix "cap", to read the hyphen character `-` as "dash", and to read the underscore character `_` as "under". This minimizes the number of syllables while eliminating all ambiguity.*
 
