@@ -24,7 +24,7 @@ Every port's CI checks out `dhh1128/entviz` at a pinned tag to get the corpus an
   uses: actions/checkout@…
   with:
     repository: dhh1128/entviz
-    ref: v0.16.0          # <- the pin
+    ref: v0.17.0          # <- the pin
 ```
 
 The runner asserts that the corpus's `spec_version` equals the implementation's rendered
@@ -61,10 +61,10 @@ is per-port and optional — a port can sit conformant-but-unreleased indefinite
    every machine, so regenerating them churns bytes and the vendored pins in `../papers` for
    no reason. The conformance corpus rasters *are* reproducible and must be regenerated.
 4. Bump `SPEC_VERSION` and `__version__` in `src/entviz/__init__.py`. The library's MINOR
-   tracks the spec major: spec `v16` → lib `0.16.x`.
+   tracks the spec major: spec `v17` → lib `0.17.x`.
 5. Update `docs/spec-change-log.md` with a "What's new in vN" section, and record the rationale
    in `this.i`.
-6. `python3 scripts/release.py --minor -m "spec v16"` — bumps, regenerates the gallery, commits,
+6. `python3 scripts/release.py --minor -m "spec vN"` — bumps, regenerates the gallery, commits,
    tags, pushes. The pushed tag triggers `.github/workflows/release.yml`, which builds and
    publishes to PyPI via Trusted Publishing.
 7. **By hand, and easy to forget:** `release.py` does *not* regenerate the social card. Run
@@ -91,7 +91,31 @@ deliberately, one at a time, not as a batch.
 
 ---
 
-## Current state — spec v16 (2026-08-04)
+## A rule this train learned the hard way
+
+**A golden freezes every property of a vector, not the one you added it for.** v16 added
+`btc-segwit-testnet` to demonstrate the HRP fold, without reading what the existing
+characterizer said about its *network*. It said `mainnet`. That wrong fact shipped as a golden
+and all four ports reproduced it to pass Tier A — a defect propagated into five implementations
+inside one release cycle, and it cost a second full train (v17) to undo. When you add a corpus
+vector, read the whole model it generates, not just the field you care about.
+
+## Current state — spec v17 (2026-08-04)
+
+v17 fixes two defects v16's own new vectors exposed: the network qualifier was *assumed*
+(`mainnet` hardcoded for every Bitcoin address, absent entirely for Cardano Shelley) rather than
+derived from the input, so a testnet address labeled exactly like its mainnet twin; and the
+Cardano Shelley matcher's body floor excluded every 29-byte address, so no `stake1…` reached it.
+Five new corpus vectors, 79 render vectors → 84. No golden raster changes — labels are excluded
+from Tier B. See `this.i:n3twrkq` and `this.i:sh3lley29`.
+
+| Stage | Repo | Tick | State |
+|---|---|---|---|
+| 1 | `entviz` | `6gde` | **Done.** `v0.17.0` tagged and pushed 2026-08-04. |
+| 2 | all four ports | — | In progress. |
+| 3 | all four | — | Not started. |
+
+## Previous — spec v16 (2026-08-04)
 
 v16 makes the bech32 HRP identity-bearing; see `docs/spec-change-log.md` and `this.i:hrpb1nd`.
 It changes rendered output for every bech32-family value and moves four golden rasters.
@@ -117,9 +141,10 @@ A Temurin JDK 21 sits at `~/opt/jdk-21.0.12+8`; export `JAVA_HOME` to it.
 generic bech32 parser for `addr1…`, so it characterized as scheme `bech32` rather than `ada` —
 a pre-existing divergence from the reference that was invisible until v16 added the
 `cardano-shelley` vectors. Both ports now carry a ported `parse_cardano_address`, Byron
-branches included. Byron and `stake1` have no corpus vector, so those paths are covered by the
-ports' own tests and by model-for-model cross-checks against the reference, not by a golden.
-Worth adding corpus vectors for them.
+branches included. Byron and `stake1` had no corpus vector at the time, so those paths rested on
+the ports' own tests and on model-for-model cross-checks against the reference. v17 closes that:
+`cardano-byron-short`, `cardano-byron-long`, `cardano-stake` and `cardano-stake-testnet` are now
+goldens.
 
 All four ports were at v15 before this change, so v16 is one hop for each — there is no
 catch-up debt underneath it.
@@ -149,7 +174,7 @@ These block nothing and are blocked by nothing. Pick them up whenever.
 | Quadratic BigInt decode reachable ahead of the input cap | `entviz-js` | `6p7t` |
 | URL fetch follows redirects while the shown provenance origin does not | `entviz-js` | `7nye` |
 | The 64 KiB cap's stated cost model is wrong (703 ms measured vs ~14 ms documented) | `entviz` | `4jvs` |
-| A Bitcoin **testnet** address is characterized and labeled as **mainnet** — and v16's corpus ships that wrong value as a golden | `entviz` | `6gde` |
+| The generic bech32 HRP charset is `[a-z]`, but BIP-173 permits far more — a legal HRP with `_` or a digit silently reaches the base64url fallback, unrecognized and unverified | `entviz` | `6xm3` |
 | Review-panel adversarial pass over the code — best run *after* a spec change lands | `entviz` | `25ac` |
 | `tick init` (the repo has a published paper and is a vendoring upstream) | `entviz-adversarial` | — |
 | Merge issue #23 with the `locateAction` translation tick | `entviz-js` | `74sc` |
