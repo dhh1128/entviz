@@ -2,6 +2,7 @@
 kind: todo
 tags: spec
 created: 2026-08-04T16:13Z
+closed: 2026-08-05T00:06Z
 
 - 2026-08-04T16:13Z Found 2026-08-04 by the entviz-rs port agent while reproducing the new v16 btc-segwit-testnet vector, and confirmed against the reference. src/entviz/characterize.py:213 sets q['network'] = 'mainnet' unconditionally inside the 'if type_name.startswith("BTC")' branch, because the parser types both bc1 and tb1 as 'BTC SegWit' and never distinguishes them. Verified: characterize('tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx') returns qualifiers {'network': 'mainnet', 'variant': 'segwit'} and render_label gives 'BTC, tb1'. The mainnet address gives the same label modulo the prefix slot.
 
