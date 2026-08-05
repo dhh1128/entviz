@@ -220,12 +220,14 @@ def _describe_from_parsed(parsed):
         # serialized `data-qualifiers` ordering does not change for mainnet.
         low = type_name.lower()
         pfx = (prefix or "").lower()
+        # Two arms, not three: parse_bitcoin_address emits only "BTC SegWit"
+        # and "BTC legacy", so a general `else` here would be unreachable — and
+        # an uncoverable line is a liability under the ports' coverage gates.
+        # (entviz-rs spotted the dead arm while porting v17.)
         if "segwit" in low:
             q["network"] = "testnet" if pfx.startswith("tb") else "mainnet"
-        elif "legacy" in low:
-            q["network"] = "testnet" if pfx[:1] in ("m", "n", "2") else "mainnet"
         else:
-            q["network"] = "mainnet"
+            q["network"] = "testnet" if pfx[:1] in ("m", "n", "2") else "mainnet"
         if "legacy" in low:
             q["variant"] = "legacy"
         elif "segwit" in low:

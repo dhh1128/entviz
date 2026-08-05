@@ -111,9 +111,21 @@ from Tier B. See `this.i:n3twrkq` and `this.i:sh3lley29`.
 
 | Stage | Repo | Tick | State |
 |---|---|---|---|
-| 1 | `entviz` | `6gde` | **Done.** `v0.17.0` tagged and pushed 2026-08-04. |
-| 2 | all four ports | — | In progress. |
-| 3 | all four | — | Not started. |
+| 1 | `entviz` | `6gde` | **Done.** `v0.17.0` tagged and pushed; CI, docs deploy and the PyPI release workflow all green. |
+| 2 | `entviz-js` | — | **Done**, local commit `b77bdb0`, unpushed. Tier A+B 104/104. |
+| 2 | `entviz-go` | — | **Done**, local commit `22d504f`, unpushed. Tier A+B 104/104. |
+| 2 | `entviz-java` | — | **Done**, local commit `71dd836`, unpushed. Tier A+B 104/104. |
+| 2 | `entviz-rs` | — | **Done**, local commit `b00aec1`, unpushed. Tier A+B 104/104. |
+| 3 | all four | — | Not started; deliberate, one at a time. |
+
+All four counts re-verified centrally, not taken from the ports' own reports. Tier B alone is
+97/97 — it covers only the raster-checkable vectors, where Tier A additionally counts the error
+and invariant vectors and the spec-version assertion.
+
+**One measurement translates rather than transfers.** The reference expresses the Shelley body
+floor as a regex group excluding the checksum (`{45,100}`); `entviz-go` and `entviz-rs` bound the
+body *including* it, so their floor is 51, not 45. Same admitted set, different frame. Any future
+length rule needs stating in both frames, or ported literally and wrongly.
 
 ## Previous — spec v16 (2026-08-04)
 
