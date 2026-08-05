@@ -81,6 +81,31 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("nostr-nsec",
      "nsec1802mpadp48s09v7y6hn0wzqe9ga5chtw07qfz23mf3wkuluqjy3szayjpu", {}),
 
+    # --- v17: the network qualifier is read from the prefix, not assumed ---
+    # Through v16 every BTC address was characterized `network: mainnet` and
+    # Cardano Shelley carried no network at all, so a testnet address rendered
+    # with no `testnet` mod — the loud-departure marker the v14 label rule
+    # requires. `btc-segwit-testnet` above is the segwit half of the evidence;
+    # this is the legacy half (base58 version byte 0x6f -> a leading `m`).
+    ("btc-legacy-testnet", "mfWyW5fc9NUj75YAnFgoRLrjxgLDn2MMth", {}),
+    # Cardano reward/stake addresses are 29 bytes = 47 bech32 characters ahead
+    # of the checksum, and the Shelley matcher's body floor was 50 — so through
+    # v16 NO stake address (nor any 29-byte enterprise address) reached the
+    # Cardano parser. Mainnet fell through to the generic bech32 parser and
+    # typed as `bech32`; testnet did not parse as bech32 at all, because
+    # `stake_test` contains `_`, outside the generic HRP charset, and landed on
+    # the base64url fallback with no scheme and no checksum verified.
+    ("cardano-stake",
+     "stake1uyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xcwfvml6", {}),
+    ("cardano-stake-testnet",
+     "stake_test1uqqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xcfrxem8", {}),
+    # Byron: both recognized forms. No corpus vector covered them before, so the
+    # ports that had to add a Cardano parser for v16 carried Byron on trust.
+    ("cardano-byron-short",
+     "Ae2tdPwUPEZ7SZaSCeU8sGZXGZ7YrVc96FnzYdZcLkbry4CqUKax9dNeEoe", {}),
+    ("cardano-byron-long",
+     "DdzFFzCqrht1D2Tv5F9HLtZHEd4P9Tddf9DFv3d4KXa2RxudcL4uHKWtc2HfiDopch5UHyZkXQx7", {}),
+
     # --- base32 (Stellar, IPFS CIDv1) ---
     ("stellar", "GCKFBEIYTKP5RDBQMUTAPDCDHF2TR4LPNRGW4JBQQTQUYZP4LDKP3SGM", {}),
     ("cid-v1", "bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi", {}),

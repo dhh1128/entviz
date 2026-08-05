@@ -84,7 +84,11 @@ def test_hrp_is_still_readable_in_the_label():
     for entropy, expected in (
         ("cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363e", "bech32, cosmos1"),
         ("osmo1qqqsyqcyq5rqwzqfpg9scrgwpugpzysntdz28t", "bech32, osmo1"),
-        ("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "BTC, tb1"),
+        # v17 added the `testnet` mod here. When this vector was written for
+        # v16 it read `BTC, tb1` — a testnet address labeled exactly like its
+        # mainnet twin, because the network qualifier was hardcoded to mainnet.
+        # See test_v17_network_qualifier.py and `this.i:n3twrkq`.
+        ("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "BTC, testnet, tb1"),
     ):
         assert render_label(characterize(entropy))[0] == expected
 

@@ -1,0 +1,291 @@
+{
+  "bg_color": "#ffffff",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#b645ce",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 14479263,
+      "text": "tdPw",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#60636d",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 1989713,
+      "text": "UPEZ",
+      "text_size_px": 16.0
+    },
+    "10": {
+      "blank": true,
+      "blank_map": false,
+      "col": 2,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 2
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#e23a8d",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 6846460,
+      "text": "cLkb",
+      "text_size_px": 16.0
+    },
+    "12": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#cb80c7",
+      "quartile": 1,
+      "row": 3,
+      "surround_bits": 6931833,
+      "text": "ry4C",
+      "text_size_px": 16.0
+    },
+    "13": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#a1b4c1",
+      "quartile": 2,
+      "row": 3,
+      "surround_bits": 15997904,
+      "text": "qUKa",
+      "text_size_px": 16.0
+    },
+    "14": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#1589dc",
+      "quartile": 4,
+      "row": 3,
+      "surround_bits": 6744814,
+      "text": "x9dN",
+      "text_size_px": 16.0
+    },
+    "15": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#a5db94",
+      "quartile": 3,
+      "row": 3,
+      "surround_bits": 8628765,
+      "text": "eEoe",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#e7be00",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#219819",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 10291613,
+      "text": "7SZa",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": true,
+      "blank_map": true,
+      "col": 3,
+      "fingerprint": false,
+      "map_max": [
+        3,
+        1
+      ],
+      "map_min": [
+        0,
+        1
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#5bb964",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 10992021,
+      "text": "SCeU",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#e0231f",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 9981833,
+      "text": "8sGZ",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#06f878",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 15070479,
+      "text": "XGZ7",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 3,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#23177f",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 9007088,
+      "text": "YrVc",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#ad5320",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 10689635,
+      "text": "96Fn",
+      "text_size_px": 16.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#20f9e5",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 5654049,
+      "text": "zYdZ",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 2
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 2,
+    "right": 9,
+    "slots": 15
+  },
+  "cols": 4,
+  "ellipse": {
+    "anchor": [
+      88.0,
+      147.0
+    ],
+    "rotation": 108.0,
+    "rx": 78.745,
+    "ry": 89.129
+  },
+  "encoding": "base58",
+  "entropy_type": "ada",
+  "input_bytes": 59,
+  "labels": {
+    "bottom": null,
+    "top": "ADA, Ae2",
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "Ae2"
+    },
+    {
+      "bind": "core",
+      "text": "tdPwUPEZ7SZaSCeU8sGZXGZ7YrVc96FnzYdZcLkbry4CqUKax9dNeEoe"
+    }
+  ],
+  "qualifiers": {
+    "variant": "byron"
+  },
+  "role": "address",
+  "rows": 4,
+  "scheme": "ada",
+  "size_basis": "decoded",
+  "size_bits": 328,
+  "spec_version": "v17",
+  "truncated": false,
+  "user_note": null
+}

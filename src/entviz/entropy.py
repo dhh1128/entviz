@@ -230,7 +230,18 @@ IPFS_CIDV1_REGEX = re.compile(r'^(b)([' + BASE32_ALPHABET_EITHER_CASE + ']{58,11
 EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
 CARDANO_SHORT_BYRON_REGEX = re.compile(r'^(Ae2)([' + BASE58_ALPHABET + ']{50})([' + BASE58_ALPHABET + ']{6})$')
 CARDANO_LONG_BYRON_REGEX = re.compile(r'^(DdzFF)([' + BASE58_ALPHABET + ']{65})([' + BASE58_ALPHABET + ']{6})$')
-CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_ALPHABET_EITHER_CASE + ']{50,100})([' + BECH32_ALPHABET_EITHER_CASE + ']{6})$')
+# Cardano Shelley. v17: the body floor was 50, which silently excluded EVERY
+# 29-byte Shelley address — reward/stake (`stake1…`) and enterprise — since 29
+# bytes is 47 bech32 characters ahead of the 6-char checksum. Those fell through
+# to the generic bech32 parser and typed as `bech32` rather than `ada`; worse,
+# their testnet forms did not parse as bech32 at all, because `stake_test`
+# contains `_`, which is outside the generic parser's `[a-z]` HRP charset, so
+# they landed on the base64url disproof fallback with no scheme and no checksum
+# verification. The floor is now 45: a 57-byte base address is 91 characters and
+# a 29-byte one is 47, so both fit with margin. Widening is safe because the
+# prefix alternation is anchored and this parser still runs before the generic
+# bech32 one. See `this.i:sh3lley29`.
+CARDANO_SHELLEY_REGEX = re.compile(r'^((?:addr|stake)(?:_test)?1)([' + BECH32_ALPHABET_EITHER_CASE + ']{45,100})([' + BECH32_ALPHABET_EITHER_CASE + ']{6})$')
 BITCOIN_CASH_REGEX = re.compile(r'^((?:bitcoincash|bchtest):)?([pq][' + BECH32_ALPHABET_EITHER_CASE + ']{41})$', re.I)
 LITECOIN_LEGACY_REGEX = re.compile(r'^(t?L)([' + BASE58_ALPHABET + ']{33})$')
 LITECOIN_REGEX = re.compile(r'^(ltc1)([' + BECH32_ALPHABET_EITHER_CASE + ']{38,68})$', re.I)

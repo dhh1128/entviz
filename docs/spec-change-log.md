@@ -6,6 +6,42 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## What's new in v17
+
+v17 fixes two defects in blockchain-address recognition that v16's own new test vectors
+exposed. Both change Tier-A output, and the first changes the visible label for testnet values,
+so the version is bumped v16 → v17. No golden raster changes: labels are excluded from Tier B.
+
+1. **The network qualifier is derived from the input, not assumed.** `characterize()` hardcoded
+   `network: "mainnet"` for every Bitcoin address and emitted no network at all for Cardano
+   Shelley. Because the label surfaces the network only when it *departs* from mainnet — the
+   v14 "testnet loud, mainnet silent" rule — a testnet address rendered a label identical to its
+   mainnet twin's: `BTC, tb1` where `BTC, testnet, tb1` was required. The reference was
+   non-conformant to its own spec, in the same mainnet-versus-testnet confusability family that
+   v16 closed for the HRP. The network is now read from the prefix on every path: segwit
+   `bc1`/`tb1`, legacy base58 version byte (`1`/`3` mainnet, `m`/`n`/`2` testnet), CashAddr
+   (already correct), Litecoin, and Cardano Shelley (`addr1`/`stake1` versus
+   `addr_test1`/`stake_test1`). **Cardano Byron deliberately carries no network**: its network
+   magic sits inside the CBOR payload the parser does not decode, so deriving it is impossible
+   and guessing it is worse than omitting it.
+2. **Cardano Shelley accepts its 29-byte forms.** The Shelley matcher's body floor was 50
+   characters, which excluded every 29-byte Shelley address — all reward (`stake1…`) and
+   enterprise addresses, at 47 characters ahead of the checksum. Mainnet forms fell through to
+   the generic bech32 parser and typed as `bech32`; testnet forms did not parse as bech32 at
+   all, because `stake_test` contains `_`, outside the generic parser's `[a-z]` HRP charset, so
+   they landed on the base64url fallback — no scheme, and no checksum verified. The floor is now
+   45, which admits both the 47- and 91-character bodies.
+
+**Five new corpus vectors** (79 render vectors → 84). `btc-legacy-testnet` and `cardano-stake-testnet` cover the derived
+network on the two paths that had none; `cardano-stake` covers the newly-admitted 29-byte form;
+`cardano-byron-short` and `cardano-byron-long` close a gap v16 exposed — no vector covered Byron
+at all, so the three ports that had to add a Cardano parser for v16 carried Byron on trust.
+
+**Ports.** Mirror the network derivation and the Shelley floor, bump `SPEC_VERSION`, move the CI
+pin to `v0.17.0`, and reproduce Tier A + Tier B against the regenerated corpus.
+
+---
+
 ## What's new in v16
 
 v16 makes the **bech32 human-readable part identity-bearing**. Through v15 the HRP was validated by the polymod and then dropped: it entered neither the cells nor the fingerprint, surviving only as label text. Two values sharing a data payload under different HRPs therefore rendered **byte-identically in every channel a human compares** — a Cosmos address and its Osmosis spelling, mainnet and testnet Bitcoin or Cardano, and, the case that forced the issue, a nostr `npub1…` public key and the `nsec1…` secret key over the same payload. Only the 12px grey label differed. This changes rendered output for every bech32-family value, so the version is bumped v15 → v16, and unlike v14/v15 it **does** change golden rasters (the fingerprint drives the surround, edge colors, ellipse, colour bar, blank map and quartile marks).

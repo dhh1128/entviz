@@ -293,7 +293,7 @@
   "scheme": "cid",
   "size_basis": "decoded",
   "size_bits": 288,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": false,
   "user_note": null
 }

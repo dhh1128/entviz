@@ -170,7 +170,7 @@
   "input_bytes": 42,
   "labels": {
     "bottom": "...xpjzsx",
-    "top": "BTC, tb1",
+    "top": "BTC, testnet, tb1",
     "truncation_marker": false
   },
   "parts": [
@@ -188,7 +188,7 @@
     }
   ],
   "qualifiers": {
-    "network": "mainnet",
+    "network": "testnet",
     "variant": "segwit"
   },
   "role": "address",
@@ -196,7 +196,7 @@
   "scheme": "btc",
   "size_basis": "decoded",
   "size_bits": 160,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": false,
   "user_note": null
 }

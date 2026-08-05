@@ -149,7 +149,7 @@
   "scheme": "lei",
   "size_basis": "decoded",
   "size_bits": 96,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": false,
   "user_note": null
 }

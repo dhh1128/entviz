@@ -364,7 +364,7 @@
   "input_bytes": 108,
   "labels": {
     "bottom": "...30xwlp",
-    "top": "+hash ADA, addr_test1",
+    "top": "+hash ADA, testnet, addr_test1",
     "truncation_marker": true
   },
   "parts": [
@@ -382,6 +382,7 @@
     }
   ],
   "qualifiers": {
+    "network": "testnet",
     "variant": "shelley"
   },
   "role": "address",
@@ -389,7 +390,7 @@
   "scheme": "ada",
   "size_basis": "decoded",
   "size_bits": 456,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": true,
   "user_note": null
 }

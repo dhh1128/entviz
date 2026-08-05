@@ -1,0 +1,204 @@
+{
+  "bg_color": "#ff3f2f",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#1dde99",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 12265335,
+      "text": "fWyW",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#c86812",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 14925995,
+      "text": "5fc9",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#86ba55",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 11902159,
+      "text": "NUj7",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#6df211",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 15557559,
+      "text": "5YAn",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#987b3a",
+      "quartile": 4,
+      "row": 1,
+      "surround_bits": 3496087,
+      "text": "FgoR",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": true,
+      "blank_map": true,
+      "col": 2,
+      "fingerprint": false,
+      "map_max": [
+        2,
+        0
+      ],
+      "map_min": [
+        1,
+        1
+      ],
+      "quartile": null,
+      "row": 1
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#b71a4f",
+      "quartile": 2,
+      "row": 2,
+      "surround_bits": 15871738,
+      "text": "Lrjx",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#2d339d",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 14184644,
+      "text": "gLDn",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#411004",
+      "quartile": 3,
+      "row": 2,
+      "surround_bits": 8501452,
+      "text": "2",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 0
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 9,
+    "right": 10,
+    "slots": 14
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      208.0,
+      67.0
+    ],
+    "rotation": 12.0,
+    "rx": 81.155,
+    "ry": 76.427
+  },
+  "encoding": "base58",
+  "entropy_type": "btc",
+  "input_bytes": 34,
+  "labels": {
+    "bottom": "...MMth",
+    "top": "BTC, testnet, m",
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "m"
+    },
+    {
+      "bind": "core",
+      "text": "fWyW5fc9NUj75YAnFgoRLrjxgLDn2"
+    },
+    {
+      "bind": "none",
+      "text": "MMth"
+    }
+  ],
+  "qualifiers": {
+    "network": "testnet",
+    "variant": "legacy"
+  },
+  "role": "address",
+  "rows": 3,
+  "scheme": "btc",
+  "size_basis": "decoded",
+  "size_bits": 176,
+  "spec_version": "v17",
+  "truncated": false,
+  "user_note": null
+}

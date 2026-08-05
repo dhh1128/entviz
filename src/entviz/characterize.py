@@ -210,8 +210,22 @@ def _describe_from_parsed(parsed):
 
     # --- Blockchain addresses ---
     if type_name.startswith("BTC"):
-        q["network"] = "mainnet"
+        # v17: the network is READ FROM THE PREFIX, not assumed. Through v16 this
+        # was a hardcoded "mainnet", so a testnet address labeled exactly like a
+        # mainnet one — `_mods` shows the network only on departure, so the loud
+        # `testnet` marker the v14 rule requires never appeared. Signals:
+        # segwit `bc1` mainnet / `tb1` testnet; legacy base58 version byte `1`
+        # (P2PKH) and `3` (P2SH) mainnet, `m`/`n` (P2PKH) and `2` (P2SH) testnet.
+        # Key order (network before variant) is preserved from v16 so the
+        # serialized `data-qualifiers` ordering does not change for mainnet.
         low = type_name.lower()
+        pfx = (prefix or "").lower()
+        if "segwit" in low:
+            q["network"] = "testnet" if pfx.startswith("tb") else "mainnet"
+        elif "legacy" in low:
+            q["network"] = "testnet" if pfx[:1] in ("m", "n", "2") else "mainnet"
+        else:
+            q["network"] = "mainnet"
         if "legacy" in low:
             q["variant"] = "legacy"
         elif "segwit" in low:
@@ -222,14 +236,27 @@ def _describe_from_parsed(parsed):
         q["network"] = "testnet" if (prefix or "").lower().startswith("bchtest") else "mainnet"
         return "bch", ROLE_ADDRESS, q, "decoded"
     if type_name.startswith("LTC"):
-        q["network"] = "mainnet"
+        # v17: as for BTC. The only testnet form this parser recognizes is the
+        # legacy `tL…`; the bech32 branch matches `ltc1` alone, so it is always
+        # mainnet (note `ltc1` also starts with `l`, not `t`).
+        q["network"] = "testnet" if (prefix or "").lower().startswith("t") else "mainnet"
         if "legacy" in type_name.lower():
             q["variant"] = "legacy"
         return "ltc", ROLE_ADDRESS, q, "decoded"
     if type_name.startswith("ADA"):
         if "Byron" in type_name:
+            # No network qualifier for Byron, deliberately. A Byron address's
+            # network magic lives inside the CBOR-encoded payload, which this
+            # parser does not decode — the same reason its CRC-32 goes
+            # unverified (see docs/spec.md "Checksum verification"). Claiming a
+            # network we cannot read would be a guess.
             q["variant"] = "byron"
         elif "Shelley" in type_name:
+            # v17: Shelley states its network in the prefix — `addr1`/`stake1`
+            # are mainnet, `addr_test1`/`stake_test1` testnet. Through v16 no
+            # network qualifier was emitted at all, so a testnet address was
+            # indistinguishable from mainnet in both the model and the label.
+            q["network"] = "testnet" if "_test" in (prefix or "").lower() else "mainnet"
             q["variant"] = "shelley"
         return "ada", ROLE_ADDRESS, q, "decoded"
     if type_name == "ETH":

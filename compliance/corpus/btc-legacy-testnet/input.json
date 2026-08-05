@@ -1,0 +1,10 @@
+{
+  "id": "btc-legacy-testnet",
+  "entropy": "mfWyW5fc9NUj75YAnFgoRLrjxgLDn2MMth",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

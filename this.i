@@ -2202,6 +2202,78 @@ Entviz = goal:
         text alone and a Complete walk over a <=512-bit value contains no
         gestalt steps at all).
 
+    Network Is Derived, Never Assumed = decision:
+      id: n3twrkq
+      status: drafted
+      why: >
+        v17, 2026-08-04. Found by the entviz-rs port agent while reproducing
+        v16's NEW btc-segwit-testnet vector, and confirmed against the
+        reference: characterize.py set q["network"] = "mainnet" unconditionally
+        inside the BTC branch, because the parser types bc1 and tb1 identically
+        ("BTC SegWit") and never looked at the prefix. Cardano Shelley was
+        worse — no network qualifier at all.
+
+        Why it MATTERS rather than being a metadata nit: _mods() emits the
+        network only on departure from mainnet (the v14 rule, "testnet loud,
+        mainnet silent"), so a testnet address rendered `BTC, tb1` where
+        `BTC, testnet, tb1` was required. The loud marker never appeared. That
+        is the same mainnet-vs-testnet confusability family [[hrpb1nd]] had
+        just closed for the HRP, reintroduced one layer up in the label. And
+        CashAddr got it RIGHT all along (keyed off a bchtest prefix), which is
+        what makes the BTC and ADA branches read as oversight, not decision.
+
+        THE RULE: qualifiers.network is DERIVED FROM THE INPUT or omitted. It
+        is never defaulted. Signals: segwit bc1/tb1; legacy base58 version byte
+        (1, 3 mainnet / m, n, 2 testnet); CashAddr bitcoincash:/bchtest:;
+        Cardano Shelley addr1|stake1 vs addr_test1|stake_test1.
+
+        BYRON CARRIES NO NETWORK, deliberately. Its network magic lives inside
+        the CBOR-encoded payload, which we do not decode — the same reason its
+        CRC-32 goes unverified (docs/spec.md "Checksum verification"). There is
+        nothing to derive it from, so omitting is honest and defaulting to
+        mainnet would be a guess wearing the costume of a fact. This is the
+        general principle the id is named for: an ABSENT qualifier is a true
+        statement about what the parser knows; a DEFAULTED one is a false
+        statement that looks identical in the output.
+
+        COST, recorded because it is the lesson. v16 shipped
+        compliance/corpus/btc-segwit-testnet/model.json with network=mainnet as
+        a GOLDEN, and all four ports reproduced it to pass Tier A — a wrong
+        fact propagated into five implementations inside one release cycle,
+        because a new vector was added without checking what the existing
+        characterizer would say about it. Fixing it cost a second full release
+        train (v17: reference release + four port re-pins). The generalizable
+        rule: when a corpus vector is added for property X, read the model it
+        generates for properties Y and Z too — the golden freezes ALL of them.
+
+    Shelley Accepts Its 29-Byte Forms = decision:
+      id: sh3lley29
+      status: drafted
+      why: >
+        v17, 2026-08-04. Found while writing the corpus vector for [[n3twrkq]]:
+        there was no stake1 vector to add, because stake1 did not work.
+
+        CARDANO_SHELLEY_REGEX's body group was {50,100}. A Shelley address has
+        two recognized payload sizes: 57 bytes (base address) = 91 bech32 chars
+        ahead of the 6-char checksum, and 29 bytes (reward/stake, and
+        enterprise) = 47 chars. 47 < 50, so EVERY 29-byte Shelley address
+        missed the matcher. Consequences, both silent:
+          * `stake1…` fell through to the generic bech32 parser and typed as
+            scheme "bech32", label "bech32, stake1" instead of ADA.
+          * `stake_test1…` did not parse as bech32 AT ALL. The generic parser's
+            HRP charset is [a-z]; `stake_test` contains `_`; so it missed that
+            matcher too and landed on the base64url disproof fallback — no
+            scheme, no checksum verified, rendered as a bare encoding.
+        Floor moved to 45. Widening is safe: the prefix alternation is anchored
+        and the Cardano parser still runs ahead of the generic bech32 one.
+
+        FOLLOW-UP not taken: BIP-173 permits HRP characters 33-126 (excluding
+        uppercase), so the generic parser's [a-z] charset under-accepts in
+        general, not just for Cardano. Widening it would admit `_` and other
+        legal HRPs — detection stays sound because it is checksum-gated at
+        ~2^-30 — but it changes what parses, so it is its own decision. Tracked
+        as a tick, not folded into v17.
+
     Fingerprint Hashes Text, Not Decoded Bytes = decision:
       id: h4shtext
       status: drafted

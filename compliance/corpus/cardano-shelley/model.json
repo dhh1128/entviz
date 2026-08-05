@@ -382,6 +382,7 @@
     }
   ],
   "qualifiers": {
+    "network": "mainnet",
     "variant": "shelley"
   },
   "role": "address",
@@ -389,7 +390,7 @@
   "scheme": "ada",
   "size_basis": "decoded",
   "size_bits": 456,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": true,
   "user_note": null
 }

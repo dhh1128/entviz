@@ -283,7 +283,7 @@
   "scheme": "bech32",
   "size_basis": "decoded",
   "size_bits": 256,
-  "spec_version": "v16",
+  "spec_version": "v17",
   "truncated": false,
   "user_note": null
 }

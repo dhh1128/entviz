@@ -19,5 +19,5 @@ release is ``0.6.0``. PATCH covers library-only changes within a spec
 version. See AGENTS.md.
 """
 
-SPEC_VERSION = "v16"
-__version__ = "0.16.0"
+SPEC_VERSION = "v17"
+__version__ = "0.17.0"
