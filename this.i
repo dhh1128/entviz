@@ -2217,10 +2217,17 @@ Entviz = goal:
         entviz-js security scan (F3) proposed and which the user asked about
         directly. It is O(1) and it is WRONG — not approximately, but for the
         most common inputs there are. It disagrees with the exact value whenever
-        leading digits are zero, which is EVERY base58check address with a
-        leading zero byte: a Bitcoin P2PKH address measures 192 bits exactly and
-        200 by the estimate; a core of all base58 '1's measures 8 and estimates
-        160. size_bits is spec-normative (docs/spec.md *Resolution A* MUSTs the
+        leading digits are zero. A Bitcoin P2PKH address: its parsed core
+        'A1zP1eP5QGefi2DMPTfTL5SLmv7Di' measures 168 bits exactly and 176 by the
+        estimate. A core of all base58 '1's measures 8 and estimates 160.
+        (CORRECTION 2026-08-06: an earlier draft of this node, and the commit
+        message that introduced it, cited "192 exactly, 200 estimated" for that
+        address. Those numbers are real but come from feeding the WHOLE address
+        string in as a core; characterize() splits off the '1' version prefix
+        and the 4-char base58check suffix first, so 168/176 is what describes
+        actual behavior. The mismatch stands either way -- only the
+        illustration was measured at the wrong call.)
+        size_bits is spec-normative (docs/spec.md *Resolution A* MUSTs the
         decode-and-minimal-byte-length definition) and feeds the SIZE label, so
         swapping in the estimate would change rendered output and every affected
         golden — a spec bump and a full release train, to make a value less

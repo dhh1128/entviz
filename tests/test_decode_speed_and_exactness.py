@@ -12,8 +12,13 @@ import math
 
 import pytest
 
-from entviz.characterize import _decoded_bytes_integer, _digits_to_int, _size_bits
-from entviz.entropy import BASE36, BASE58, DECIMAL
+from entviz.characterize import (
+    _decoded_bytes_integer,
+    _digits_to_int,
+    _size_bits,
+    characterize,
+)
+from entviz.entropy import BASE36, BASE58, DECIMAL, parse
 
 
 def _naive(digits, base):
@@ -60,11 +65,20 @@ def test_decoded_byte_length_matches_a_direct_computation(core, alphabet):
 
 def test_the_cheap_estimate_is_not_equivalent_and_must_not_be_substituted():
     # Guard against a future "optimization" that swaps the exact decode for
-    # ceil(len * log2(base) / 8). It disagrees on the most ordinary input there
-    # is — a Bitcoin P2PKH address, whose leading '1' is a leading zero byte.
-    core = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+    # ceil(len * log2(base) / 8). It disagrees whenever leading digits are zero.
+    #
+    # Use the core the parser ACTUALLY produces for a Bitcoin P2PKH address —
+    # characterize() splits off the '1' version prefix and the 4-char
+    # base58check suffix, so the core is the middle, not the whole string.
+    # Asserting on the whole string instead (192 vs 200) is a true statement
+    # about a call the pipeline never makes.
+    address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+    core = parse(address).core
+    assert core == "A1zP1eP5QGefi2DMPTfTL5SLmv7Di"
     exact = _size_bits(core, BASE58, "decoded")
     estimate = math.ceil(len(core) * math.log2(58) / 8) * 8
-    assert exact == 192
-    assert estimate == 200
+    assert exact == 168
+    assert estimate == 176
     assert exact != estimate
+    # And end-to-end, so the figure quoted in this.i:f4std3c0 stays honest.
+    assert characterize(address)["size_bits"] == 168
