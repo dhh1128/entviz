@@ -57,11 +57,21 @@ _NOTE_RE = re.compile(r'^[\x20-\x7E]+$')
 
 # Anti-DoS input cap (this.i:1nputcap). entviz visualizes identifiers; the
 # largest plausible one (a long cert chain or JWT) is a few KB, so 64 KiB is
-# ~16× headroom while bounding render()'s O(n) work (full-core SHA-512,
-# .strip()/.encode() copies, the txt->b64url fallback) to a few milliseconds
-# even worst-case (a 64 KiB input of 4-byte codepoints expands ~4× through the
-# txt->b64url fallback before the SHA-512; measured ~14 ms). Past the cap the
-# input is not an identifier and render() rejects it outright.
+# ~16× headroom while bounding render()'s work. The cap is checked BEFORE any
+# O(n) work (parse, hashing, the .strip()/.encode() copies), on the raw
+# pre-strip input, so whitespace padding cannot smuggle a larger payload past
+# it.
+#
+# COST AT THE CAP, measured rather than assumed. The original note here claimed
+# "~14 ms" worst case, which was true only of the path it measured — a 64 KiB
+# input of 4-byte codepoints expanding ~4× through the txt->b64url fallback
+# before the SHA-512. The expensive path is a different one: a base58 (or
+# base36/decimal) core reaches the positional decode behind `size_bits`, which
+# was O(n²) and cost ~703 ms at the cap. That decode is now a balanced
+# divide-and-conquer fold (see characterize._digits_to_int) and the same input
+# measures ~50 ms. Both figures are on this box; treat them as an order of
+# magnitude, not a guarantee. Past the cap the input is not an identifier and
+# render() rejects it outright.
 MAX_INPUT_CHARS = 65536
 
 

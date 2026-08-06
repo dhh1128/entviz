@@ -69,17 +69,59 @@ def _decoded_bytes_integer(core: str, alphabet) -> int:
     """
     chars = alphabet.chars
     base = len(chars)
-    n = 0
+    lower = chars.lower()
+    digits = []
     for c in core:
         v = chars.find(c)
         if v < 0:
-            v = chars.lower().find(c.lower())
+            v = lower.find(c.lower())
         if v < 0:
             v = 0
-        n = n * base + v
+        digits.append(v)
+    n = _digits_to_int(digits, base)
     if n == 0:
         return 1
     return (n.bit_length() + 7) // 8
+
+
+# Chunk size for the divide-and-conquer fold below. Small enough that a leaf
+# fold is plain machine-word arithmetic, large enough that the recursion depth
+# stays shallow. The exact value is not load-bearing.
+_DIGIT_LEAF = 32
+
+
+def _digits_to_int(digits: list[int], base: int) -> int:
+    """Positional value of ``digits`` in ``base``, computed in ~O(n^1.58).
+
+    The obvious fold — ``n = n * base + digit`` per character — is O(n²),
+    because the accumulator grows without bound and every step multiplies the
+    whole of it. That is invisible on an address and expensive on a large paste:
+    measured at the 64 KiB input cap, a base58 core cost ~703 ms, against the
+    ~14 ms the cap's own rationale claimed (`this.i:1nputcap`).
+
+    Splitting the digit string in half, converting each half, and combining as
+    ``hi * base**len(lo) + lo`` keeps the operands balanced, so Python's
+    Karatsuba multiplication does the work instead of a long tail of
+    lopsided multiplies.
+
+    This returns the SAME integer as the naive fold — it must. `size_bits` is
+    spec-normative (docs/spec.md *Resolution A*: "decode the core to its integer
+    value and take its minimal byte length"), so the cheap upper-bound estimate
+    ``ceil(len × log2(base) / 8)`` is NOT a substitute: it disagrees with the
+    exact value whenever leading digits are zero, which is every base58check
+    address with a leading zero byte — a Bitcoin P2PKH address measures 192 bits
+    exactly and 200 by the estimate. Using the estimate would change rendered
+    labels and every affected golden. See `this.i:f4std3c0`.
+    """
+    if len(digits) <= _DIGIT_LEAF:
+        n = 0
+        for d in digits:
+            n = n * base + d
+        return n
+    mid = len(digits) // 2
+    hi = _digits_to_int(digits[:mid], base)
+    lo = _digits_to_int(digits[mid:], base)
+    return hi * base ** (len(digits) - mid) + lo
 
 
 def _size_bits(core: str, alphabet, size_basis: str) -> int:

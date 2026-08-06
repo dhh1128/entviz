@@ -2202,6 +2202,41 @@ Entviz = goal:
         text alone and a Complete walk over a <=512-bit value contains no
         gestalt steps at all).
 
+    Positional Decode Is Exact and Balanced = decision:
+      id: f4std3c0
+      status: drafted
+      why: >
+        2026-08-06. size_bits for the non-power-of-2 alphabets (base58, base36,
+        decimal) decodes the core to an integer and takes its minimal byte
+        length. The fold was `n = n * base + digit` per character — O(n^2),
+        because the accumulator grows without bound and every step multiplies
+        all of it. At the 64 KiB cap a base58 core cost 703 ms. See the
+        correction in [[1nputcap]].
+
+        REJECTED: the cheap estimate `ceil(len * log2(base) / 8)`, which the
+        entviz-js security scan (F3) proposed and which the user asked about
+        directly. It is O(1) and it is WRONG — not approximately, but for the
+        most common inputs there are. It disagrees with the exact value whenever
+        leading digits are zero, which is EVERY base58check address with a
+        leading zero byte: a Bitcoin P2PKH address measures 192 bits exactly and
+        200 by the estimate; a core of all base58 '1's measures 8 and estimates
+        160. size_bits is spec-normative (docs/spec.md *Resolution A* MUSTs the
+        decode-and-minimal-byte-length definition) and feeds the SIZE label, so
+        swapping in the estimate would change rendered output and every affected
+        golden — a spec bump and a full release train, to make a value less
+        correct. Verified before rejecting, not assumed.
+
+        ADOPTED: keep the exact integer, compute it faster. Split the digit
+        string in half, convert each half, combine as hi * base**len(lo) + lo.
+        Balanced operands let Karatsuba do the work instead of a long tail of
+        lopsided multiplies: ~O(n^1.58), and 703 ms -> ~50 ms at the cap. The
+        result is the same integer by construction, and the proof is cheap —
+        the regenerated corpus is byte-identical, so no golden moved.
+
+        The general shape, worth reusing: when a hot path is defined by a
+        normative rule, optimize the ALGORITHM, not the DEFINITION. An estimate
+        that is usually right is a spec change wearing a performance costume.
+
     Network Is Derived, Never Assumed = decision:
       id: n3twrkq
       status: drafted
@@ -3357,6 +3392,16 @@ Entviz = goal:
 
         Relation to [[s3cch41n]]: that node hardens the BUILD/CI surface; this
         hardens the RUNTIME render() surface. Both serve the same threat model.
+
+        CORRECTION 2026-08-06 — the "~14 ms" above was measured on the WRONG
+        path and understated the worst case by 50x. It timed the txt->b64url
+        expansion feeding SHA-512. The expensive path is the positional decode
+        behind size_bits for the non-power-of-2 alphabets, which was O(n^2): a
+        64 KiB base58 core measured 703 ms at the cap. The cap still HELD (it is
+        checked before any O(n) work, unlike entviz-js, where characterize() ran
+        ahead of it — their F3/F9), so this was a wrong cost model rather than a
+        hole. Fixed by [[f4std3c0]]; the same input now measures ~50 ms. Lesson:
+        a bound quoted from one measured path is not a bound.
 
     Algorithm Bug-Hunt Review = decision:
       id: alg0rvw1
