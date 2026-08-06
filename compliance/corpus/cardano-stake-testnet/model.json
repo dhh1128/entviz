@@ -212,7 +212,13 @@
   "input_bytes": 64,
   "labels": {
     "bottom": "...frxem8",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "ADA, testnet, stake_test1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

@@ -166,7 +166,13 @@
   "input_bytes": 40,
   "labels": {
     "bottom": "(a.b_c-d!)",
+    "bottom_nodes": [
+      "tspan"
+    ],
     "top": "hex, 160-bit",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

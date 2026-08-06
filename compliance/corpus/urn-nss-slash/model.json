@@ -100,7 +100,11 @@
   "input_bytes": 25,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "urn:example",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

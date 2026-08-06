@@ -326,7 +326,11 @@
   "input_bytes": 56,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "text, 56-byte",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

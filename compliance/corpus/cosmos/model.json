@@ -172,7 +172,13 @@
   "input_bytes": 45,
   "labels": {
     "bottom": "...rk363e",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "bech32, cosmos1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

@@ -264,7 +264,11 @@
   "input_bytes": 59,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "ADA, Ae2",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

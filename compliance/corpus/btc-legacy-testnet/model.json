@@ -172,7 +172,13 @@
   "input_bytes": 34,
   "labels": {
     "bottom": "...MMth",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "BTC, testnet, m",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

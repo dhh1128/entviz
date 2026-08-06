@@ -364,7 +364,12 @@
   "input_bytes": 256,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "+hash hex, 1024-bit",
+    "top_nodes": [
+      "tspan",
+      "chars"
+    ],
     "truncation_marker": true
   },
   "parts": [

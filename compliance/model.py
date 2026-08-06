@@ -353,7 +353,51 @@ def _labels(root):
                     marker = True
         elif ch == "label-bottom":
             bottom = _text_content(g)
-    return {"top": top, "bottom": bottom, "truncation_marker": marker}
+    return {
+        "top": top,
+        "bottom": bottom,
+        "truncation_marker": marker,
+        # v17 correction: the label strips' SERIALIZATION, not just their text.
+        # Everything else in this model is deliberately shape-independent, which
+        # is why five implementations could certify at 104/104 while disagreeing
+        # about the bytes they emit: four wrote a large input's type text as bare
+        # character data after the `+hash` tspan, entviz-js wrapped it in a
+        # second tspan. Same pixels, same text, different DOM — invisible to
+        # Tier A (which compared recovered values) and to Tier B (which strips
+        # text before rasterizing), so the "required SVG profile" was asserted in
+        # prose and enforced nowhere.
+        #
+        # This is scoped deliberately to the text channel's node shape rather
+        # than the whole document: enough to catch this class of divergence,
+        # without freezing every whitespace and attribute-order decision that
+        # implementations are still free to make. See `this.i:l4b3ld0m`.
+        "top_nodes": _text_nodes(root, "label-top"),
+        "bottom_nodes": _text_nodes(root, "label-bottom"),
+    }
+
+
+def _text_nodes(root, channel):
+    """The label's node shape: a list of ``"tspan"`` / ``"chars"`` in order.
+
+    ``["tspan", "chars"]`` is the normative form for a truncated input's top
+    strip — the marker in a tspan, the type text as bare character data.
+    ``["tspan", "tspan"]`` is the divergence this field exists to catch.
+    """
+    for g in _findall(root, "g"):
+        if g.get("data-channel") != channel:
+            continue
+        for t in _findall(g, "text"):
+            nodes = []
+            if (t.text or "").strip():
+                nodes.append("chars")
+            for child in t:
+                if _tag(child) == "tspan":
+                    nodes.append("tspan")
+                if (child.tail or "").strip():
+                    nodes.append("chars")
+            return nodes
+        return []
+    return None
 
 
 def _user_note(root):

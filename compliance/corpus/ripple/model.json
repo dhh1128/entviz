@@ -170,7 +170,11 @@
   "input_bytes": 34,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "XRP, r",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

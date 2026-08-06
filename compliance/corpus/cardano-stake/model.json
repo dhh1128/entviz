@@ -212,7 +212,13 @@
   "input_bytes": 59,
   "labels": {
     "bottom": "...wfvml6",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "ADA, stake1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

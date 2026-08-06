@@ -1,0 +1,10 @@
+{
+  "id": "hex-bech32-shaped",
+  "entropy": "dee1ad37cf96",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

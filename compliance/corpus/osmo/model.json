@@ -172,7 +172,13 @@
   "input_bytes": 43,
   "labels": {
     "bottom": "...tdz28t",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "bech32, osmo1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

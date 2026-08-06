@@ -166,7 +166,11 @@
   "input_bytes": 50,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "swh:1:cnt",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

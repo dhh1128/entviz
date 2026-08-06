@@ -214,7 +214,11 @@
   "input_bytes": 44,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "CESR, Ed25519",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

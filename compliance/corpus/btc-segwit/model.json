@@ -170,7 +170,13 @@
   "input_bytes": 42,
   "labels": {
     "bottom": "...v8f3t4",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "BTC, bc1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

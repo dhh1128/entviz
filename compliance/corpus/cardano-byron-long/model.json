@@ -320,7 +320,11 @@
   "input_bytes": 76,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "ADA, DdzFF",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

@@ -170,7 +170,11 @@
   "input_bytes": 45,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "urn:uuid",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

@@ -102,7 +102,11 @@
   "input_bytes": 16,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "hex, 64-bit",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

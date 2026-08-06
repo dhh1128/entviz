@@ -258,7 +258,11 @@
   "input_bytes": 57,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "did:key",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

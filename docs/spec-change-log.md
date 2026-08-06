@@ -6,6 +6,42 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## Corrections to v17 (2026-08-06, no version bump)
+
+Two defects found after v17 shipped. **No rendered output changes** — every golden raster is
+untouched and no model value moved — so the spec stays at **v17**; the corrections propagate as
+library patch releases (`0.17.1`) and a corpus regeneration. This is the same standard the v15
+editorial pass used: the version tracks *rendered behavior*, and neither of these alters it.
+
+Note the one consequence of not bumping: a port that has not taken the corrections still stamps
+`v17`, so the runner's spec-version assertion cannot distinguish it from one that has. It fails
+on the changed vectors instead, which is red either way but less legible. Re-pin ports to
+`v0.17.1`.
+
+1. **The generic bech32 path claims less.** Two changes, one principle — do not claim a scheme
+   you cannot substantiate. The data floor rose from 8 characters to **32**, and a failing
+   polymod now **falls through instead of rejecting**. v14 had rejected on the reasoning that
+   "a `<hrp>1<data>` string with 8+ bech32 chars is a clear bech32 structural match"; that
+   premise was false, and measured it refused roughly **1.1% of random short hex strings** —
+   ordinary values entviz would not render at all. Rejection remains for the **named** schemes
+   (`bc1`/`tb1`, `ltc1`, `addr1`/`stake1`, `bitcoincash:`/`bchtest:`), where the prefix is a
+   genuine signal and v14's reasoning holds unchanged. A corrupted address still never renders
+   *as* an address — its label reports the encoding actually recognized. The
+   `err-cosmos-bad-checksum` error vector becomes the `cosmos-bad-checksum-falls-through` render
+   vector, and `hex-bech32-shaped` locks a real value the old floor swallowed. See
+   `this.i:b3ch32fl`.
+2. **The label strips' serialization is normative, and now enforced.** Four implementations
+   wrote a truncated input's type text as bare character data after the `+hash` tspan; one
+   wrapped it in a second tspan. Same pixels, same text, different DOM — and invisible to both
+   conformance tiers, so the "required SVG profile" was asserted in prose and policed nowhere.
+   The bare form is normative. Tier A's model gains `labels.top_nodes` / `labels.bottom_nodes`,
+   an ordered list of `tspan` / `chars`, scoped to the text channel so implementations keep
+   their latitude over whitespace and attribute order. This surfaced because the new
+   `@entviz/core` SVG compare engine re-renders and compares trees, so the divergence cost real
+   interop between two conformant implementations. See `this.i:l4b3ld0m`.
+
+---
+
 ## What's new in v17
 
 v17 fixes two defects in blockchain-address recognition that v16's own new test vectors

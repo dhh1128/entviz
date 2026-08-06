@@ -2202,6 +2202,98 @@ Entviz = goal:
         text alone and a Complete walk over a <=512-bit value contains no
         gestalt steps at all).
 
+    Claim Only What You Can Substantiate (bech32 fall-through) = decision:
+      id: b3ch32fl
+      status: drafted
+      why: >
+        v17 correction, 2026-08-06. Two changes to the GENERIC bech32 path, one
+        principle.
+
+        v14 made a structural match with a failing polymod REJECT the input,
+        reasoning that "a <hrp>1<data> string with 8+ bech32 chars is a clear
+        bech32 structural match", so a bad checksum meant a corrupted address
+        and rendering one would mislead. The premise was false and the cost was
+        measurable: 34 of 3000 random short hex strings (~1.1%) matched by
+        accident and were refused outright — dee1ad37cf96, a15c77a2f24e,
+        c13a004ecf7d. Ordinary values entviz would not render at all. Long
+        digests were safe (0 of 3000 sha256 hex), so it was short values that
+        paid.
+
+        THE RULE. Rejection on a failed check is sound only when the structural
+        match is UNAMBIGUOUS. It is, for the named schemes — bc1/tb1, ltc1,
+        addr1/stake1, bitcoincash:/bchtest: — where the prefix is a real signal;
+        v14's reasoning holds there unchanged. It is not, for the generic
+        <hrp>1<data> form, where by design there is no registry of valid HRPs
+        ([[xtra4lph]]: the HRP names the chain straight from the input). There a
+        failing checksum means only "not bech32 after all": decline, and let the
+        input continue down the chain.
+
+        Both halves were needed, and neither alone would do. Raising the data
+        floor from 8 to 32 makes the structural claim honest (a real payload is
+        20+ bytes, so data plus checksum comfortably exceeds 32) and cut the
+        false rejects to 10 of 3000. Falling through removes the remaining
+        bech32-path ones entirely. Fixing only the floor leaves a smaller
+        version of the same bug; falling through without the floor leaves the
+        parser making a claim it cannot support.
+
+        NOT A FALSE ACCEPT. A corrupted address still never renders AS an
+        address — the label reports what was actually recognized (hex, base58),
+        not "bech32, cosmos1" — so a reader comparing against a known-good
+        address sees a different type name and a different picture.
+
+        NO VERSION BUMP. Nothing rendered changes: every golden raster is
+        untouched and no model value moved; only ACCEPTANCE changes, for inputs
+        that previously errored. Spec stays v17, libraries go to 0.17.1. The
+        maintainer's call, and the same standard the v15 editorial pass used.
+        The cost is stated in the change log: a stale port still stamps v17, so
+        the runner's version assertion cannot distinguish it and it fails on the
+        changed vectors instead — red either way, less legible.
+
+        STILL OPEN, same bug elsewhere: BTC-legacy base58check (56 of 12000
+        random hex strings) and LEI MOD 97-10 (10 of 12000) reject on the same
+        weak-signal reasoning — a single leading [123mn] character, and "20
+        base36 chars with 00 at positions 4-5". Both premises are as false as
+        this one was. Not fixed here because the maintainer approved the bech32
+        scope specifically; raised for decision.
+
+    Label Serialization Is Normative, and Now Enforced = decision:
+      id: l4b3ld0m
+      status: drafted
+      why: >
+        v17 correction, 2026-08-06. Found by the agent implementing entviz-js's
+        F1/F2 fix; confirmed by rendering the same >512-bit input in all five
+        implementations.
+
+        Four wrote the top strip's type text as bare character data after the
+        `+hash` tspan; entviz-js wrapped it in a second tspan. Same pixels, same
+        text, different DOM. Neither tier saw it: Tier A compares the recovered
+        MODEL (values, deliberately shape-independent), Tier B strips text
+        before rasterizing. So the Conformance section's "required SVG profile"
+        was asserted in prose and policed nowhere, and five implementations
+        certified at 104/104 while disagreeing about the bytes they emit.
+
+        Harmless until it wasn't. entviz-js's F1/F2 fix makes an affirmative SVG
+        verdict conditional on RE-RENDERING the value and comparing trees —
+        which is exactly what closes the forgery, because a reference that
+        passes IS our own drawing of that value. A python-rendered large-input
+        reference therefore cannot be reproduced by the JS renderer and degrades
+        from the green similar verdict to plain unknown. Real interop loss
+        between two conformant implementations.
+
+        DECIDED: the bare-character-data form is normative (4 of 5 already, it
+        is the reference's own output, and it is fewer nodes). entviz-js
+        changes. Tier A's model gains labels.top_nodes / labels.bottom_nodes —
+        an ordered list of "tspan"/"chars" — extracted by the RUNNER from
+        whatever SVG a port emits, so no port needs new code, only the right
+        DOM.
+
+        SCOPED DELIBERATELY to the text channel rather than the whole document.
+        Enough to catch this class; not so much that implementations lose the
+        latitude over whitespace and attribute order that the spec never meant
+        to constrain. The general lesson: a model comparison is shape-blind by
+        construction, so anything the spec says about SHAPE needs its own check
+        or it is decoration.
+
     Positional Decode Is Exact and Balanced = decision:
       id: f4std3c0
       status: drafted

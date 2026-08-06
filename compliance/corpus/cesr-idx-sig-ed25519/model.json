@@ -364,7 +364,12 @@
   "input_bytes": 88,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "+hash CESR, Ed25519 idx sig",
+    "top_nodes": [
+      "tspan",
+      "chars"
+    ],
     "truncation_marker": true
   },
   "parts": [

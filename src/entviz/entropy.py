@@ -223,8 +223,15 @@ STELLAR_MUXED_REGEX = re.compile(r'^(M|m)([' + BASE32_ALPHABET_EITHER_CASE + ']{
 # the chain in the label. Specific bech32 formats (bc1/tb1, ltc1, addr1…)
 # have their own parsers that run first. HRP is lowercase letters in
 # practice; data part (incl. 6-char checksum) is the bech32 charset.
+# v17 correction: the data floor was 8, which made the structural match a claim
+# this parser could not support. Measured before the change, 34 of 3000 random
+# short hex strings (~1.1%) matched `<letters>1<8+ bech32 chars>` by accident and
+# were REJECTED outright on the failing polymod — ordinary values entviz simply
+# would not render. A real bech32 payload is 20+ bytes, so its data part
+# (payload + the 6-char checksum) is comfortably over 32 characters; the corpus
+# Cosmos vector has 38. See `this.i:b3ch32fl`.
 BECH32_GENERIC_REGEX = re.compile(
-    r'^([a-z]{1,83})1([' + BECH32_ALPHABET + ']{8,})$', re.I)
+    r'^([a-z]{1,83})1([' + BECH32_ALPHABET + ']{32,})$', re.I)
 IPFS_CIDV0_REGEX = re.compile(r'^(Qm)([' + BASE58_ALPHABET + ']{44})$')
 IPFS_CIDV1_REGEX = re.compile(r'^(b)([' + BASE32_ALPHABET_EITHER_CASE + ']{58,112})$')
 EOS_REGEX = re.compile(r"(^[a-z1-5.]{1,11}[a-z1-5]$)|(^[a-z1-5.]{12}[a-j1-5]$)")
@@ -1375,14 +1382,24 @@ def parse_bech32_address(text) -> Parsed:
     hrp = m.group(1).lower()
     data = m.group(2).lower()
     if _bech32_checksum_const(hrp, data) not in (1, 0x2bc830a3):
-        # v14: a `<hrp>1<data>` string with 8+ bech32 chars is a clear bech32
-        # structural match, and the 6-char checksum is surfaced as the bound
-        # suffix — so an invalid polymod REJECTS rather than falling through to
-        # a bare bech32 encoding (which would render an address that fails its
-        # own checksum). This is the same "no entviz from an invalid checksum"
-        # rule the specific bc1/ltc1 parsers now follow. See docs/spec.md
-        # "Checksum verification".
-        raise Bech32ChecksumError("bech32", text)
+        # v17 correction: FALL THROUGH, do not reject.
+        #
+        # v14 rejected here, reasoning that "a `<hrp>1<data>` string with 8+
+        # bech32 chars is a clear bech32 structural match", so a failing polymod
+        # meant a corrupted address and rendering one would mislead. The premise
+        # was false: the shape is not distinctive, and the rejection refused
+        # ordinary values outright (~1.1% of random short hex strings, measured).
+        #
+        # Rejection is only sound when the match is unambiguous. It stays for the
+        # NAMED schemes — bc1/tb1, ltc1, addr1/stake1, bitcoincash:/bchtest: —
+        # where the prefix really is a strong signal and v14's reasoning holds.
+        # Here there is no registry of valid HRPs by design, so a failing
+        # checksum means only "this is not bech32 after all": return None and let
+        # the input continue to the next parser and the alphabet ladder. It still
+        # never renders AS an address — the label reads `hex`/`base58`, not
+        # `bech32, cosmos1`, so a reader sees that recognition did not happen.
+        # See `this.i:b3ch32fl` and docs/spec.md "Checksum verification".
+        return None
     # Type is just "bech32"; the chain is named by the displayed prefix
     # (cosmos1/osmo1/…), not repeated in the type. See this.i:lbldedup.
     return Parsed("bech32", BECH32, hrp + "1", data[:-6], data[-6:],

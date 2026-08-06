@@ -268,7 +268,11 @@
   "input_bytes": 71,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "did:webvh",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

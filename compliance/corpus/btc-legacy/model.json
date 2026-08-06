@@ -172,7 +172,13 @@
   "input_bytes": 34,
   "labels": {
     "bottom": "...vfNa",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "BTC, 1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

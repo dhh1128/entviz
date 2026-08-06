@@ -258,7 +258,13 @@
   "input_bytes": 63,
   "labels": {
     "bottom": "...zayjpu",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "bech32, nsec1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

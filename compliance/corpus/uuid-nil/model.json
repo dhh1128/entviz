@@ -128,7 +128,11 @@
   "input_bytes": 36,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "UUID",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

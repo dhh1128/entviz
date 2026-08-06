@@ -147,7 +147,12 @@ _BAD_CHECKSUM_CASES = {
     "btc-legacy": ("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", Base58CheckError),
     "btc-segwit": ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", Bech32ChecksumError),
     "ltc-bech32": ("ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n8", Bech32ChecksumError),
-    "cosmos": ("cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363f", Bech32ChecksumError),
+    # NOTE: no generic-bech32 entry. v17's correction makes that path FALL
+    # THROUGH on a bad polymod instead of rejecting — the shape alone is not a
+    # sound claim, and the old rule refused ~1.1% of random short hex strings.
+    # Rejection stays for the NAMED schemes in this table, where the prefix IS a
+    # strong signal and v14's reasoning holds. See this.i:b3ch32fl and the
+    # cosmos-bad-checksum-falls-through render vector.
     # BCH CashAddr uses a 40-bit BCH checksum, not the bech32 polymod; a
     # one-char-corrupted (a->q) corpus address must reject. Shares the
     # Bech32ChecksumError class ("Bitcoin Cash" kind).

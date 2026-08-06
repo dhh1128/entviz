@@ -128,7 +128,11 @@
   "input_bytes": 29,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "urn:oid",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

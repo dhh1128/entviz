@@ -166,7 +166,11 @@
   "input_bytes": 42,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "ETH, 0x",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

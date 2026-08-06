@@ -364,7 +364,14 @@
   "input_bytes": 108,
   "labels": {
     "bottom": "...30xwlp",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "+hash ADA, testnet, addr_test1",
+    "top_nodes": [
+      "tspan",
+      "chars"
+    ],
     "truncation_marker": true
   },
   "parts": [

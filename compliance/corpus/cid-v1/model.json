@@ -270,7 +270,11 @@
   "input_bytes": 59,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "CIDv1, dag-pb, b",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

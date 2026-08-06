@@ -264,7 +264,13 @@
   "input_bytes": 62,
   "labels": {
     "bottom": "...ccfmv3",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "BTC, bc1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

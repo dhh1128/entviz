@@ -376,7 +376,11 @@
   "input_bytes": 128,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "hex, 512-bit",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

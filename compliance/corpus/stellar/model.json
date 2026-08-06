@@ -264,7 +264,11 @@
   "input_bytes": 56,
   "labels": {
     "bottom": null,
+    "bottom_nodes": null,
     "top": "XLM, G",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

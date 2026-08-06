@@ -130,7 +130,13 @@
   "input_bytes": 20,
   "labels": {
     "bottom": "...05",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "LEI",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

@@ -364,7 +364,14 @@
   "input_bytes": 103,
   "labels": {
     "bottom": "...r0jfpr",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "+hash ADA, addr1",
+    "top_nodes": [
+      "tspan",
+      "chars"
+    ],
     "truncation_marker": true
   },
   "parts": [

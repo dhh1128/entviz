@@ -170,7 +170,13 @@
   "input_bytes": 42,
   "labels": {
     "bottom": "...xpjzsx",
+    "bottom_nodes": [
+      "chars"
+    ],
     "top": "BTC, testnet, tb1",
+    "top_nodes": [
+      "chars"
+    ],
     "truncation_marker": false
   },
   "parts": [

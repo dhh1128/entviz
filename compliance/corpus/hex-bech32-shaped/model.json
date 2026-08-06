@@ -1,0 +1,121 @@
+{
+  "bg_color": "#ffffff",
+  "cells": {
+    "0": {
+      "blank": true,
+      "blank_map": true,
+      "col": 0,
+      "fingerprint": false,
+      "map_max": [
+        1,
+        1
+      ],
+      "map_min": [
+        0,
+        1
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ade1de",
+      "quartile": 2,
+      "row": 0,
+      "surround_bits": 4311472,
+      "text": "dee1ad",
+      "text_size_px": 12.0
+    },
+    "2": {
+      "blank": true,
+      "blank_map": false,
+      "col": 0,
+      "fingerprint": false,
+      "quartile": null,
+      "row": 1
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#96cf37",
+      "quartile": 1,
+      "row": 1,
+      "surround_bits": 11247716,
+      "text": "37cf96",
+      "text_size_px": 12.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 0
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 1
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 2
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 0,
+    "right": 8,
+    "slots": 9
+  },
+  "cols": 2,
+  "ellipse": {
+    "anchor": [
+      88.0,
+      27.0
+    ],
+    "rotation": 108.0,
+    "rx": 31.6,
+    "ry": 53.2
+  },
+  "encoding": "hex",
+  "entropy_type": "hex",
+  "input_bytes": 12,
+  "labels": {
+    "bottom": null,
+    "bottom_nodes": null,
+    "top": "hex, 48-bit",
+    "top_nodes": [
+      "chars"
+    ],
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "dee1ad37cf96"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
+  "rows": 2,
+  "scheme": null,
+  "size_basis": "decoded",
+  "size_bits": 48,
+  "spec_version": "v17",
+  "truncated": false,
+  "user_note": null
+}

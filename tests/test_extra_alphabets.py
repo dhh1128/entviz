@@ -57,14 +57,20 @@ def test_hrp_names_the_chain_generically():
         assert p.prefix == hrp
 
 
-def test_invalid_checksum_is_rejected():
-    # v14: a clear `<hrp>1<data>` bech32 match with a bad polymod REJECTS
-    # (raises) rather than returning None and falling through to a bare
-    # bech32 encoding — the checksum is surfaced as the suffix, so it must
-    # verify. See docs/spec.md "Checksum verification".
+def test_invalid_checksum_falls_through_rather_than_rejecting():
+    # v17 correction, reversing the v14 rule ON THIS PATH ONLY. v14 rejected a
+    # `<hrp>1<data>` match with a bad polymod, reasoning that the shape was "a
+    # clear bech32 structural match". It is not: measured, ~1.1% of random short
+    # hex strings matched the old 8-character-data form by accident and were
+    # refused outright. With no registry of valid HRPs, a failing checksum here
+    # means only "not bech32 after all", so the parser declines and the input
+    # continues down the chain. The NAMED schemes (bc1/tb1, ltc1, addr1,
+    # bitcoincash:) still reject — see test_v14_label_and_checksums.py.
     bad = COSMOS[:-1] + ("q" if COSMOS[-1] != "q" else "p")
-    with pytest.raises(Bech32ChecksumError):
-        parse_bech32_address(bad)
+    assert parse_bech32_address(bad) is None
+    # ...and the whole-parser path renders it as a bare encoding, never AS an
+    # address: the label says what was actually recognized.
+    assert parse(bad).type != "bech32"
 
 
 def test_specific_bech32_formats_still_win():

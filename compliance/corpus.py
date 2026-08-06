@@ -81,6 +81,19 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("nostr-nsec",
      "nsec1802mpadp48s09v7y6hn0wzqe9ga5chtw07qfz23mf3wkuluqjy3szayjpu", {}),
 
+    # --- v17 correction: the generic bech32 path claims less ---------------
+    # Two changes, one principle: do not claim a scheme you cannot substantiate.
+    # (1) The data floor rose from 8 characters to 32, because 8 made the
+    #     structural match a claim this parser could not support. (2) A failing
+    #     polymod now falls through instead of rejecting, because with no
+    #     registry of valid HRPs a failed checksum means only "not bech32 after
+    #     all". Measured before the change, ~1.1% of random short hex strings
+    #     were refused outright by this path.
+    ("cosmos-bad-checksum-falls-through",
+     "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363f", {}),
+    # A real hex value that the old 8-character floor swallowed and rejected.
+    ("hex-bech32-shaped", "dee1ad37cf96", {}),
+
     # --- v17: the network qualifier is read from the prefix, not assumed ---
     # Through v16 every BTC address was characterized `network: mainnet` and
     # Cardano Shelley carried no network at all, so a testnet address rendered
@@ -252,8 +265,10 @@ ERROR_VECTORS: list[tuple[str, str, dict, str]] = [
     ("err-ltc-bad-checksum",
      "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n8", {}, "bech32-checksum"),
     #   bech32 polymod (generic cosmos parser): last char e->f.
-    ("err-cosmos-bad-checksum",
-     "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363f", {}, "bech32-checksum"),
+    #   (The generic bech32 path no longer has an error vector. v17's correction
+    #   makes a failing polymod FALL THROUGH there rather than reject — see the
+    #   cosmos-bad-checksum-falls-through render vector. The NAMED schemes above
+    #   still reject, which is where v14's reasoning holds.)
     #   CashAddr 40-bit BCH code (Bitcoin Cash): the valid corpus address with
     #   its last payload char corrupted a->q. NOT the bech32 polymod — Bitcoin
     #   Cash uses a distinct 40-bit BCH checksum. See docs/spec.md.
