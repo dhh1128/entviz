@@ -112,11 +112,21 @@ from Tier B. See `this.i:n3twrkq` and `this.i:sh3lley29`.
 | Stage | Repo | Tick | State |
 |---|---|---|---|
 | 1 | `entviz` | `6gde` | **Done.** `v0.17.0` tagged and pushed; CI, docs deploy and the PyPI release workflow all green. |
-| 2 | `entviz-js` | — | **Done**, local commit `b77bdb0`, unpushed. Tier A+B 104/104. |
-| 2 | `entviz-go` | — | **Done**, local commit `22d504f`, unpushed. Tier A+B 104/104. |
-| 2 | `entviz-java` | — | **Done**, local commit `71dd836`, unpushed. Tier A+B 104/104. |
-| 2 | `entviz-rs` | — | **Done**, local commit `b00aec1`, unpushed. Tier A+B 104/104. |
-| 3 | all four | — | Not started; deliberate, one at a time. |
+| 2 | `entviz-js` | — | **Done.** Tier A+B 104/104, plus the F1/F2/F3/F9/F10 security fixes. |
+| 2 | `entviz-go` | — | **Done.** Tier A+B 104/104. |
+| 2 | `entviz-java` | — | **Done.** Tier A+B 104/104. |
+| 2 | `entviz-rs` | — | **Done.** Tier A+B 104/104. |
+| 3 | all four | — | **Done.** All five repos released at 0.17.0 — PyPI, npm (`@entviz/core`), pkg.go.dev, Maven Central, crates.io. |
+
+Every Tier A+B count was re-verified centrally against the corpus, not taken from a port's own
+report.
+
+**Stage 3 lesson.** `entviz-js`'s first release attempt failed at `npm audit --audit-level=high`
+*before* the publish step — two high advisories in a transitive dev dependency. The gate did
+exactly its job. Fixed with a lockfile-only `npm audit fix` (576 core / 329 react tests and
+conformance unchanged), and the tag was moved to the fixed commit rather than burning a version,
+since nothing had been published under it. Moving a tag is only safe in that window; once an
+artifact exists under it, cut a patch instead.
 
 All four counts re-verified centrally, not taken from the ports' own reports. Tier B alone is
 97/97 — it covers only the raster-checkable vectors, where Tier A additionally counts the error
