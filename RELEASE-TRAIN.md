@@ -100,7 +100,42 @@ and all four ports reproduced it to pass Tier A — a defect propagated into fiv
 inside one release cycle, and it cost a second full train (v17) to undo. When you add a corpus
 vector, read the whole model it generates, not just the field you care about.
 
-## Current state — spec v17 (2026-08-04)
+## Corrections to v17 (2026-08-06) — released as 0.17.1
+
+Two defects found after v17 shipped, propagated as a **library patch with no spec bump**,
+because neither changes rendered output: every golden raster was untouched and no model value
+moved. The generic bech32 path stopped rejecting on a failing checksum (it refused ~1.1% of
+random short hex strings) and got a 32-character data floor; and the label strips' serialization
+became normative *and enforced*, after four implementations were found emitting one DOM and
+`entviz-js` another. See `docs/spec-change-log.md` and `this.i:b3ch32fl` / `this.i:l4b3ld0m`.
+
+| Stage | Repo | State |
+|---|---|---|
+| 1 | `entviz` | **Done.** `v0.17.1` released. Corpus is 86 render + 11 error + 7 invariant vectors. |
+| 2 | all four ports | **Done.** Each re-verified centrally at Tier A+B **105/105**. |
+| 3 | all four | **Done.** `v0.17.1` released across npm, pkg.go.dev, Maven Central and crates.io. |
+
+**When a correction does not need a version bump.** The test is whether *rendered behavior*
+changes — not whether the code changed, and not whether the corpus changed. Both of these
+altered only which inputs are *accepted*, plus an additive model field. The cost of not bumping
+is stated in the change log: a stale port still stamps `v17`, so the runner's spec-version
+assertion cannot distinguish it and it fails on the changed vectors instead. Re-pin ports to the
+new tag; that is what coordinates them, not the spec version.
+
+**Three lessons from this pass, each found by a port rather than by the reference.**
+- *Mind the frame.* "The data part is at least 32 characters" means different numbers depending
+  on whether a matcher's bound includes the 6-character checksum. It did here (so 32 transferred
+  unchanged), and did not for the Shelley window on the previous pass (where `{45,100}` became
+  `51..=106`). State length rules in both frames or they port wrongly and silently.
+- *Fall-through hides a wrong floor.* Once a failing match declines instead of erroring, a floor
+  that is too low looks identical from the outside. `entviz-rs` pinned it with two vectors
+  differing only in length, both carrying a valid polymod — 31 declines, 32 matches. Without
+  that pair the floor rests on a comment.
+- *A model comparison is shape-blind by construction.* Anything the spec says about
+  serialization needs its own check or it is decoration — which is how five implementations
+  certified at 104/104 while disagreeing about the bytes they emit.
+
+## Previous — spec v17 (2026-08-04)
 
 v17 fixes two defects v16's own new vectors exposed: the network qualifier was *assumed*
 (`mainnet` hardcoded for every Bitcoin address, absent entirely for Cardano Shelley) rather than
