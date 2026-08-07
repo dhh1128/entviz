@@ -144,9 +144,14 @@ def test_ssh_size_is_faithful_field_projection():
 
 # Each is a valid render vector with ONE checksum char/case corrupted.
 _BAD_CHECKSUM_CASES = {
-    "btc-legacy": ("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", Base58CheckError),
     "btc-segwit": ("bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", Bech32ChecksumError),
     "ltc-bech32": ("ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n8", Bech32ChecksumError),
+    # NOTE: this table is now exactly the EXPLICIT-marker schemes. v17's second
+    # correction (this.i:w3aksig) moved every weak-signal path out of it —
+    # generic bech32, Bitcoin/Litecoin legacy base58check, bare CashAddr, and
+    # LEI — because a leading character or a reserved digit pair is not a claim
+    # the parser can support, and rejecting on it refused ~2% of random values.
+    # What remains carries an unmistakable multi-character marker.
     # NOTE: no generic-bech32 entry. v17's correction makes that path FALL
     # THROUGH on a bad polymod instead of rejecting — the shape alone is not a
     # sound claim, and the old rule refused ~1.1% of random short hex strings.
@@ -160,7 +165,6 @@ _BAD_CHECKSUM_CASES = {
         "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q",
         Bech32ChecksumError,
     ),
-    "lei": ("5493001KJTIIGC8Y1R13", LEIChecksumError),
     "eip55": ("0x5aaeb6053F3E94C9b9A09f33669435E7Ef1BeAed", EIP55ChecksumError),
 }
 

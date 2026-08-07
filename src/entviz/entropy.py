@@ -733,10 +733,15 @@ def parse_bitcoin_address(text) -> Parsed:
     """
     m = BITCOIN_LEGACY_REGEX.match(text)
     if m:
-        # v14: the 4-byte double-SHA256 checksum is surfaced as the suffix, so
-        # it MUST verify. A structural match with a bad checksum rejects.
+        # v17 correction (`this.i:w3aksig`): FALL THROUGH, do not reject. The
+        # only signal here is ONE leading character from [123mn] plus a length
+        # band — far too weak to claim the scheme. Measured, this path refused
+        # ~2% of random short values outright. Rejection is reserved for inputs
+        # carrying an explicit multi-character scheme marker (bc1, ltc1, addr1,
+        # bitcoincash:, 0x+EIP-55), where a failed check really does mean "this
+        # IS that scheme, and it is corrupt".
         if not _base58check_ok(m.group(0)):
-            raise Base58CheckError("Bitcoin legacy", text)
+            return None
         return Parsed("BTC legacy", BASE58, m.group(1), m.group(2), m.group(3))
     m = BITCOIN_SEGWIT_REGEX.match(text)
     if m:
@@ -877,10 +882,10 @@ def parse_litecoin_address(text) -> Parsed:
     """
     m = LITECOIN_LEGACY_REGEX.match(text)
     if m:
-        # v14: Litecoin legacy is base58check; verify the double-SHA256
-        # checksum (surfaced implicitly by the format) — bad checksum rejects.
+        # v17 correction (`this.i:w3aksig`): fall through. `L`/`tL` plus a fixed
+        # length is a weak signal, same as Bitcoin legacy above.
         if not _base58check_ok(m.group(0)):
-            raise Base58CheckError("Litecoin legacy", text)
+            return None
         return Parsed("LTC legacy", BASE58, m.group(1), m.group(2), None)
     m = LITECOIN_REGEX.match(text)
     if m:
@@ -912,11 +917,19 @@ def parse_bitcoin_cash_address(text) -> Parsed:
         # prefix (with the ':') or None; the checksum HRP is the prefix WITHOUT
         # the colon, defaulting to "bitcoincash" for a bare q…/p… address. The
         # payload (group 2, INCLUDING its 8 trailing checksum chars) is what the
-        # BCH code covers. A structural CashAddr match with a bad checksum is
-        # REJECTED, not rendered with an unverified suffix. See docs/spec.md
-        # "Checksum verification".
+        # BCH code covers.
+        #
+        # v17 correction (`this.i:w3aksig`): the verdict on a bad checksum now
+        # depends on whether the input CARRIED the prefix. An explicit
+        # `bitcoincash:`/`bchtest:` is an unambiguous marker, so a failure there
+        # is a corrupt address and still REJECTS. A bare `q…`/`p…` body is a
+        # single leading character plus a length — too weak to claim, so it
+        # falls through like the other weak-signal paths.
+        explicit = m.group(1) is not None
         prefix = (m.group(1) or "bitcoincash:").rstrip(":").lower()
         if not _cashaddr_verify(prefix, m.group(2)):
+            if not explicit:
+                return None
             raise Bech32ChecksumError("Bitcoin Cash", text)
         # v16 EXCEPTION — CashAddr is deliberately NOT folded, and keeps its
         # 8-char checksum inside the core. Two reasons, in order of weight.
@@ -1148,12 +1161,12 @@ def parse_lei(text) -> Parsed:
         # 20-char base36 string can still be recognized as an encoding.
         return None
     if not _lei_checksum_ok(upper):
-        # v14: 20 base36 chars WITH the reserved "00" is an unambiguous LEI
-        # match, and the MOD 97-10 check digits are surfaced as the bound
-        # suffix — so a bad checksum REJECTS rather than falling through to a
-        # generic base36 encoding (which would render an invalid LEI). See
-        # docs/spec.md "Checksum verification".
-        raise LEIChecksumError(upper)
+        # v17 correction (`this.i:w3aksig`): fall through. v14 called "20 base36
+        # chars WITH the reserved 00" an unambiguous LEI match. It is not — the
+        # reserved pair lands by chance in 1 of 1296 random 20-char base36
+        # strings, and this path was refusing real values. The signal is a
+        # length plus two characters, not an explicit scheme marker.
+        return None
     return Parsed("LEI", BASE36, None, upper[:18], upper[18:])
 
 def parse_did(text) -> Parsed:

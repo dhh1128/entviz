@@ -2256,6 +2256,47 @@ Entviz = goal:
         this one was. Not fixed here because the maintainer approved the bech32
         scope specifically; raised for decision.
 
+    Reject Only On An Explicit Marker = decision:
+      id: w3aksig
+      status: drafted
+      why: >
+        v17 correction 2, 2026-08-07. [[b3ch32fl]] fixed the generic bech32 path
+        and I reported that the same bug lived in two more parsers. Measured
+        across 8100 random values in three alphabets and nine lengths, the
+        weak-signal paths refused ~2% outright: Bitcoin/Litecoin legacy
+        base58check dominated, plus LEI and bare CashAddr.
+
+        THE GENERAL RULE, which is what this node exists to state: a failing
+        checksum REJECTS only when the input carries an EXPLICIT,
+        MULTI-CHARACTER scheme marker. Then "this is that scheme, corrupted" is
+        a claim the parser can support. Otherwise the parser DECLINES and the
+        input continues down the chain, because all a failed check proves is
+        "not that scheme".
+
+        EXPLICIT (reject stands): bc1/tb1, ltc1, addr1/stake1/addr_test1,
+        bitcoincash:/bchtest: WHEN THE PREFIX WAS TYPED, and 0x + exactly 40 hex
+        + mixed case for EIP-55.
+        WEAK (now decline): generic <hrp>1 (no HRP registry, by design), Bitcoin
+        legacy (one leading char from [123mn] plus a length band), Litecoin
+        legacy (L/tL plus a fixed length), bare CashAddr (a leading q/p plus a
+        length), LEI (a reserved "00" at positions 4-5, which lands by chance in
+        1 of 1296 random 20-char base36 strings).
+
+        CashAddr splits BY INPUT, not by scheme — the same parser rejects when
+        the prefix was typed and declines when it was not. That is the rule
+        applied honestly: the marker either is present in the input or it is
+        not, and the verdict follows the evidence rather than the parser's
+        identity.
+
+        RESULT: 0 of 8100 random values refused, down from ~2%. And rejection
+        did not become vacuous — the four explicit-marker paths still reject,
+        pinned by test_v17_correction_guards.py so the correction cannot drift
+        into "never reject anything".
+
+        Same standard as [[b3ch32fl]]: nothing RENDERED changes, only which
+        inputs are accepted, so the spec stays v17 and this ships as 0.17.2.
+        Three error vectors become render vectors.
+
     Label Serialization Is Normative, and Now Enforced = decision:
       id: l4b3ld0m
       status: drafted

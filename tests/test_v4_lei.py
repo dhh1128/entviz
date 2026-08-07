@@ -131,17 +131,21 @@ def test_invalid_character_rejected():
     assert parse_lei(bad) is None
 
 
-def test_invalid_checksum_rejected():
+def test_invalid_checksum_falls_through_rather_than_rejecting():
     """Take a valid LEI and flip the last digit so MOD 97-10 fails.
 
-    v14: a 20-char base36 string WITH the reserved '00' is an unambiguous LEI
-    match whose check digits are surfaced as the bound suffix, so a bad checksum
-    now REJECTS (raises) rather than returning None. See docs/spec.md "Checksum
-    verification"."""
+    v17 correction (`this.i:w3aksig`), reversing v14 here. v14 called a 20-char
+    base36 string WITH the reserved '00' an unambiguous LEI match, so a bad
+    checksum rejected. It is not unambiguous: the reserved pair lands by chance
+    in 1 of 1296 random 20-char base36 strings, and this path was refusing real
+    values outright. A weak signal cannot carry a rejection, so the parser
+    declines and the input continues down the chain."""
     # Original valid: ...Y1R12. Change last digit to make it invalid.
     bad = "5493001KJTIIGC8Y1R13"
-    with pytest.raises(LEIChecksumError):
-        parse_lei(bad)
+    assert parse_lei(bad) is None
+    # ...and it still never renders AS an LEI: the label reports the encoding
+    # actually recognized.
+    assert parse(bad).type != "LEI"
 
 
 def test_position_5_6_not_00_rejected():

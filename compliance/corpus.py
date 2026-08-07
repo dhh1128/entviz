@@ -94,6 +94,19 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     # A real hex value that the old 8-character floor swallowed and rejected.
     ("hex-bech32-shaped", "dee1ad37cf96", {}),
 
+    # v17 correction 2 (`this.i:w3aksig`): rejection is reserved for inputs that
+    # carry an EXPLICIT multi-character scheme marker. These three carried only a
+    # weak one — a leading `1` from [123mn], a reserved `00` at positions 4-5, a
+    # bare `q` — and were refused outright on a failing checksum. Measured across
+    # 8100 random values in three alphabets, the weak-signal paths refused ~2%;
+    # after the change, none. Each of these renders as a bare encoding, never as
+    # the scheme it resembles.
+    ("btc-legacy-bad-checksum-falls-through",
+     "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", {}),
+    ("lei-bad-checksum-falls-through", "5493001KJTIIGC8Y1R13", {}),
+    ("cashaddr-bare-bad-checksum-falls-through",
+     "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q", {}),
+
     # --- v17: the network qualifier is read from the prefix, not assumed ---
     # Through v16 every BTC address was characterized `network: mainnet` and
     # Cardano Shelley carried no network at all, so a testnet address rendered
@@ -256,8 +269,6 @@ ERROR_VECTORS: list[tuple[str, str, dict, str]] = [
     # the (now-verified) bound checksum fails -> reject. See docs/spec.md
     # "Checksum verification".
     #   base58check double-SHA256 (Bitcoin legacy): last checksum char a->b.
-    ("err-btc-legacy-bad-checksum",
-     "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", {}, "base58check"),
     #   bech32 polymod (Bitcoin segwit, specific bc1 parser): last char 4->5.
     ("err-btc-segwit-bad-checksum",
      "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5", {}, "bech32-checksum"),
@@ -275,8 +286,6 @@ ERROR_VECTORS: list[tuple[str, str, dict, str]] = [
     ("err-bch-bad-checksum",
      "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q", {}, "cashaddr-checksum"),
     #   LEI MOD 97-10 (base36): last check digit 2->3.
-    ("err-lei-bad-checksum",
-     "5493001KJTIIGC8Y1R13", {}, "lei-checksum"),
     # user-note sanitization. The note is printable ASCII only, so the rejected
     # cases are now (a) too long, (b) a control character, (c) any non-ASCII
     # codepoint (which closes the homoglyph/bidi/zero-width surface).

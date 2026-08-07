@@ -1,0 +1,195 @@
+{
+  "bg_color": "#2f3fbf",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ffffff",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#399000",
+      "quartile": 3,
+      "row": 0,
+      "surround_bits": 6208424,
+      "text": "1A1z",
+      "text_size_px": 16.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#560958",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 12258886,
+      "text": "P1eP",
+      "text_size_px": 16.0
+    },
+    "2": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#e57311",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 15839788,
+      "text": "5QGe",
+      "text_size_px": 16.0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#4c909a",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 14261657,
+      "text": "fi2D",
+      "text_size_px": 16.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#a66651",
+      "quartile": 2,
+      "row": 1,
+      "surround_bits": 13675275,
+      "text": "MPTf",
+      "text_size_px": 16.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#193169",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 1239599,
+      "text": "TL5S",
+      "text_size_px": 16.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#46cd4e",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 778180,
+      "text": "Lmv7",
+      "text_size_px": 16.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#ff3f2f",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#669d32",
+      "quartile": 1,
+      "row": 2,
+      "surround_bits": 4050558,
+      "text": "Divf",
+      "text_size_px": 16.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#000000",
+      "fg": "#ffffff",
+      "fingerprint": false,
+      "nucleus_bg": "#622556",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 10694161,
+      "text": "Nb",
+      "text_size_px": 16.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 0
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 1
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 2
+    },
+    {
+      "band": "W",
+      "letter": "w",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 1,
+    "right": 6,
+    "slots": 12
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      28.0,
+      107.0
+    ],
+    "rotation": 132.0,
+    "rx": 62.245,
+    "ry": 48.062
+  },
+  "encoding": "base58",
+  "entropy_type": "base58",
+  "input_bytes": 34,
+  "labels": {
+    "bottom": null,
+    "bottom_nodes": null,
+    "top": "base58, 192-bit",
+    "top_nodes": [
+      "chars"
+    ],
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "core",
+      "text": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb"
+    }
+  ],
+  "qualifiers": {},
+  "role": null,
+  "rows": 3,
+  "scheme": null,
+  "size_basis": "decoded",
+  "size_bits": 192,
+  "spec_version": "v17",
+  "truncated": false,
+  "user_note": null
+}

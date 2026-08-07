@@ -6,6 +6,34 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## Correction 2 to v17 (2026-08-07, no version bump) — 0.17.2
+
+**Reject only on an explicit marker.** The 2026-08-06 correction fixed the generic bech32 path;
+the same defect was then measured in four more places. Across 8100 random values in three
+alphabets and nine lengths, the weak-signal paths refused roughly **2% outright** — Bitcoin and
+Litecoin legacy base58check dominating, plus LEI and bare CashAddr.
+
+The rule, stated generally so it stops recurring: a failing checksum rejects **only** when the
+input carries an explicit, multi-character scheme marker (`bc1`/`tb1`, `ltc1`, `addr1`/`stake1`,
+a *typed* `bitcoincash:`/`bchtest:`, `0x` + 40 hex for EIP-55). Where the only signal is a
+leading character, a length band, or a reserved digit pair, the parser declines and the input
+continues. CashAddr splits on the **input** rather than the parser: the same recognizer rejects a
+typed prefix and declines a bare body, because the marker either is present or it is not.
+
+Result: **0 of 8100** random values refused, and rejection did not become vacuous — the four
+explicit-marker paths still reject, pinned by tests so the correction cannot drift into "never
+reject anything". Three error vectors become render vectors (89 render + 9 error). No rendered
+output changes, so the spec stays **v17**; libraries go to **0.17.2** and ports re-pin to
+`v0.17.2`. See `this.i:w3aksig`.
+
+**Also: guards for what the previous pass taught.** `tests/test_v17_correction_guards.py` pins
+the three lessons that were living in review comments — the frame a length rule is measured in,
+a 31-versus-32 length pair (because fall-through makes a wrong floor invisible), and a test that
+*demonstrates the serialization check firing* by rewriting a real render into the wrapped label
+form and asserting the model notices.
+
+---
+
 ## Corrections to v17 (2026-08-06, no version bump)
 
 Two defects found after v17 shipped. **No rendered output changes** — every golden raster is
