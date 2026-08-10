@@ -83,6 +83,13 @@ WEAK_SIGNAL_BAD_CHECKSUM = [
     ("btc-legacy", "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNb", "BTC"),
     ("lei", "5493001KJTIIGC8Y1R13", "LEI"),
     ("cashaddr-bare", "qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q", "BCH"),
+    # Litecoin legacy. Added after the entviz-go and entviz-java agents each
+    # independently discovered this table was short: the corpus has no
+    # Litecoin-legacy vector (the `litecoin` vector is the bech32 `ltc1` form),
+    # so nothing here or in the corpus exercised the base58check arm. The valid
+    # twin is version 0x30 over a fixed hash; this is that address with its last
+    # character corrupted.
+    ("ltc-legacy", "LKDyUEtTR1HXamkiEphisSiBJu6o3ZPE35", "LTC"),
     ("generic-bech32", "cosmos1qqqsyqcyq5rqwzqfpg9scrgwpugpzysnrk363f", "bech32"),
 ]
 
@@ -93,6 +100,12 @@ EXPLICIT_MARKER_BAD_CHECKSUM = [
     ("ltc1", "ltc1qw508d6qejxtdg4y5r3zarvary0c5xw7kgmn4n8"),
     ("bitcoincash:", "bitcoincash:qpm2qsznhks23z7629mms6s4cwef74vcwvy22gdx6q"),
     ("eip55", "0x5aaeb6053F3E94C9b9A09f33669435E7Ef1BeAed"),
+    # Cardano. `addr1`/`stake1` is named in the rule as an explicit marker and
+    # the reference does reject on it, but this table omitted it until the
+    # entviz-go agent added the case to its own port and the omission showed up
+    # by comparison.
+    ("addr1", "addr1qyqqzqsrqszsvpcgpy9qkrqdpc83qygjzv2p29shrqv35xmyv4nxw6rfdf4kc"
+              "mtwdac8zunnw36hvamc09a8klra0elsr0jfps"),
 ]
 
 
