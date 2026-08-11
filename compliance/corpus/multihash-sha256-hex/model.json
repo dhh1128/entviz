@@ -237,7 +237,7 @@
   "scheme": "multihash",
   "size_basis": "decoded",
   "size_bits": 256,
-  "spec_version": "v17",
+  "spec_version": "v18",
   "truncated": false,
   "user_note": null
 }

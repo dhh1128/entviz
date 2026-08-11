@@ -6,6 +6,40 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## What's new in v18
+
+v18 makes the **multihash hash function visible**, which it was supposed to be since v14.
+
+The v14 label rule has always listed "a multihash hash on departure" among the MOD slots, and
+`_mods` has always had the branch to render it. But `characterize()` parsed the hash-function
+name out of the recognizer's type string and then **discarded it**, so `qualifiers["hash"]` was
+never set for a multihash and the branch could never fire. A sha3-256 multihash labeled exactly
+like a sha2-256 one. The reference was non-conformant to its own rule, in the same shape as
+v17's network qualifier.
+
+This changes a rendered label, so unlike the 0.17.x corrections it **is** a version bump.
+`multihash, 256-bit, 1520` becomes `multihash, sha3-256, 256-bit, 1520`. Labels are excluded
+from Tier B, so no golden raster moves.
+
+**Why it mattered more than a missing word.** The discard made the 48-entry
+`MULTIHASH_HASH_FUNCS` table **unobservable**: the lookup's result never reached the model, so an
+implementation could get every entry wrong and still pass Tier A. That is not hypothetical. The
+0.17.3 pass found three of four ports carrying roughly nine entries each, and each "completed"
+its table to a *different* remembered size — one agent reported the reference as 63 entries,
+another as 42, within the same hour. Nothing could adjudicate that, because nothing rendered it.
+
+**Four new corpus vectors** (92 render → 96), each departing from a default so the tables are
+actually exercised: `multihash-sha3-256-hex`, `multihash-sha2-512-hex`, `multihash-sha1-hex`,
+and `cid-v1-raw-sha3` — the last departing on both axes at once, since CIDv1's multicodec decode
+is the same table's other consumer and every previous CID vector was dag-pb over sha2-256, both
+silent.
+
+**Ports.** Populate `qualifiers["hash"]` for multihash from the recognized name, re-pin to
+`v0.18.0`, and reproduce Tier A + Tier B. Expect the new vectors to find table errors — that is
+what they are for. See `this.i:mh4shnam`.
+
+---
+
 ## Corpus additions (2026-08-11, no version bump) — 0.17.3
 
 Three recognizer branches had **no corpus vector at all** and were therefore certified by no

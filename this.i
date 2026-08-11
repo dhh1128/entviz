@@ -2256,6 +2256,44 @@ Entviz = goal:
         this one was. Not fixed here because the maintainer approved the bech32
         scope specifically; raised for decision.
 
+    A Discarded Qualifier Makes A Whole Table Unobservable = decision:
+      id: mh4shnam
+      status: drafted
+      why: >
+        v18, 2026-08-11. characterize() parsed the multihash hash-function name
+        out of Parsed.type and threw it away, so qualifiers["hash"] was never
+        set and the _mods branch that renders it — present and correct since
+        v14 — could never fire. A sha3-256 multihash labeled identically to a
+        sha2-256 one. Same shape as [[n3twrkq]]: the rule existed, the rendering
+        code existed, and the field feeding them was empty.
+
+        THE REASON THIS IS ITS OWN NODE, not a one-line bug: discarding the
+        qualifier made the 48-entry MULTIHASH_HASH_FUNCS table UNOBSERVABLE. The
+        lookup ran, and its result reached nothing a checker could see. So the
+        table could be arbitrarily wrong in any implementation and Tier A would
+        still pass.
+
+        It was. The 0.17.3 pass found three of four ports with no hex-multihash
+        parser AT ALL, and each, on fixing it, found its hash table truncated to
+        ~9 entries. Each then "completed" the table to a different remembered
+        size — the entviz-rs agent reported the reference as 63 entries, the
+        entviz-java agent as 42, in the same hour. The true count is 48. Nothing
+        in the corpus could adjudicate between them, because nothing rendered
+        the result.
+
+        GENERALIZATION worth carrying: a lookup table is only as certified as
+        its most observable consumer. If a table's output is swallowed before it
+        reaches the model, no conformance tier can police it, and "we ported the
+        table" is a claim resting on the porter's memory. Ask of any table: what
+        rendered artifact changes when an entry is wrong? If the answer is
+        "nothing", the table is decoration to the checker no matter how correct
+        it is.
+
+        Costs a version bump — unlike the 0.17.x corrections, a rendered label
+        changes. Four vectors added, each DEPARTING from a default, because a
+        default-valued vector proves nothing here: sha2-256 is silent by the
+        loud-departure rule, which is exactly how this hid.
+
     Reject Only On An Explicit Marker = decision:
       id: w3aksig
       status: drafted

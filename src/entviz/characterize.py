@@ -350,6 +350,21 @@ def _describe_from_parsed(parsed):
     if type_name == "snowflake":
         return "snowflake", ROLE_IDENTIFIER, q, "decoded"
     if type_name.startswith("multihash") or "multihash" in type_name:
+        # v18: surface the hash function so the MOD slot can render it. The
+        # parser has always recovered the name — `Parsed.type` reads
+        # "hex multihash sha3-256" — and this function threw it away, so the
+        # `_mods` branch below that reads `q["hash"]` could never fire and a
+        # non-default multihash labeled identically to a sha2-256 one. The v14
+        # rule has required "a multihash hash on departure" since v14; the
+        # reference simply never honored it (`this.i:mh4shnam`).
+        #
+        # It also made the 48-entry MULTIHASH_HASH_FUNCS table UNOBSERVABLE:
+        # a port could get every entry wrong and still pass Tier A, because the
+        # lookup's result never reached the model. Three ports were found in the
+        # 0.17.3 pass carrying only ~9 of the entries.
+        tail = type_name.split("multihash", 1)[1].strip()
+        if tail:
+            q["hash"] = tail
         return "multihash", ROLE_DIGEST, q, "decoded"
 
     # --- Bare encodings (hex / base64 / base64url / disproof fallbacks) ---

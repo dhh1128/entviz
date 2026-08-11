@@ -117,6 +117,10 @@ BRANCHES = [
     ("hex-multihash",
      "1220b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553",
      "hex multihash"),
+    # v18. The default hash is SILENT in the label, so a sha2-256 multihash
+    # cannot show whether the hash-function table is right. Only a DEPARTURE
+    # can, which is why this branch is listed separately from the one above.
+    ("hex-multihash-non-default", "1520" + "ab" * 32, "hex multihash sha3-256"),
 ]
 
 # Branch-level debt, same contract as UNCOVERED_FUNCTIONS. Also empty.

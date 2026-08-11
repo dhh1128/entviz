@@ -163,6 +163,27 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     # first principles by any implementer checking our arithmetic.
     ("ltc-legacy", "LKDyUEtTR1HXamkiEphisSiBJu6o3ZPE34", {}),
 
+    # --- v18: the multihash hash-function table, made observable -------------
+    # Until v18 `characterize()` parsed the hash-function name and then threw it
+    # away, so the MOD slot the v14 rule requires ("a multihash hash on
+    # departure") never rendered, and the 48-entry MULTIHASH_HASH_FUNCS table was
+    # UNOBSERVABLE: a port could get every entry wrong and still pass Tier A.
+    # Three ports were caught in the 0.17.3 pass carrying ~9 entries each, each
+    # "completing" the table to a different remembered size. These vectors make
+    # the lookup's result visible in the label, so the table is now certified
+    # rather than trusted.
+    ("multihash-sha3-256-hex",
+     "1520" + "ab" * 32, {}),
+    ("multihash-sha2-512-hex",
+     "1340" + "ab" * 64, {}),
+    ("multihash-sha1-hex", "1114" + "ab" * 20, {}),
+    # The same table's OTHER consumer: CIDv1's multicodec decode. Every CID
+    # vector was dag-pb over sha2-256 — both defaults, both silent in the label —
+    # so neither the codec table nor the hash table was exercised through this
+    # path either. This one departs on both axes at once.
+    ("cid-v1-raw-sha3",
+     "bafkrkiaaaebagbafaydqqcikbmga2dqpcaireeyuculbogazdinryhi6d4", {}),
+
     # --- decimal (snowflake) ---
     ("snowflake-discord", "80351110224678912", {}),
     ("snowflake-19", "1234567890987654321", {}),

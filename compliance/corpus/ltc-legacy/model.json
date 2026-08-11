@@ -196,7 +196,7 @@
   "scheme": "ltc",
   "size_basis": "decoded",
   "size_bits": 192,
-  "spec_version": "v17",
+  "spec_version": "v18",
   "truncated": false,
   "user_note": null
 }

@@ -121,7 +121,7 @@
   "scheme": "snowflake",
   "size_basis": "decoded",
   "size_bits": 64,
-  "spec_version": "v17",
+  "spec_version": "v18",
   "truncated": false,
   "user_note": null
 }

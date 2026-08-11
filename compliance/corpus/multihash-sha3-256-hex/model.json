@@ -1,0 +1,245 @@
+{
+  "bg_color": "#ffffff",
+  "cells": {
+    "0": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 10081798,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "1": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 0,
+      "surround_bits": 15164372,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "10": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#e7be00",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": 2,
+      "row": 3,
+      "surround_bits": 13218132,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "11": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 3,
+      "surround_bits": 13980182,
+      "text": "abab",
+      "text_size_px": 12.0
+    },
+    "2": {
+      "blank": true,
+      "blank_map": true,
+      "col": 2,
+      "fingerprint": false,
+      "map_max": [
+        2,
+        2
+      ],
+      "map_min": [
+        2,
+        0
+      ],
+      "quartile": null,
+      "row": 0
+    },
+    "3": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 4633344,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "4": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 10380125,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "5": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 1,
+      "surround_bits": 14109490,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "6": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": 3,
+      "row": 2,
+      "surround_bits": 3411099,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "7": {
+      "blank": false,
+      "blank_map": false,
+      "col": 1,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": null,
+      "row": 2,
+      "surround_bits": 9165034,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "8": {
+      "blank": false,
+      "blank_map": false,
+      "col": 2,
+      "edge_color": "#2f3fbf",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": 4,
+      "row": 2,
+      "surround_bits": 16089261,
+      "text": "ababab",
+      "text_size_px": 12.0
+    },
+    "9": {
+      "blank": false,
+      "blank_map": false,
+      "col": 0,
+      "edge_color": "#000000",
+      "fg": "#000000",
+      "fingerprint": false,
+      "nucleus_bg": "#ababab",
+      "quartile": 1,
+      "row": 3,
+      "surround_bits": 4725495,
+      "text": "ababab",
+      "text_size_px": 12.0
+    }
+  },
+  "color_bar": [
+    {
+      "band": "R",
+      "letter": "r",
+      "rank": 0
+    },
+    {
+      "band": "B",
+      "letter": "b",
+      "rank": 1
+    },
+    {
+      "band": "K",
+      "letter": "k",
+      "rank": 2
+    },
+    {
+      "band": "G",
+      "letter": "g",
+      "rank": 3
+    }
+  ],
+  "color_bar_markers": {
+    "left": 10,
+    "right": 5,
+    "slots": 15
+  },
+  "cols": 3,
+  "ellipse": {
+    "anchor": [
+      148.0,
+      147.0
+    ],
+    "rotation": 48.0,
+    "rx": 53.627,
+    "ry": 98.429
+  },
+  "encoding": "hex",
+  "entropy_type": "multihash",
+  "input_bytes": 68,
+  "labels": {
+    "bottom": null,
+    "bottom_nodes": null,
+    "top": "multihash, sha3-256, 256-bit, 1520...",
+    "top_nodes": [
+      "chars"
+    ],
+    "truncation_marker": false
+  },
+  "parts": [
+    {
+      "bind": "none",
+      "text": "1520"
+    },
+    {
+      "bind": "core",
+      "text": "abababababababababababababababababababababababababababababababab"
+    }
+  ],
+  "qualifiers": {
+    "hash": "sha3-256"
+  },
+  "role": "digest",
+  "rows": 4,
+  "scheme": "multihash",
+  "size_basis": "decoded",
+  "size_bits": 256,
+  "spec_version": "v18",
+  "truncated": false,
+  "user_note": null
+}
