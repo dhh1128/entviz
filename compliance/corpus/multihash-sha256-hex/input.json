@@ -1,0 +1,10 @@
+{
+  "id": "multihash-sha256-hex",
+  "entropy": "1220b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553",
+  "params": {
+    "target_ar": 1.0,
+    "font_size_pt": 12,
+    "note": null
+  },
+  "expect": "render"
+}

@@ -1,6 +1,6 @@
 {
   "spec_version": "v17",
-  "lib_version": "0.17.2",
+  "lib_version": "0.17.3",
   "rasterizer": "cairosvg-2.9.0@scale2.0",
   "raster_scale": 2.0,
   "channel_tol": 16,
@@ -48,6 +48,9 @@
     "cid-v0",
     "lei-bloomberg",
     "lei-lowercase",
+    "eos-system",
+    "multihash-sha256-hex",
+    "ltc-legacy",
     "snowflake-discord",
     "snowflake-19",
     "cesr-aid-d",

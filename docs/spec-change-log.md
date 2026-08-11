@@ -6,6 +6,31 @@ Earlier versions (v1–v3) are archived in the project's git history (browse the
 
 ---
 
+## Corpus additions (2026-08-11, no version bump) — 0.17.3
+
+Three recognizer branches had **no corpus vector at all** and were therefore certified by no
+implementation: `eos-system`, `multihash-sha256-hex`, and `ltc-legacy`. All three schemes were
+already specified and already implemented; what was missing was any check that the five
+implementations agree about them.
+
+This is the cheapest kind of change there is. **No code changed, no spec text changed, and no
+existing golden moved** — the only diff to the pre-existing corpus is three new entries in
+`manifest.json`. It is not an erratum, because nothing was wrong in the spec; it is test
+coverage that should have existed from the start.
+
+Litecoin legacy is the instructive one. `parse_litecoin_address` looked covered at function
+granularity because its bech32 `ltc1` arm is exercised by the `litecoin` vector, while the
+base58check arm beside it had never run. Coverage measured per *function* cannot see that;
+coverage measured per *branch* can. Both layers now gate it
+(`tests/test_corpus_recognizer_coverage.py`), and their debt lists are empty.
+
+**Ports.** Re-pin to `v0.17.3` and re-run conformance. Expect this to be mechanical *unless a
+port is wrong on one of these paths* — in which case it will fail, which is the entire point.
+The precedent is v16, whose first Cardano vectors revealed that two ports had no Cardano parser
+whatsoever.
+
+---
+
 ## Correction 2 to v17 (2026-08-07, no version bump) — 0.17.2
 
 **Reject only on an explicit marker.** The 2026-08-06 correction fixed the generic bech32 path;

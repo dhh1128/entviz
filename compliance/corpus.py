@@ -143,6 +143,26 @@ RENDER_VECTORS: list[tuple[str, str, dict]] = [
     ("lei-bloomberg", "5493001KJTIIGC8Y1R12", {}),
     ("lei-lowercase", "213800wavvops85n2205", {}),
 
+    # --- recognizer branches that had NO vector until 2026-08-11 -------------
+    # Found by the coverage gate in tests/test_corpus_recognizer_coverage.py.
+    # Each of these paths existed in all five implementations and was certified
+    # by none of them: a recognizer with no vector is one every port may get
+    # wrong, or omit entirely, while passing. That is not hypothetical — v16's
+    # first Cardano vectors revealed that two ports had no Cardano parser at all.
+    #
+    # `parse_eos_address` and `parse_hex_multihash` had no coverage at the
+    # FUNCTION level. Litecoin legacy is subtler and is why the gate needed a
+    # branch layer: `parse_litecoin_address` looked covered because the bech32
+    # `ltc1` arm is exercised by the `litecoin` vector, while the base58check arm
+    # beside it had never run.
+    ("eos-system", "eosio.token", {}),
+    ("multihash-sha256-hex",
+     "1220b1674191a88ec5cdd733e4240a81803105dc412d6c6708d53ab94fc248f4f553", {}),
+    # Constructed rather than harvested: base58check version 0x30 (Litecoin
+    # mainnet P2PKH) over a fixed 20-byte payload, so it is reproducible from
+    # first principles by any implementer checking our arithmetic.
+    ("ltc-legacy", "LKDyUEtTR1HXamkiEphisSiBJu6o3ZPE34", {}),
+
     # --- decimal (snowflake) ---
     ("snowflake-discord", "80351110224678912", {}),
     ("snowflake-19", "1234567890987654321", {}),

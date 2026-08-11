@@ -56,10 +56,11 @@ ENTROPIES = _corpus_entropies()
 
 # Recognizers with no corpus vector at all. Each entry is debt: the path exists,
 # five implementations claim to support it, and nothing checks that they agree.
-UNCOVERED_FUNCTIONS = {
-    "parse_eos_address",
-    "parse_hex_multihash",
-}
+# Empty, and that is the intended steady state. Paid down 2026-08-11: adding a
+# vector costs a corpus regeneration and a port re-pin, but nothing else — no
+# code change, no spec text, no version bump — so there was never a good reason
+# to carry it. If you add an entry here, say why it cannot simply be a vector.
+UNCOVERED_FUNCTIONS: set[str] = set()
 
 
 def _recognizer_names():
@@ -118,8 +119,8 @@ BRANCHES = [
      "hex multihash"),
 ]
 
-# Branch-level debt, same contract as UNCOVERED_FUNCTIONS.
-UNCOVERED_BRANCHES = {"litecoin-legacy", "eos", "hex-multihash"}
+# Branch-level debt, same contract as UNCOVERED_FUNCTIONS. Also empty.
+UNCOVERED_BRANCHES: set[str] = set()
 
 
 @pytest.mark.parametrize("name,sample,expected_type", BRANCHES)
