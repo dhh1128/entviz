@@ -2,6 +2,7 @@
 kind: todo
 tags: spec
 created: 2026-08-10T22:24Z
+closed: 2026-08-11T04:03Z
 
 - 2026-08-10T22:25Z Filed 2026-08-10. The debt lists in tests/test_corpus_recognizer_coverage.py (UNCOVERED_FUNCTIONS, UNCOVERED_BRANCHES) are the authoritative statement; that test fails if a NEW recognizer appears without a vector, and ALSO fails if one of these gains coverage and the list is not shrunk.
 
