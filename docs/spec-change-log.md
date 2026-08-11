@@ -24,9 +24,12 @@ from Tier B, so no golden raster moves.
 **Why it mattered more than a missing word.** The discard made the 48-entry
 `MULTIHASH_HASH_FUNCS` table **unobservable**: the lookup's result never reached the model, so an
 implementation could get every entry wrong and still pass Tier A. That is not hypothetical. The
-0.17.3 pass found three of four ports carrying roughly nine entries each, and each "completed"
-its table to a *different* remembered size — one agent reported the reference as 63 entries,
-another as 42, within the same hour. Nothing could adjudicate that, because nothing rendered it.
+0.17.3 pass found three of four ports carrying roughly nine entries each — a real truncation that
+had shipped. Their completions turned out to be correct (v18's vectors and entry-by-entry diffs
+confirm all four ports carry the full 48), but the *reports* disagreed: one agent described the
+reference table as 63 entries and another as 42, within the same hour, while each committed a
+correct 48. Three beliefs about a table none of them could observe, and nothing able to
+adjudicate. An unobservable table is uncertifiable even when it happens to be right.
 
 **Four new corpus vectors** (92 render → 96), each departing from a default so the tables are
 actually exercised: `multihash-sha3-256-hex`, `multihash-sha2-512-hex`, `multihash-sha1-hex`,

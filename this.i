@@ -2275,11 +2275,24 @@ Entviz = goal:
 
         It was. The 0.17.3 pass found three of four ports with no hex-multihash
         parser AT ALL, and each, on fixing it, found its hash table truncated to
-        ~9 entries. Each then "completed" the table to a different remembered
-        size — the entviz-rs agent reported the reference as 63 entries, the
-        entviz-java agent as 42, in the same hour. The true count is 48. Nothing
-        in the corpus could adjudicate between them, because nothing rendered
-        the result.
+        ~9 entries — the codes the CID vectors happened to use. Those
+        truncations were REAL and had shipped.
+
+        CORRECTED 2026-08-11 (the entviz-java agent pushed back on an earlier
+        draft of this node, and was right). The completions those agents made
+        were CORRECT. v18's vectors, plus entry-by-entry table diffs in all four
+        ports, show every port carrying the full 48. What was wrong was the
+        REPORTING: one agent described the reference table as 63 entries and
+        another as 42 while each committed a correct 48. So the vivid detail is
+        NOT "three ports completed a table wrongly" — it is that three agents
+        held three different beliefs about the size of a table none of them
+        could observe, and nothing in the system could adjudicate.
+
+        The generalization is unchanged and if anything sharper: an unobservable
+        table is uncertifiable EVEN WHEN IT HAPPENS TO BE RIGHT. "It is correct"
+        and "we can show it is correct" were different claims for that table's
+        entire life, and only the second one is worth anything to a spec with
+        five implementations.
 
         GENERALIZATION worth carrying: a lookup table is only as certified as
         its most observable consumer. If a table's output is swallowed before it
