@@ -2,6 +2,7 @@
 kind: todo
 tags: spec
 created: 2026-08-11T03:21Z
+closed: 2026-08-11T04:03Z
 
 - 2026-08-11T03:21Z Filed 2026-08-11, straight out of the 0.17.3 pass. Three of four ports turned out never to have implemented parse_hex_multihash at all (entviz-go since its first v10 release, entviz-java for its whole life, entviz-rs likewise; only entviz-js had it). While fixing that, all three ALSO found their multihash hash-function table truncated to ~9 of the reference's entries — just the codes the CID vectors happen to use.
 
