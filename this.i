@@ -4440,3 +4440,130 @@ Entviz = goal:
         staggered rollout never fails cross-impl conformance (each impl is
         compared to its own characterization). Relates to [[e1ntv1z0]],
         [[ch4rmod3l]], [[s3mpr3fx]], [[h4shtext]], [[entviz-multiimpl-plan]].
+
+    Terminal Pill = goal:
+      id: t3rmp1ll
+      why: >
+        Give a TUI a one-line, static rendering of a value that a human can
+        RECOGNIZE at a glance, for hosts that cannot show an SVG at all. First
+        consumer is heti's REPL, which lists 2-6 facet AIDs in a window of text.
+        Explicitly NON-NORMATIVE: no spec text, no conformance tier, no goldens,
+        no port to entviz-js/-go/-java/-rs. Lives in `src/entviz/terminal/`,
+        never imported by the base package, designed in `docs/terminal-pill.md`.
+        Relates to [[e1ntv1z0]], [[v1schann]].
+
+      children:
+
+        Recognition Only, Never Verification = constraint:
+          id: p1llr3cg
+          why: >
+            A pill shows 3 of 11 cells and quantizes 24-bit color to 8. Both are
+            lossy, so equality can never be judged from it; a host needing a
+            verdict routes to the full value or a real entviz. This is the same
+            seam the React pill draws, and it is what makes the deliberate
+            information leaks below acceptable.
+
+        Cells Whole Or Not At All = decision:
+          id: p1llc3ll
+          why: >
+            A 4-char base64url token is 24 bits and an RGB triple is 24 bits, so
+            a cell's nucleus color and its characters are THE SAME NUMBER in two
+            notations ([[nuclchan]]). Painting a whole cell therefore discloses
+            nothing not already on screen. Cutting mid-cell would break that: the
+            color would still encode all 24 bits while only half the characters
+            showed, making it a coarse projection of withheld entropy. So width
+            is quantized to whole cells, and is NOT caller-settable — it is a
+            property of the value (11-24 columns, measured over the gallery),
+            like the entviz's own aspect ratio. A host-set width would render one
+            value two ways in two hosts.
+
+        Color Bar Prefix Is Load-Bearing, Not Decoration = decision:
+          id: p1llb4r4
+          why: >
+            The mnemonic elides 8 of 11 cells, and every entropy-derived channel
+            in the pill (text, nucleus color) is blind to them. Measured: "UUID A"
+            and "UUID A with mid char flipped" render an IDENTICAL mnemonic,
+            `550e84...00`, with identical cell colors. Only the fingerprint-derived
+            color bar separates them. So the 4-cell histogram is the pill's only
+            coverage for what the ellipsis hides, not a garnish. Also carries the
+            entviz background as its cell background, which can never collide with
+            a band because the background is removed from the edge palette.
+
+        Max-Normalize The Bar, Not Sum-Normalize = decision:
+          id: b4rm4xn0
+          why: >
+            Four bars summing to 8 spend nearly the whole range on the constraint:
+            band counts are multinomial over 256 slices (64 +/- 7), so the tallest
+            bar is 3/8 two-thirds of the time and never exceeds 4/8 in 98% of
+            cases. Normalizing each bar to the TALLEST band preserves the ratios
+            exactly while using the full range: 126 distinct shapes -> 1836,
+            entropy 4.96 -> 10.25 bits, 6-pill collision 48.6% -> 1.5% over 200k
+            random digests. REJECTED: squaring the already-quantized values (a
+            monotone map applied AFTER quantization cannot recover a distinction
+            quantization destroyed, and truncating merges the rare tall bars, so
+            it measured WORSE at 72 shapes); and a sqrt gamma on top of
+            max-normalization (1010 shapes -- pulling small bars up compresses
+            the large ones). The four cells are side by side, not stacked, so
+            unlike the SVG's single bar there is no total to conserve.
+
+        Separators Summarize The Elided Surrounds = decision:
+          id: s3pbl0ck
+          why: >
+            Each `...` is replaced by one block glyph: tally the elided cells'
+            FILLED SURROUND BOXES by edge color ([[3dg3chan]]), background = the
+            most-used color, foreground = the least-used present color, fill =
+            their ratio. Worth 12.55 bits, near-independent of the bar's >=15.35
+            (edge color comes from the nucleus, box count from the ftok). Kept
+            despite buying no measurable recognition gain -- the bar alone already
+            puts a 6-pill collision at 1 in 2500 -- because it costs ZERO columns
+            and gives the elided region a second, localized, independent look.
+            Skips the v10 fingerprint-edge override ([[3dg3chan]] casual
+            avalanche) deliberately: honoring it would drag grid geometry into a
+            channel that needs none, and it can only add entropy, so the measured
+            figures are floors.
+
+        256-Color Only, And The Palette Is A Table = decision:
+          id: p1ll256c
+          why: >
+            Measured on the target terminal 2026-08-15: truecolor renders as
+            unstyled text and SGR 58 (colored underline) does nothing, which
+            killed an earlier design putting the color bar under the whois line
+            as an underline. Colored underlines are in general LESS portable than
+            truecolor, so they are the wrong fallback when truecolor is what you
+            lack. Two rungs only, `256` and `none`; no 16-color rung, since 0-15
+            are the user's theme. No truecolor rung either, deliberately: one
+            rendering that is byte-identical everywhere beats one that varies
+            with terminal capability, and the color is already a lossy projection
+            of text printed beside it. The five spec palette colors are PINNED by
+            hand (231/184/202/25/16), not snapped by the quantizer: nearest-by-RGB
+            picks 178 for gold, which darkens gold while the same quantizer
+            lightens red, collapsing the gold/red Oklab gap to 0.080 -- half the
+            spec palette's own worst pair (0.157). Index 184 holds the worst
+            adjacent gap at 0.149. Lightness spacing is why that palette exists
+            ([[v6goldlt]]), so it is the one property quantization must not
+            damage. Arbitrary nucleus colors still need a quantizer; it uses the
+            spec's own weighted RGB metric rather than a new rule.
+
+        Fail Closed On Unrecognized Input = decision:
+          id: p1llf41l
+          why: >
+            `render()` falls back to base64-encoding arbitrary text, which is
+            right for a visualization and wrong here: a mistyped identifier in a
+            TUI must not come back looking like a well-formed one. `pill()` raises
+            instead and the host renders the error. A deliberate divergence from
+            the renderer, per the heti seam contract.
+
+        Versioning Escape Hatch = constraint:
+          id: p1llv3rs
+          why: >
+            The library's MINOR tracks the spec's MAJOR, so a non-normative
+            subpackage in the same distribution inherits a number that means
+            "spec v18" and says nothing about it. Documented in the subpackage
+            docstring. A breaking API change here has nowhere to go under that
+            convention; THAT is the trigger to split a second distribution out of
+            this repo. It cannot stay `entviz.terminal` at that point -- `entviz`
+            is a regular package, so two distributions cannot both write into it,
+            and the import becomes `entviz_terminal`. heti wraps the call behind
+            one `render_pill()` so the rename costs it one line. No `[terminal]`
+            extra: extras gate dependencies and there are none (the pill's reach
+            is lxml-free; lxml enters only via pipeline/renderer/shapes).

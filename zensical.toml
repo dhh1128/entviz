@@ -18,6 +18,7 @@ nav = [
     { Home = "index.md" },
     { Specification = "spec.md" },
     { "Integration Guide" = "integration-guide.md" },
+    { "Terminal Pill" = "terminal-pill.md" },
     { "Spec Change Log" = "spec-change-log.md" },
     { Gallery = "gallery.html" },
     { Paper = "entviz-paper.md" },
