@@ -119,8 +119,14 @@ reported to it.
 **Ambiguous**, so a terminal configured to render ambiguous characters
 double-width — some CJK setups — will disagree with it. Every ordinary Western
 configuration renders them narrow. If that ever bites, the fix is a host-side
-width function, not a different glyph set; there is no non-ambiguous partial
-block in Unicode.
+width function.
+
+A **different** glyph set would also fix it, contrary to what this section
+claimed before 2026-08-20: the quadrant blocks (U+2596–U+259F) are EAW
+**Neutral**, and so is every braille pattern (U+2800–U+28FF). Quadrants are not
+worth a rewrite — 16 states with only partial ordinality against the eighths'
+9 — but the braille fact is load-bearing for §4.3, where it means the `none`
+rung is *less* exposed to this than the `256` rung is.
 
 Cells are read in token order, which equals the grid's reading order for
 non-blank cells because `assign_cell_indices` only *shifts* token indices to
@@ -248,19 +254,68 @@ Paint characters **on** their color, never **in** it.
 
 ### 4.3 The `none` rung
 
-With color stripped, the block glyphs still carry their fill levels, so the
-prefix's shape and the separators' ratios survive; what is lost is which band is
-which color. An earlier draft used four painted band letters (`wgrb`) for the
-prefix instead, which inverts the tradeoff — identity survives, heights do not.
+Stripping color costs the prefix about 5 bits — which band is which color, and
+which palette entry the background is — and costs each separator about 4, since
+`_separator_span` puts nearly everything in its foreground/background pair and
+leaves only a 9-level fill behind. Two earlier candidates each recovered half of
+that: block glyphs keep the heights and lose the identities, while four painted
+band letters (`wgrb`) keep the identities and lose the heights.
 
-Glyphs win because they stay consistent with the separators, which have no
-letter form at all, and because `none` is the piped case, where the consumer is
-usually a machine that should be handed the value rather than a pill.
+Braille recovers both, because a braille cell is 256 code points where a block
+glyph is 9. The `none` rung therefore substitutes glyphs rather than merely
+dropping escapes — spans carry a `mono` alternate, and `ansi` prints it. Both
+rungs stay the same printable width, which is the only thing a host laying out
+columns requires, and it is fixed before the color mode is known.
 
-The width is identical in both rungs either way, which is the only thing a host
-laying out columns actually requires. Note that the ladder may therefore change
-*characters*, not merely styling — what it must not change is the printable
-width, which is fixed before the color mode is known.
+**The prefix keeps a readable bar.** Dots fill width-first from the bottom —
+dots 7, 8, 3, 6, 2, 5, 1, 4 — so a glyph's dot *count* equals its fill height and
+the ordinal reading survives as density:
+
+```
+  ⠀ ⡀ ⣀ ⣄ ⣤ ⣦ ⣶ ⣷ ⣿      0/8 through 8/8
+```
+
+Which *arrangement* of that many dots gets drawn is then free, and that is where
+the color assignment goes: which of the 5 palette colors is the background,
+times the 4! orders the bands take over the rest, is 120 states. It is written
+across the four cells jointly in mixed radix rather than each cell naming its own
+color — a cell alone would need 5 codes, and the two extreme heights have only
+one arrangement each. Nothing decodes a pill by eye, so locality costs nothing.
+
+Only the **6 bottom-heaviest** arrangements per height are used. Lexicographic
+order over the dot list happens to rank them that way, so the cap costs one
+constant and keeps every glyph reading as a bar rather than as scattered dots:
+
+```
+  h=1  ⡀ ⢀ ⠄ ⠠ ⠂ ⠐        h=5  ⣦ ⣴ ⣥ ⣬ ⣖ ⣇
+  h=3  ⣄ ⣠ ⣂ ⣐ ⣁ ⣈        h=7  ⣷ ⣾ ⣯ ⣽ ⣟ ⣻
+```
+
+Measured over 100,000 random digests, the full 120-state assignment fits in
+**98.0%** of draws at a cap of 6, against 82.2% at 4 and 99.4% uncapped. Six is
+the knee. When it does not fit — three or more bands at an extreme height, where
+each cell offers only two codes — the encoder names the background color alone
+and drops the order. That shortfall is a function of the heights, which both ends
+can see, so it needs no escape mark; and four two-code cells still give 16, so
+the background always fits.
+
+The block glyph stays in the alphabet as the last code at every height. That is
+what makes the extreme heights non-degenerate, and it is why a `none`-rung prefix
+mixes families — `▅█⣭⣶`, `▄⡐█⣶`. Both halves are doing work: the dot count (or
+the block's own level) carries the height, the choice of family carries a bit.
+
+**The separator goes the other way and becomes opaque.** One cell cannot hold
+this channel positionally: an ordered palette pair is 20 states on its own, so
+nothing readable is left for the ratio. Since the separator is already a summary
+nobody decodes rather than a magnitude anyone reads, the ratio's legibility is
+the cheaper thing to spend. Pair and fill go in as one number, reaching 225 of
+the 256 patterns.
+
+The remaining 31 stay unused **deliberately**. There is spare room to widen the
+fill quantization or to fold in the per-color tallies the gap currently discards,
+and taking it would mean the `none` rung said *more* about a value than the `256`
+rung does — so that stripping color gained you entropy. The ladder must not
+invert. Both rungs summarize the same thing; only the presentation differs.
 
 ## 5. Security notes
 

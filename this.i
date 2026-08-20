@@ -4567,3 +4567,67 @@ Entviz = goal:
             one `render_pill()` so the rename costs it one line. No `[terminal]`
             extra: extras gate dependencies and there are none (the pill's reach
             is lxml-free; lxml enters only via pipeline/renderer/shapes).
+
+        Braille Carries The Color Rung's Loss = decision:
+          id: m0n0br41
+          why: >
+            Stripping color costs the bar ~5 bits (which band is which color,
+            and which palette entry is the background) and each separator ~4
+            (its fg/bg pair, leaving only a 9-level fill). The two candidates
+            [[p1llb4r4]] weighed each recovered half: block glyphs keep the
+            heights and lose the identities, four painted band letters (`wgrb`)
+            keep the identities and lose the heights. Braille recovers both, at
+            256 code points per cell against a block glyph's 9. So the `none`
+            rung SUBSTITUTES GLYPHS rather than merely dropping escapes -- Span
+            gains a `mono` alternate and `ansi` prints it -- which
+            docs/terminal-pill.md §4.3 already licensed ("the ladder may change
+            characters, not printable width"). Width is unchanged, and braille
+            is EAW Neutral where the blocks are Ambiguous, so the `none` rung is
+            the LESS width-exposed of the two. That also corrects a claim §3.2
+            carried until 2026-08-20 ("no non-ambiguous partial block in
+            Unicode"): the quadrants U+2596-259F are Neutral too, just not worth
+            a rewrite at 16 partly-ordinal states.
+
+          children:
+
+            Dot Count Is The Height, Arrangement Is The Color = decision:
+              id: b4rdotsc
+              why: >
+                Dots fill WIDTH-FIRST from the bottom (7 8 3 6 2 5 1 4), so a
+                glyph's dot COUNT equals its fill height and the bar's ordinal
+                reading survives as density -- all nine levels, not the seven a
+                reserved-top-row scheme would leave. Which ARRANGEMENT of that
+                many dots is then free, and carries the 120-state color
+                assignment (5 backgrounds x 4! band orders), written across the
+                four cells JOINTLY in mixed radix. Not per-cell: one cell would
+                need 5 codes and the two extreme heights have one arrangement
+                each. Nothing decodes a pill by eye ([[p1llr3cg]]), so locality
+                costs nothing. Only the 6 bottom-heaviest arrangements per
+                height are used -- lexicographic order over the dot list happens
+                to rank them that way -- so a glyph still reads as a bar rather
+                than as scattered dots. Measured over 100k digests the full
+                assignment fits 98.0% of draws at 6, vs 82.2% at 4 and 99.4%
+                uncapped; 6 is the knee. The block glyph stays as the last code
+                at every height, which is what makes the extreme heights
+                non-degenerate -- and is why a `none` prefix MIXES FAMILIES
+                (`▅█⣭⣶`). Both halves work: dot count carries the height, choice
+                of family carries a bit. When the assignment does not fit (three
+                bands at an extreme height, two codes each), name the background
+                alone and drop the order; the shortfall is a function of the
+                heights, which both ends see, so no escape mark is needed.
+
+            The Separator Trades Its Fill, Not Its Color = decision:
+              id: s3popaqu
+              why: >
+                One cell cannot hold [[s3pbl0ck]] positionally: an ordered
+                palette pair is 20 states on its own, leaving nothing readable
+                for the ratio. Since the separator is already a summary nobody
+                decodes rather than a magnitude anyone reads, the ratio's
+                legibility is the cheaper thing to spend -- so pair and fill go
+                in as one opaque number, reaching 225 of 256 patterns. The
+                remaining 31 stay unused DELIBERATELY. There is room to widen
+                the fill quantization or fold in the per-color tallies the gap
+                discards, and taking it would make the `none` rung say MORE
+                about a value than `256` does, so that stripping color GAINED
+                you entropy. The ladder must not invert; both rungs summarize
+                the same thing and differ only in presentation.

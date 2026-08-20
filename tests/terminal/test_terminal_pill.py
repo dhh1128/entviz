@@ -13,9 +13,10 @@ sys.path.insert(0, os.path.join(ROOT, "src"))
 
 import pytest  # noqa: E402
 
-from entviz.colors import get_nucleus_colors  # noqa: E402
-from entviz.terminal import (BAR, CELL, SEPARATOR, Pill,  # noqa: E402
-                             ansi, pill, whois)
+from entviz.colors import (POSSIBLE_EDGE_COLORS,  # noqa: E402
+                           get_nucleus_colors)
+from entviz.terminal import (BAR, BAR_ALPHABET, CELL, EIGHTHS,  # noqa: E402
+                             NO_CELLS, SEPARATOR, Pill, ansi, pill, whois)
 
 # The gallery's Ed25519 verification key: 44 base64url chars, 264 bits, so the
 # mnemonic takes its three-cell shape.
@@ -133,9 +134,17 @@ def test_separator_is_a_single_cell():
             assert len(span.text) == 1
 
 
-def test_ansi_none_mode_is_exactly_plain():
+def test_ansi_none_mode_keeps_the_width_but_not_the_glyphs():
+    """The ladder changes characters, not printable width (terminal-pill.md §4.3).
+
+    ``plain`` is the 256 rung's text. The ``none`` rung substitutes braille that
+    carries what color would otherwise have said, so the two disagree on glyphs
+    and must not disagree on width.
+    """
     p = pill(AID)
-    assert ansi(p, color="none") == p.plain
+    stripped = ansi(p, color="none")
+    assert stripped != p.plain
+    assert len(stripped) == p.width
 
 
 def test_ansi_256_mode_paints_and_strips_back_to_plain():
@@ -211,3 +220,153 @@ def test_whois_marks_material_that_has_no_cells():
     never turned into cells, so it cannot be summarized — only marked."""
     assert "…" in whois(BIG).plain
     assert "…" not in whois(AID).plain
+
+
+# ---------------------------------------------------------------------------
+# The `none` rung's braille substitution (docs/terminal-pill.md §4.3)
+#
+# With color stripped, block glyphs keep the bar's fill levels and lose which
+# band is which color. Braille has room for both: dot COUNT still reads as fill
+# height, and which arrangement of that many dots was chosen names the color
+# assignment. The separator goes the other way — it becomes an opaque code with
+# no readable fill, because one cell cannot hold an ordered palette pair and a
+# ratio in positional form.
+# ---------------------------------------------------------------------------
+
+BRAILLE = range(0x2800, 0x2900)
+
+#: Two 128-bit hex values whose bars have the SAME four fill heights and
+#: DIFFERENT color assignments. In the 256 rung color separates them; in the
+#: old `none` rung nothing did.
+TWIN_A = "00000000000000000000000000000001"
+TWIN_B = "00000000000000000000000000000011"
+
+
+def mono(span):
+    """What the `none` rung prints for one span."""
+    return span.mono if span.mono else span.text
+
+
+def fill_of(glyph):
+    """The fill height a `none`-rung bar glyph reads as: its dot count, or the
+    block's own index for the one code per height that stays a block."""
+    if ord(glyph) in BRAILLE:
+        return bin(ord(glyph) - 0x2800).count("1")
+    return EIGHTHS.index(glyph)
+
+
+def test_none_rung_bar_keeps_every_fill_level():
+    """Nine levels, not the seven a reserved-top-row scheme would leave."""
+    for value in (AID, AID_B, UUID, BIG, TWIN_A, TWIN_B):
+        for span in pill(value).spans:
+            if span.channel == BAR:
+                assert fill_of(mono(span)) == EIGHTHS.index(span.text)
+
+
+def test_none_rung_bar_separates_what_the_block_rung_confuses():
+    a, b = pill(TWIN_A), pill(TWIN_B)
+    bar = lambda p, f: "".join(f(s) for s in p.spans if s.channel == BAR)
+    assert bar(a, lambda s: s.text) == bar(b, lambda s: s.text), "same heights"
+    assert [s.fg for s in a.spans if s.channel == BAR] \
+        != [s.fg for s in b.spans if s.channel == BAR], "different colors"
+    assert bar(a, mono) != bar(b, mono), "the none rung must not confuse them"
+
+
+def test_none_rung_bar_glyphs_stay_bar_like():
+    """Only the bottom-heaviest arrangements are in play, so a glyph still reads
+    as a bar rather than as scattered dots."""
+    for value in (AID, AID_B, UUID, BIG, TWIN_A, TWIN_B):
+        for span in pill(value).spans:
+            if span.channel == BAR:
+                assert mono(span) in BAR_ALPHABET[EIGHTHS.index(span.text)]
+
+
+def test_none_rung_separator_is_an_opaque_braille_code():
+    for value in (AID, UUID):
+        for span in pill(value).spans:
+            if span.channel == SEPARATOR and span.text != NO_CELLS:
+                assert ord(mono(span)) in BRAILLE
+
+
+def test_none_rung_separator_names_its_color_pair_and_fill():
+    """The block rung shows the ratio and paints the pair; the braille rung
+    carries all three, so a value's separators survive color stripping."""
+    for value in (AID, UUID):
+        for span in pill(value).spans:
+            if span.channel == SEPARATOR and span.text != NO_CELLS:
+                pair, fill = divmod(ord(mono(span)) - 0x2800, len(EIGHTHS))
+                least, greatest = divmod(pair, len(POSSIBLE_EDGE_COLORS))
+                assert POSSIBLE_EDGE_COLORS[least] == span.fg
+                assert POSSIBLE_EDGE_COLORS[greatest] == span.bg
+                assert EIGHTHS[fill] == span.text
+
+
+def test_none_rung_leaves_no_cells_marker_alone():
+    """`…` means characters that became no cell at all. It has no color to lose,
+    so there is nothing for braille to carry."""
+    for span in whois(BIG).spans:
+        if span.text == NO_CELLS:
+            assert span.mono is None
+
+
+def test_none_rung_is_deterministic_and_carries_no_color():
+    out = ansi(pill(AID), color="none")
+    assert out == ansi(pill(AID), color="none")
+    assert SGR.search(out) is None
+
+
+#: Heights [8, 8, 5, 8] — three cells at an extreme height leave 56 codes, under
+#: the 120 a full assignment needs, so this exercises the fallback.
+CRAMPED = "0000000000000000000000000000001b"
+
+
+def decode_bar(p):
+    """Read the `none` rung's four bar glyphs back to the number they carry."""
+    spans = [s for s in p.spans if s.channel == BAR]
+    code, place = 0, 1
+    for span in spans:
+        alphabet = BAR_ALPHABET[EIGHTHS.index(span.text)]
+        code += alphabet.index(mono(span)) * place
+        place *= len(alphabet)
+    return code, place
+
+
+def test_none_rung_bar_carries_the_whole_color_assignment():
+    """Background color and band order both survive, for a bar with room.
+
+    Decoded blind: from the glyphs alone, reconstruct which palette color the
+    entviz background is and what color each of the four bands was painted, then
+    check both against what the 256 rung actually paints.
+    """
+    from itertools import permutations
+    orders = sorted(permutations(range(4)))
+
+    for value in (AID, AID_B, UUID, BIG, TWIN_A, TWIN_B):
+        p = pill(value)
+        code, capacity = decode_bar(p)
+        assert capacity >= 120, f"{value} is the cramped case, not this test's"
+
+        background = POSSIBLE_EDGE_COLORS[code // len(orders)]
+        others = [c for c in POSSIBLE_EDGE_COLORS if c != background]
+        bands = [others[i] for i in orders[code % len(orders)]]
+
+        bar = [s for s in p.spans if s.channel == BAR]
+        assert background == bar[0].bg
+        assert bands == [s.fg for s in bar]
+
+
+def test_a_cramped_bar_falls_back_to_the_background_alone():
+    """Three extreme heights leave too few codes. That is visible in the heights
+    themselves, so the fallback needs no escape mark — and the background, the
+    single most useful thing color says, still fits."""
+    p = pill(CRAMPED)
+    code, capacity = decode_bar(p)
+    assert capacity < 120
+    background = {s.bg for s in p.spans if s.channel == BAR}.pop()
+    assert POSSIBLE_EDGE_COLORS[code] == background
+
+
+def test_cramped_bar_still_keeps_its_fill_levels():
+    for span in pill(CRAMPED).spans:
+        if span.channel == BAR:
+            assert fill_of(mono(span)) == EIGHTHS.index(span.text)

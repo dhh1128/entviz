@@ -15,10 +15,10 @@ where the MINOR component tracks the spec's major version. Nothing here is
 bound to a spec version, and a change to this API says nothing about the
 algorithm.
 """
-from .pill import (BAR, CELL, EIGHTHS, GAP, NO_CELLS, SEPARATOR, Pill, Span,
-                   ansi, pill, whois)
+from .pill import (BAR, BAR_ALPHABET, CELL, EIGHTHS, GAP, NO_CELLS, SEPARATOR,
+                   Pill, Span, ansi, pill, whois)
 
 __all__ = [
-    "BAR", "CELL", "EIGHTHS", "GAP", "NO_CELLS", "SEPARATOR",
+    "BAR", "BAR_ALPHABET", "CELL", "EIGHTHS", "GAP", "NO_CELLS", "SEPARATOR",
     "Pill", "Span", "ansi", "pill", "whois",
 ]
