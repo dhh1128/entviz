@@ -267,6 +267,19 @@ dropping escapes — spans carry a `mono` alternate, and `ansi` prints it. Both
 rungs stay the same printable width, which is the only thing a host laying out
 columns requires, and it is fixed before the color mode is known.
 
+Bear in mind who reaches this rung. It is largely the **piped** case, where the
+consumer is a machine that should be handed the value rather than a pill; and
+where the consumer is a person running a screen reader, the same answer applies
+for a different reason. A pill affords *glancing*, which is not what a screen
+reader does, so a host that knows it is talking to one should print the value.
+That decision belongs to the host, like every other capability question (§2).
+No glyph set changes it: both rungs announce as symbol names or are skipped
+entirely at normal verbosity. On a refreshable braille display the substitution
+should if anything help, since U+2800–U+28FF is the block that exists to carry
+dot patterns and passes through to the cells as itself — but that claim has not
+been checked against a real BRLTTY stack, and it is not a reason to render a
+pill at somebody rather than the value.
+
 **The prefix keeps a readable bar.** Dots fill width-first from the bottom —
 dots 7, 8, 3, 6, 2, 5, 1, 4 — so a glyph's dot *count* equals its fill height and
 the ordinal reading survives as density:
