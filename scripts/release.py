@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Cut an entviz release: bump version, regenerate the gallery, commit, tag, push.
+"""Cut an entviz release: bump version, regenerate version-stamped assets, test,
+commit, tag, push.
+
+Order matters: the bump and the asset regeneration happen BEFORE the test run,
+because the gallery and the repo self-image both embed the library version. The
+pre-bump tree is not the tree that gets tagged, so testing it proves nothing;
+the suite runs against the exact content the tag will point at. If it fails, the
+working tree is restored and nothing is committed, pushed, or tagged.
 
 HUMAN-run by default: pushes to main and tags are reserved for a human
 maintainer. An AI agent may run this script ONLY when a human has explicitly
@@ -26,7 +33,9 @@ on another branch, and fast-forwards main to origin/main (failing only if local
 main has unpushed/diverged commits a human must resolve). It is pure-stdlib and
 operates on the repo root regardless of cwd, so `python3 /path/to/scripts/release.py`
 works from anywhere — no `cd` needed. (`uv` must be on PATH: the script shells
-out to `uv run` for the test suite and the gallery regeneration.)
+out to `uv run` for the test suite and the asset regeneration. The social-card
+step additionally needs the opt-in `render` group's cairosvg, which wants system
+libcairo.)
 
 The library version is single-sourced in src/entviz/__init__.py (`__version__`);
 this script edits that one line and hatch derives the package version from it.
@@ -52,6 +61,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).parent.parent
 INIT_PY = REPO_ROOT / "src" / "entviz" / "__init__.py"
 GALLERY_SCRIPT = REPO_ROOT / "scripts" / "gallery.py"
+SOCIAL_CARD_SCRIPT = REPO_ROOT / "scripts" / "social_card.py"
 
 _VERSION_RE = re.compile(r'^(__version__\s*=\s*)"([^"]+)"', re.MULTILINE)
 _SPEC_RE = re.compile(r'^SPEC_VERSION\s*=\s*"v?(\d+)"', re.MULTILINE)
@@ -160,6 +170,23 @@ def regenerate_gallery():
     run(["uv", "run", "python", str(GALLERY_SCRIPT.relative_to(REPO_ROOT))])
 
 
+def regenerate_social_card():
+    """The repo self-image embeds the lib version too, on exactly the same
+    footing as the gallery: docs/assets/root-commit-entviz.svg carries a
+    `lib="<version>"` attribute, and tests/test_social_card.py fails if the
+    committed file drifts from a fresh render. Omitting this step is what sank
+    the v0.18.2 release — the tag was pushed with a card still reading 0.18.1,
+    so release.yml's test gate failed and nothing was ever published.
+
+    Needs the opt-in `render` group for cairosvg (the PNG step); without it the
+    script writes both SVGs and then exits nonzero."""
+    print("Regenerating repo self-image + social card (embeds the new version)...")
+    run([
+        "uv", "run", "--group", "render", "python",
+        str(SOCIAL_CARD_SCRIPT.relative_to(REPO_ROOT)),
+    ])
+
+
 def set_version(new_version):
     text = INIT_PY.read_text()
     updated, n = _VERSION_RE.subn(rf'\g<1>"{new_version}"', text)
@@ -247,19 +274,37 @@ def main():
         message = prompt_message(label)
 
     check_tag_absent(tag)
-    run_tests()
 
     if args.no_bump:
         # Nothing to bump or regenerate: the version is already on main, so we
         # only tag the current (already-pushed) HEAD and push the tag.
         print(f"Releasing current version {new} (no bump)")
         warn_spec_minor_mismatch(new)
+        run_tests()
     else:
         verb = "Setting" if args.explicit else "Bumping"
         print(f"{verb} {old} -> {new}")
-        set_version(new)
-        warn_spec_minor_mismatch(new)
-        regenerate_gallery()
+        # Bump and regenerate BEFORE testing. Several committed assets embed the
+        # version, so the pre-bump tree is not the tree we are about to tag —
+        # testing it proves nothing about the release. Test what ships.
+        try:
+            set_version(new)
+            warn_spec_minor_mismatch(new)
+            regenerate_gallery()
+            regenerate_social_card()
+            run_tests()
+        except subprocess.CalledProcessError as exc:
+            # check_clean() ran above, so every modification to these paths is
+            # ours to discard. Leave main exactly as we found it rather than
+            # stranding a half-bumped working tree. (Same path list as the
+            # `git add` below — keep the two in step.)
+            run(["git", "checkout", "--", "src/entviz/__init__.py", "docs"], check=False)
+            step = " ".join(str(c) for c in exc.cmd)
+            sys.exit(
+                f"Release aborted: `{step}` failed on the {new} tree "
+                f"(exit {exc.returncode}). Nothing was committed, tagged, or "
+                f"pushed; the working tree has been restored to {old}."
+            )
         run(["git", "add", "src/entviz/__init__.py", "docs"])
         # DCO sign-off (we work in DCO-enforced repos and sign every commit).
         run(["git", "commit", "-s", "-m", f"Release {tag}: {message}"])

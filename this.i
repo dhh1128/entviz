@@ -4631,3 +4631,40 @@ Entviz = goal:
                 about a value than `256` does, so that stripping color GAINED
                 you entropy. The ladder must not invert; both rungs summarize
                 the same thing and differ only in presentation.
+
+    Test The Tree You Tag, Not The One You Left = decision:
+      id: t3stship
+      why: >
+        scripts/release.py ran the suite, THEN bumped the version and
+        regenerated the gallery, then committed and tagged. So the tree it
+        tested was never the tree it shipped: the bump itself mutates committed
+        assets that embed the version, and nothing re-checked them. The gate
+        was aimed one commit upstream of the thing it was guarding.
+
+        This is not hypothetical. Several assets carry a `lib="<version>"`
+        stamp, and the release script re-stamped only the gallery — not the
+        repo self-image (docs/assets/root-commit-entviz.svg), which
+        tests/test_social_card.py has guarded since 2026-06-19. The gap was
+        KNOWN and written down in AGENTS.md §4 step 7 as a standing manual
+        chore, which is exactly the shape of a bug that eventually fires: v0.9.1
+        shipped stale art before the guard existed, and v0.18.2 failed to ship
+        at all after it. The v0.18.2 tag carried a card still reading 0.18.1,
+        release.yml's test gate did its job, and the release train stopped —
+        no PyPI artifact, no GitHub Release. main was fine the whole time; the
+        break was invisible from main because the tag, not main, was broken.
+
+        Fix, in two parts. (1) Regenerate the self-image alongside the gallery,
+        so every version-stamped asset is re-stamped from one place instead of
+        one being automated and the other left to a human's memory. (2) Reorder
+        to bump -> regenerate -> test -> commit -> tag, so the suite runs
+        against the exact content the tag will point at. On failure the working
+        tree is restored to its pre-bump state and nothing is committed, tagged,
+        or pushed — an aborted release must leave no trace, or the next attempt
+        starts from a tree the maintainer has to clean up by hand.
+
+        The generalizable lesson, and the reason this is a node rather than a
+        commit message: a verification step that runs BEFORE the mutation it is
+        meant to verify is decoration. Ordering is load-bearing in any pipeline
+        where the artifact is derived from the thing being changed. Compare
+        [[s3cch41n]], which hardens the build surface against outside tampering;
+        this hardens it against the release process tampering with itself.
