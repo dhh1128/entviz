@@ -1,9 +1,9 @@
 # The terminal pill
 
-**Status:** design, pre-implementation. **Audience:** implementers of a terminal
-pill in `entviz-py`, and hosts that consume it (first one: heti's TUI).
-**Normative status:** none. This is a design record, not spec text. The entviz
-spec (`spec.md`) is untouched by anything here, there are no conformance
+**Status:** implemented and shipped, in `src/entviz/terminal/`. **Audience:**
+maintainers of that subpackage, and hosts that consume it (first one: heti's
+TUI). **Normative status:** none. This is a design record, not spec text. The entviz
+spec (`docs/spec.md`) is untouched by anything here, there are no conformance
 obligations, and no port to `entviz-js` is implied. Where this document and the
 spec disagree about the entviz itself, the spec wins.
 
@@ -13,8 +13,11 @@ cell text, colored, about 19 columns wide. It is a sibling of the React
 of it — the React pill is interactive, expands, and carries copy affordances,
 and none of that exists here. A terminal pill is a string.
 
-The prototype every claim below was measured against is
-`.ignored/pill-proto.py`.
+Every claim below was originally measured against the prototype
+`.ignored/pill-proto.py`, and has since been re-measured against the shipped
+`src/entviz/terminal/pill.py`, which reproduces all of it (§3.3's shape count and
+entropy, §3.4's separator entropy, §4.3's cap-6 fit rates) to within sampling
+noise.
 
 ---
 
@@ -67,11 +70,15 @@ by the host and expressed only as the color mode it asks for.
 ## 3. Anatomy
 
 ```
-  ▆▁▃▂   DKxy  ▅  19f2  ▃  imBx
+  ▅█▄▃   DKxy  ▂  19f2  ▃  imBx
   └──┬─┘  └─┬┘  ┬  └─┬┘  ┬  └─┬┘
    color   cell │  cell │  cell
     bar         └─ separator: the cells this pill is not showing
 ```
+
+Same value as §1, spread out to be labelled. The real string has one space after
+the color bar and nothing between the cells and their separators — the pill
+spends no column on anything but the bar's one separating space.
 
 ### 3.1 Cells
 
@@ -79,8 +86,9 @@ The pill shows the entviz's own cells, in reading order, with their own colors:
 
 - **Text** is the cell's token text, exactly as the entviz renders it.
 - **Background** is the cell's nucleus color — the token's 24-bit quant read
-  straight out as RGB (`spec.md:436`), quantized to 256.
-- **Foreground** is white or black by the spec's Oklab rule (L < 0.6 → white).
+  straight out as RGB (`docs/spec.md:437`), quantized to 256.
+- **Foreground** is white or black by the spec's Oklab rule (L < 0.6 → white,
+  same line).
 
 The color is not an extra channel. A 4-character base64url token is exactly 24
 bits and an RGB triple is exactly 24 bits, so **a cell's color and its
@@ -130,20 +138,21 @@ rung is *less* exposed to this than the `256` rung is.
 
 Cells are read in token order, which equals the grid's reading order for
 non-blank cells because `assign_cell_indices` only *shifts* token indices to
-make room for blanks and never reorders them. **This is currently an argument,
-not a test.** It should become one.
+make room for blanks and never reorders them. This was an argument when the
+design was written; it is now pinned by
+`tests/terminal/test_terminal_pill.py:102`.
 
 ### 3.3 The color bar prefix
 
 Four cells, one per band, in the entviz color bar's own first-appearance order
-(`spec.md:513`). Each cell is a partial block glyph:
+(`docs/spec.md:513`). Each cell is a partial block glyph:
 
 - **foreground** = the band's palette color, filling from the bottom;
 - **background** = the *entviz* background color;
 - **fill** = `round(8 · wᵢ / max(w))`, where `wᵢ` is that band's `count⁴` weight.
 
 Background and fill can never collide, because the entviz background is removed
-from the edge palette (`spec.md:417`), so no band is ever painted over itself.
+from the edge palette (`docs/spec.md:417`), so no band is ever painted over itself.
 The worst pairing this can produce is gold-on-white, which is the palette's own
 designed-for minimum contrast. Using the background color here also puts its 2
 bits on screen directly, instead of leaving them to be inferred from which of
@@ -179,11 +188,11 @@ carrying a summary of **the cells that ellipsis is hiding**:
 
 1. For each elided cell in that gap, take its **surround edge color** — the
    nearest edge-palette entry to its nucleus by the spec's weighted RGB metric
-   (`spec.md:441`) — and the number of its 24 surround boxes that are filled
-   (the popcount of the ftok quant's low 24 bits).
+   (`docs/spec.md:443`) — and the number of its 24 surround boxes that are
+   filled (the popcount of the ftok quant's low 24 bits, `docs/spec.md:462`).
 
    The v10 fingerprint-edge override on grid position 0 and the two quartile
-   cells (`spec.md:432`) is deliberately **not** applied. Honoring it would
+   cells (`docs/spec.md:451`) is deliberately **not** applied. Honoring it would
    drag grid geometry into a channel that otherwise needs none, and it can only
    add entropy, so skipping it makes the measurements below floors rather than
    flattering them. This is a place where the pill knowingly diverges from what
@@ -196,9 +205,15 @@ carrying a summary of **the cells that ellipsis is hiding**:
 Colors that no cell in the gap uses are not candidates — otherwise every gap
 would nominate an unused color as its rarest and the fill would always be zero.
 Ties break by palette order. A gap where the rarest *present* color contributes
-no filled boxes renders as an honest solid block. Measured over 60,000 random
-AIDs the fill spreads from 2/8 to 8/8 with a mode at 3, and the solid case never
-occurred in 8,000 gaps.
+no filled boxes has a fill of zero, and since the background is painted, that
+renders as an honest solid block of the dominant color.
+
+Measured over 220,000 gaps (three samples of random AIDs, two gaps each) the
+fill spreads across 1/8 to 8/8 with a mode at 3/8 (~31%) and a second lobe at
+2/8 (~14%) and 4/8 (~21%). The extremes are rare but real: 1/8 lands in ~0.65%
+of gaps, and the solid 0/8 case occurred once in 220,000 — so it is reachable
+rather than merely theoretical, which an earlier draft measured as a floor of
+2/8 on a smaller sample.
 
 Worth 12.55 bits, near-independent of the prefix — the edge color comes from the
 nucleus, the box count from the ftok. The prefix measures at ≥ 15.35 bits over
@@ -206,6 +221,15 @@ the same sample (heights *and* band colors, not the 10.25 of §3.3 which is
 heights alone); that is a floor, since 45,527 of 60,000 draws were distinct and
 the sample censors the tail. The combined channel could not be resolved at all —
 59,980 distinct in 60,000 — but if the two are independent it is around 27 bits.
+
+**`…` survives, with a narrowed meaning.** The block glyph means "cells you are
+not being shown," so it needs cells to summarize. Where there are none, the pill
+falls back to a literal `…` (`NO_CELLS`), which means the different thing:
+"characters that became no cell at all." That is the >512-bit case, where the
+tokenizer only ever produced head, fingerprint-middle and tail cells and the
+material between them was never tokenized — so the whois line, which otherwise
+shows every cell, carries two of these. A pill gap that turns out to be empty
+takes the same marker for the same reason.
 
 **It costs zero columns**, which is what earns it a place. On recognition
 grounds alone it is redundant: the prefix by itself already puts a six-pill
@@ -233,7 +257,7 @@ These are **not** the nearest entries by RGB distance. Nearest picks 178
 (`#d7af00`) for gold, which darkens it while the quantizer simultaneously
 lightens red, collapsing the gold/red lightness gap to 0.080 — half the spec
 palette's own worst adjacent gap of 0.157. Since lightness spacing is the whole
-rationale for the palette (`spec.md:411`), that is the one property the
+rationale for the palette (`docs/spec.md:411`), that is the one property the
 quantization must not damage. Picking 184 (`#d7d700`) instead maximizes the
 minimum adjacent gap at **0.149**, level with the spec palette. Gold becomes a
 more yellow gold, which if anything strengthens the hue cue against red.
@@ -242,8 +266,8 @@ more yellow gold, which if anything strengthens the hue cue against red.
 
 Nucleus colors are arbitrary RGB and do need a quantizer: nearest entry in the
 6×6×6 cube plus the 24 grays, by the spec's own weighted RGB metric
-(`spec.md:441`), so the snapping rule is one the spec already defines. Never
-indices 0–15.
+(`docs/spec.md:443`), so the snapping rule is one the spec already defines.
+Never indices 0–15.
 
 Every visible cell sets **both** foreground and background, so nothing inherits
 the terminal's theme and the pill renders identically on light and dark. This is
@@ -339,6 +363,7 @@ invert. Both rungs summarize the same thing; only the presentation differs.
 | No short head+tail teaser outside cell alignment | Prefix/suffix grinding (threat model T1/T6) |
 | Prefix and separators disclose elided cells | Deliberate, and the only coverage the pill has for what the ellipsis hides. Both are lossy summaries; matching either is far cheaper than matching the value, which is acceptable precisely because the pill is not a verification surface |
 | Never locale-transform the value; locale-invariant casing only | Turkish dotless-`i` corrupts normalization and the fingerprint |
+| Unrecognized input raises, never renders | `render()` falls back to base64-encoding arbitrary text, which is right for a visualization and wrong here: a mistyped identifier in a TUI must not come back looking like a well-formed one |
 
 The near-neighbour case is what makes the prefix and separators load-bearing
 rather than decorative. Two values differing in a single character *inside an
@@ -377,7 +402,17 @@ regular package, so two distributions cannot both write into it, and the import
 would become `entviz_terminal`. heti already wraps the call behind a single
 `render_pill()` for exactly this reason, so the rename costs one line there.
 
-The API is smaller than the seam contract proposed. There are no channel flags:
+`pill(value)` and `whois(value)` each return a `Pill` — `spans`, `plain`, and
+`width` — and `ansi(rendered, color=...)` serializes one. A `Span` carries its
+`text`, a `channel` (`BAR`, `CELL`, `SEPARATOR`, `GAP`), its `fg`/`bg` as spec
+sRGB rather than palette indices, and its `mono` alternate. Splitting rendering
+from serialization is what lets a host lay out columns without stripping escape
+codes, and lets a caller measure a pill without rendering one. `EIGHTHS`,
+`BAR_ALPHABET` and `NO_CELLS` are exported for hosts that restyle or measure the
+glyphs directly.
+
+The API is otherwise smaller than the seam contract proposed. There are no
+channel flags:
 trust posture is the host's to decide, and a host that doesn't want
 value-derived channels shown doesn't call `pill()`. That keeps the policy in the
 one place that knows the value's provenance, which is what the contract asked
