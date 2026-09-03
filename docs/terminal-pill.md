@@ -38,12 +38,25 @@ They open with the same four-cell prefix, deliberately, so a pill and its whois
 line can be tied together by eye.
 
 For `DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx`, the gallery's Ed25519
-verification key (colors omitted here; the glyphs are the real output):
+verification key:
+
+![the pill and its whois line](assets/pill/pill-and-whois.svg)
+
+**Figure 1.** The running example, painted. Every figure in this document is
+generated from a real `pill()` call by `scripts/pill_figures.py` and pinned by
+`tests/test_figures.py`, so none of them can drift from the code.
+
+The glyphs alone, for a reader who wants the string rather than the picture:
 
 ```
 ▅█▄▃ DKxy▂19f2▃imBx                                    the pill
 ▅█▄▃ DKxy2sgzfplyr_tgwIxS19f2OchFHtLwPWD3v4oYimBx      the whois line
 ```
+
+Do not read the color as decoration on top of that string. §3.1 is the argument
+that a cell's color and its characters are the same 24 bits written twice, and
+§5 is the case where two values produce *identical* glyph strings and are told
+apart by color alone — which is why this document is illustrated at all.
 
 ## 2. Terminal assumptions
 
@@ -69,16 +82,11 @@ by the host and expressed only as the color mode it asks for.
 
 ## 3. Anatomy
 
-```
-  ▅█▄▃   DKxy  ▂  19f2  ▃  imBx
-  └──┬─┘  └─┬┘  ┬  └─┬┘  ┬  └─┬┘
-   color   cell │  cell │  cell
-    bar         └─ separator: the cells this pill is not showing
-```
+![the parts of a pill](assets/pill/pill-anatomy.svg)
 
-Same value as §1, spread out to be labelled. The real string has one space after
-the color bar and nothing between the cells and their separators — the pill
-spends no column on anything but the bar's one separating space.
+**Figure 2.** The same value as §1, spread out to be labelled. The real string
+has one space after the color bar and nothing between the cells and their
+separators — the pill spends no column on anything but that one space.
 
 ### 3.1 Cells
 
@@ -172,6 +180,12 @@ digests:
 | **max-normalized** | **1836** | **10.25 bits** | **1.5%** |
 | max-normalized, √ gamma | 1010 | 8.77 bits | 4.2% |
 
+![max- versus sum-normalized bars](assets/pill/pill-color-bar.svg)
+
+**Figure 3.** The same four band weights under both normalizations. Normalizing
+to the sum squashes the whole bar into the bottom two rungs; the ratios are
+identical and only the range differs.
+
 The middle row is worth keeping as a warning: a monotone transform applied
 *after* quantization cannot recover a distinction quantization already
 destroyed, and truncating merges the rare tall bars, so it ends up worse than
@@ -222,6 +236,12 @@ heights alone); that is a floor, since 45,527 of 60,000 draws were distinct and
 the sample censors the tail. The combined channel could not be resolved at all —
 59,980 distinct in 60,000 — but if the two are independent it is around 27 bits.
 
+![how a separator summarizes the cells it hides](assets/pill/pill-separator.svg)
+
+**Figure 4.** The first gap of the running example, end to end: the four hidden
+cells, the edge color each takes from its own nucleus, the filled-box counts the
+fingerprint gives them, the tally, and the single block that results.
+
 **`…` survives, with a narrowed meaning.** The block glyph means "cells you are
 not being shown," so it needs cells to summarize. Where there are none, the pill
 falls back to a literal `…` (`NO_CELLS`), which means the different thing:
@@ -252,6 +272,12 @@ five-entry lookup, chosen once by hand:
 | red | `#ff3f2f` | 0.657 | 202 | `#ff5f00` | 0.687 |
 | blue | `#2f3fbf` | 0.445 | 25 | `#005faf` | 0.485 |
 | black | `#000000` | 0.000 | 16 | `#000000` | 0.000 |
+
+![the spec palette and its 256 stand-ins](assets/pill/pill-palette-256.svg)
+
+**Figure 5.** The same table as swatches, with the rejected gold below it. A
+table of hex codes cannot show that 178 is a duller, darker mustard while 184
+stays a bright yellow — which is the entire reason for the pin.
 
 These are **not** the nearest entries by RGB distance. Nearest picks 178
 (`#d7af00`) for gold, which darkens it while the quantizer simultaneously
@@ -311,6 +337,12 @@ the ordinal reading survives as density:
 ```
   ⠀ ⡀ ⣀ ⣄ ⣤ ⣦ ⣶ ⣷ ⣿      0/8 through 8/8
 ```
+
+![the 256 rung and the none rung compared](assets/pill/pill-none-rung.svg)
+
+**Figure 6.** The same pill on both rungs, with the density ramp below. The
+color the top row carries is exactly what the bottom row has to recover in its
+choice of dot arrangement.
 
 Which *arrangement* of that many dots gets drawn is then free, and that is where
 the color assignment goes: which of the 5 palette colors is the background,
@@ -372,6 +404,12 @@ gallery's `--section avalanche` pairs demonstrate exactly this, with "UUID A"
 and "UUID A with mid char flipped" both rendering `550e84…00`. Only the
 fingerprint-derived channels separate them. A pill without them would show two
 different values as the same string.
+
+![four single-character UUID neighbours](assets/pill/pill-avalanche.svg)
+
+**Figure 7.** The avalanche quartet. Rows 1 and 2 are the case this section is
+about: identical glyphs, identical nucleus colors, told apart only by the color
+bar and the separator.
 
 The other case worth knowing about: `BKxy2sgz…` and `DKxy2sgz…`, the same body
 under a non-transferable versus a transferable derivation code, differ in cell

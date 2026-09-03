@@ -1,8 +1,9 @@
-"""Drift guard for the documentation figures (paper + spec).
+"""Drift guard for the documentation figures (paper + spec + terminal pill).
 
-The figures in docs/assets/paper/ (paper) and docs/assets/ (spec) are *generated*
-from the live renderer by scripts/paper_figures.py and scripts/spec_figures.py
-via the shared scripts/figlib.py. They are never hand-drawn or hand-edited.
+The figures in docs/assets/paper/ (paper), docs/assets/ (spec) and
+docs/assets/pill/ (the terminal pill design record) are *generated* from live
+code by scripts/paper_figures.py, scripts/spec_figures.py and
+scripts/pill_figures.py via the shared scripts/figlib.py. They are never hand-drawn or hand-edited.
 These tests make "do the figures still match the algorithm/spec?" a CI question:
 
   * test_figure_svg_matches_committed — regenerates each figure's SVG in-process
@@ -22,6 +23,7 @@ Only entviz + lxml + segno are needed (NOT cairosvg / the PNG step), so this run
 in the default CI env. Regenerate with:
     PYTHONPATH=src .venv/bin/python scripts/paper_figures.py
     PYTHONPATH=src .venv/bin/python scripts/spec_figures.py
+    PYTHONPATH=src .venv/bin/python scripts/pill_figures.py
 """
 import os
 import sys
@@ -34,6 +36,7 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 import figlib  # noqa: E402
 import paper_figures  # noqa: E402
+import pill_figures  # noqa: E402
 import spec_figures  # noqa: E402
 from entviz import SPEC_VERSION  # noqa: E402
 from entviz.pipeline import render  # noqa: E402
@@ -42,11 +45,12 @@ from entviz.pipeline import render  # noqa: E402
 SUITES = [
     (paper_figures, os.path.join(ROOT, "docs", "assets", "paper")),
     (spec_figures, os.path.join(ROOT, "docs", "assets")),
+    (pill_figures, os.path.join(ROOT, "docs", "assets", "pill")),
 ]
 CASES = [(mod, out, fn) for mod, out in SUITES for fn in mod.FIGURES]
 IDS = [f"{mod.__name__}:{fn.__name__}" for mod, out, fn in CASES]
 
-REGEN = "re-run scripts/{paper,spec}_figures.py and commit the result"
+REGEN = "re-run scripts/{paper,spec,pill}_figures.py and commit the result"
 
 
 @pytest.mark.parametrize("mod,out,fn", CASES, ids=IDS)
