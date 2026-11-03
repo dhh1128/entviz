@@ -352,7 +352,7 @@ def fig_palette_swatch():
         cx = x + sw_w / 2
         s.append(text(cx, top + sw_h + 26, nm, size=T_L, anchor="middle", weight="bold"))
         s.append(text(cx, top + sw_h + 46, hexv, size=T_B, anchor="middle", family=MONO, fill=INK2))
-        s.append(text(cx, top + sw_h + 64, f"L* = {lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
+        s.append(text(cx, top + sw_h + 64, f"L*\u200a=\u200a{lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
     s.append(caption(W, H - 32, "indices 0–3 are background candidates;", size=T_B))
     s.append(caption(W, H - 14, "black (index 4) is always an edge color, never the background.", size=T_B))
     s.append(svg_close())
@@ -381,7 +381,7 @@ def fig_palette_cvd():
             s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=sim_hex(PALETTE[nm], vision), stroke=HAIR, sw=0.5))
         a, b, d = min_pair(vision)
         warn = d < 20
-        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b} ΔL* = {d:.0f}",
+        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b}\u2002ΔL*\u200a=\u200a{d:.0f}",
                       size=T_L, weight="bold" if warn else "normal", fill=WARN if warn else OK))
     s.append(caption(W, H - 32, "Every normal-vision pair clears the ΔL* ≥ 20 floor;", size=T_B))
     s.append(caption(W, H - 14, "the protan red/blue collapse falls back to the color-bar letters.", size=T_B))

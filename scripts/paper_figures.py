@@ -181,7 +181,7 @@ def fig_palette():
         cx = x + sw_w / 2
         s.append(text(cx, top + 6 + sw_h + 22, nm, size=T_L, anchor="middle", weight="bold"))
         s.append(text(cx, top + 6 + sw_h + 40, hexv, size=T_B, anchor="middle", family=MONO, fill=INK2))
-        s.append(text(cx, top + 6 + sw_h + 57, f"L* = {lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
+        s.append(text(cx, top + 6 + sw_h + 57, f"L*\u200a=\u200a{lstar(hexv):.0f}", size=T_B, anchor="middle", fill=INK2))
 
     s.append(text(mx, cvd_top - 16, "Same palette under color-vision deficiency "
                   "(Machado et al. 2009)", size=T_H, weight="bold"))
@@ -195,7 +195,7 @@ def fig_palette():
             s.append(rect(grid_x + j * cell_w, y, cell_w, cell_h, fill=sim_hex(PALETTE[nm], vision), stroke=HAIR, sw=0.5))
         a, b, d = min_pair(vision)
         warn = d < 20
-        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b} ΔL* = {d:.0f}",
+        s.append(text(grid_x + n * cell_w + 14, y + cell_h / 2 + 5, f"{a}/{b}\u2002ΔL*\u200a=\u200a{d:.0f}",
                       size=T_L, weight="bold" if warn else "normal", fill=WARN if warn else OK))
     s.append(text(mx, H - 32, "All normal-vision pairs clear the ΔL* ≥ 20 design floor;", size=T_B, fill=INK2))
     s.append(text(mx, H - 14, "the unavoidable protan red/blue collapse falls back to the color-bar letters.",

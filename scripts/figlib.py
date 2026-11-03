@@ -29,6 +29,7 @@ figure), not a system libcairo — cairosvg lives in the opt-in `render` group.
 import os
 import re
 import sys
+import unicodedata
 
 from lxml import etree
 
@@ -93,7 +94,12 @@ def loc(e):
 
 
 def esc(s):
-    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Typographic spaces (hair, en, thin...) go out as numeric character
+    # references. They render identically, and the committed SVG stays legible
+    # to scripts/check_unicode.py, which refuses literal non-ASCII spaces.
+    return "".join(f"&#x{ord(c):X};" if c != " " and unicodedata.category(c) == "Zs" else c
+                   for c in s)
 
 
 # ---- primitive SVG emitters ----------------------------------------------
