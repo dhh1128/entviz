@@ -3550,6 +3550,11 @@ Entviz = goal:
         bypasses. Inside git it scans `git ls-files --cached --others
         --exclude-standard`, so ignored scratch is out and an unstaged new file
         is in. A bare CR is refused because it overprints a terminal line.
+        Binary detection is by extension, never by content: a file that decodes
+        as UTF-8 is always scanned (a NUL in it is a refused control), and one
+        that does not is skipped only under a known binary suffix. The first
+        cut sniffed for a NUL as git does, and the hostile review of PR #58
+        showed one NUL in a JavaScript comment switched off the whole file.
         Cost: an emoji newer than CI's Python Unicode database reads as Cn and
         fails, which is the right direction to fail. The stricter rule caught
         HAIR SPACE and EN SPACE in the palette figures' L* labels; the

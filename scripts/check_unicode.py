@@ -29,8 +29,11 @@ line breaks and so never look at them. Only LF advances the line counter.
 
 Inside a git work tree the scan covers `git ls-files` (tracked files plus
 untracked ones that are not ignored). Elsewhere it walks the directory.
-Binary files (a NUL byte in the first 8 KiB, git's own heuristic) are
-skipped. A text file that is not valid UTF-8 is a finding, never a skip.
+Every file that decodes as UTF-8 is scanned, whatever its name, and a NUL
+in it is refused like any other control. A file that does not decode is
+skipped only when its extension names a binary format (BINARY_SUFFIXES);
+anything else that is not UTF-8 is a finding. Sniffing for a NUL byte, as
+git does, would let one NUL in a JavaScript comment switch off the scan.
 
 Usage: python3 scripts/check_unicode.py [PATH ...]   (default: ".")
 Exits non-zero and prints path:line:col for every finding.
@@ -53,7 +56,16 @@ SKIP_DIRS = {
 # Tune for this repo: exclude generated/minified files and any test
 # fixtures that intentionally embed control characters to exercise them.
 SKIP_SUFFIXES = {".min.js", ".map"}
-BINARY_SNIFF_BYTES = 8192
+# Formats that are opaque bytes by design. A file with one of these names is
+# still scanned when it happens to decode as UTF-8.
+BINARY_SUFFIXES = {
+    ".png", ".jpg", ".jpeg", ".gif", ".webp", ".avif", ".ico", ".bmp",
+    ".tif", ".tiff", ".xcf", ".psd", ".pdf", ".woff", ".woff2", ".ttf",
+    ".otf", ".eot", ".zip", ".gz", ".tgz", ".bz2", ".xz", ".zst", ".7z",
+    ".tar", ".whl", ".jar", ".wasm", ".pyc", ".so", ".dylib", ".dll",
+    ".exe", ".class", ".mp3", ".mp4", ".wav", ".flac", ".ogg", ".webm", ".mov",
+    ".sqlite", ".sqlite3", ".docx", ".xlsx", ".pptx",
+}
 
 BIDI = {0x202A, 0x202B, 0x202C, 0x202D, 0x202E, 0x2066, 0x2067, 0x2068, 0x2069}
 MARKS = {0x200E, 0x200F, 0x061C}
@@ -157,11 +169,6 @@ def _candidates(root):
     return [(root / rel, rel) for rel in rels]
 
 
-def _is_binary(path):
-    with open(path, "rb") as fh:
-        return b"\0" in fh.read(BINARY_SNIFF_BYTES)
-
-
 def iter_files(roots):
     """Text files to scan under each root (explicit files are always kept)."""
     for root in roots:
@@ -172,8 +179,6 @@ def iter_files(roots):
                 continue
             if rel is not None and _skipped(rel):
                 continue
-            if _is_binary(p):
-                continue
             yield p
 
 
@@ -183,6 +188,8 @@ def scan_file(path):
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
+        if path.suffix.lower() in BINARY_SUFFIXES:
+            return []
         ln = raw.count(b"\n", 0, exc.start) + 1
         col = exc.start - (raw.rfind(b"\n", 0, exc.start) + 1) + 1
         return [f"{path}:{ln}:{col}: not valid UTF-8 (byte 0x{raw[exc.start]:02X}) (encoding)"]

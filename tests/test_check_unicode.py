@@ -100,14 +100,17 @@ def test_main_returns_zero_for_clean_tree(tmp_path):
     assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 0
 
 
-def test_iter_files_yields_text_and_skips_binary(tmp_path):
-    # Non-UTF-8 bytes exercise the UnicodeDecodeError branch — such files are
-    # data/binary, not reviewable source, so the gate must skip them silently.
+def test_binary_extension_is_skipped_and_unknown_bytes_are_reported(tmp_path, capsys):
+    # A non-UTF-8 file passes only when its extension names a binary format.
+    # The same bytes under a name the gate does not know are reported, since
+    # skipping on content alone is a bypass (see the NUL test below).
     (tmp_path / "ok.py").write_text("v = 3\n", encoding="utf-8")
+    (tmp_path / "blob.png").write_bytes(b"\xff\xfe\x00\x01not-utf8")
     (tmp_path / "blob.bin").write_bytes(b"\xff\xfe\x00\x01not-utf8")
-    names = {p.name for p in check_unicode.iter_files([tmp_path])}
-    assert "ok.py" in names
-    assert "blob.bin" not in names
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "blob.png" not in out
+    assert "blob.bin:1:1: not valid UTF-8 (byte 0xFF) (encoding)" in out
 
 
 def test_iter_files_skips_excluded_dirs_and_suffixes(tmp_path):
@@ -247,3 +250,31 @@ def test_this_repo_passes_its_own_gate():
     # before CI does.
     root = _SCANNER.parent.parent
     assert check_unicode.main(["check_unicode.py", str(root)]) == 0
+
+
+def test_nul_byte_does_not_switch_off_the_scan(tmp_path, capsys):
+    # Hostile review of #58: a NUL inside a JavaScript comment is valid JS, and
+    # a sniff-for-NUL binary test skipped the whole file, payload included.
+    (tmp_path / "evil.js").write_bytes(b"// \x00\nconst s = 'a" + RLO.encode() + b"b';\n")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "evil.js:1:4: U+0000" in out
+    assert "evil.js:2:13: U+202E" in out
+
+
+def test_non_utf8_is_skipped_only_for_binary_extensions(tmp_path, capsys):
+    # A file that is not UTF-8 is opaque to review, so it passes only when its
+    # name says it is a binary format. Invalid bytes plus a NUL in a .js file
+    # are a finding, since Node runs such a file with replacement characters.
+    (tmp_path / "logo.png").write_bytes(b"\x89PNG\r\n\x1a\n\x00\xff")
+    (tmp_path / "evil.js").write_bytes(b"// \x00\xff\nrun();\n")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "logo.png" not in out
+    assert "evil.js:1:5: not valid UTF-8" in out
+
+
+def test_text_in_a_binary_extension_is_still_scanned(tmp_path):
+    # A .png that decodes as UTF-8 shows up in a diff as text, so it gets read.
+    (tmp_path / "fake.png").write_text("x" + RLO, encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
