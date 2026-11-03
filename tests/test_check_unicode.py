@@ -278,3 +278,30 @@ def test_text_in_a_binary_extension_is_still_scanned(tmp_path):
     # A .png that decodes as UTF-8 shows up in a diff as text, so it gets read.
     (tmp_path / "fake.png").write_text("x" + RLO, encoding="utf-8")
     assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+
+
+def test_file_over_the_cap_is_a_finding_and_is_not_read(tmp_path, capsys, monkeypatch):
+    # Copilot on #58: reading a huge file whole costs unbounded memory. The cap
+    # bounds it and fails closed, so padding a file is still no way past.
+    monkeypatch.setattr(check_unicode, "MAX_BYTES", 16)
+    (tmp_path / "big.txt").write_text("x" * 17, encoding="utf-8")
+    (tmp_path / "small.txt").write_text("x" * 16, encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "big.txt: 17 bytes is over the 16-byte scan limit (size)" in out
+    assert "small.txt" not in out
+
+    # Over the cap the gate cannot tell whether a .png is really text, so it
+    # reports it as well (cross-model review of the cap: a 50 MiB "png" of
+    # valid UTF-8 compresses to a few KB in git).
+    (tmp_path / "big.txt").unlink()
+    (tmp_path / "huge.png").write_text("x" * 16 + RLO, encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    assert "huge.png: 19 bytes is over the 16-byte scan limit (size)" in capsys.readouterr().out
+
+
+def test_encoding_error_column_counts_characters(tmp_path, capsys):
+    # Copilot on #58: the column was a byte offset, so it pointed past the payload.
+    (tmp_path / "x.txt").write_bytes("a\n".encode() + "é".encode() + b"\xff")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    assert "x.txt:2:2: not valid UTF-8 (byte 0xFF) (encoding)" in capsys.readouterr().out

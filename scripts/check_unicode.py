@@ -56,6 +56,9 @@ SKIP_DIRS = {
 # Tune for this repo: exclude generated/minified files and any test
 # fixtures that intentionally embed control characters to exercise them.
 SKIP_SUFFIXES = {".min.js", ".map"}
+# Larger files are reported, never skipped. GitHub refuses files over 100 MB
+# and warns at 50 MB, so a real source file is far below this.
+MAX_BYTES = 50 * 1024 * 1024
 # Formats that are opaque bytes by design. A file with one of these names is
 # still scanned when it happens to decode as UTF-8.
 BINARY_SUFFIXES = {
@@ -184,14 +187,21 @@ def iter_files(roots):
 
 def scan_file(path):
     """Finding lines for one file."""
+    size = path.stat().st_size
+    if size > MAX_BYTES:
+        # Too big to hold in memory twice. A finding, never a skip, whatever the
+        # name, so neither padding nor renaming a file is a way past the gate.
+        return [f"{path}: {size} bytes is over the {MAX_BYTES}-byte scan limit (size)"]
     raw = path.read_bytes()
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         if path.suffix.lower() in BINARY_SUFFIXES:
             return []
-        ln = raw.count(b"\n", 0, exc.start) + 1
-        col = exc.start - (raw.rfind(b"\n", 0, exc.start) + 1) + 1
+        # Locate the bad byte in characters, as the other findings are.
+        prefix = raw[:exc.start].decode("utf-8")
+        ln = prefix.count("\n") + 1
+        col = len(prefix) - (prefix.rfind("\n") + 1) + 1
         return [f"{path}:{ln}:{col}: not valid UTF-8 (byte 0x{raw[exc.start]:02X}) (encoding)"]
     out = []
     for ln, col, cp, cat in find_disallowed(text):

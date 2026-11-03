@@ -3555,6 +3555,9 @@ Entviz = goal:
         that does not is skipped only under a known binary suffix. The first
         cut sniffed for a NUL as git does, and the hostile review of PR #58
         showed one NUL in a JavaScript comment switched off the whole file.
+        Files over 50 MiB are a finding rather than a skip (Copilot on #58: a
+        whole-file read is otherwise unbounded memory), and an encoding error
+        reports its column in characters like every other finding.
         Cost: an emoji newer than CI's Python Unicode database reads as Cn and
         fails, which is the right direction to fail. The stricter rule caught
         HAIR SPACE and EN SPACE in the palette figures' L* labels; the
