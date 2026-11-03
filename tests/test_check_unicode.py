@@ -110,17 +110,6 @@ def test_iter_files_yields_text_and_skips_binary(tmp_path):
     assert "blob.bin" not in names
 
 
-def test_iter_files_skips_oversized(tmp_path, monkeypatch):
-    # Files larger than MAX_BYTES are presumed data and skipped without being
-    # read; shrink the cap so a tiny file trips the same size branch.
-    monkeypatch.setattr(check_unicode, "MAX_BYTES", 8)
-    (tmp_path / "small.py").write_text("a = 1\n", encoding="utf-8")
-    (tmp_path / "big.py").write_text("a = 1  # " + "x" * 64 + "\n", encoding="utf-8")
-    names = {p.name for p in check_unicode.iter_files([tmp_path])}
-    assert "small.py" in names
-    assert "big.py" not in names
-
-
 def test_iter_files_skips_excluded_dirs_and_suffixes(tmp_path):
     # Vendored/generated trees (SKIP_DIRS) and minified/map artifacts
     # (SKIP_SUFFIXES) are not first-party source and must be excluded — even
@@ -135,3 +124,126 @@ def test_iter_files_skips_excluded_dirs_and_suffixes(tmp_path):
     assert names == {"real.py"}
     # And because the only flagged chars live in skipped locations, the gate passes.
     assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 0
+
+
+# ---------------------------------------------------------------------------
+# Gaps closed in the 2026-11 hardening pass. Each test below failed against the
+# previous scanner, which read with str.splitlines(), kept hand-maintained sets
+# of "dangerous" code points, skipped non-UTF-8 and oversized files silently,
+# and walked the filesystem instead of asking git what is in the repo.
+
+# str.splitlines() treats all of these as line breaks, so the old scanner
+# consumed them as separators and never examined them.
+SPLITLINES_BREAKS = [0x2028, 0x2029, 0x0085, 0x000B, 0x000C, 0x001C, 0x001D, 0x001E]
+
+
+def test_splitlines_breaks_are_examined_not_consumed():
+    for cp in SPLITLINES_BREAKS:
+        text = "a = 1\nb" + chr(cp) + "c\n"
+        findings = check_unicode.find_disallowed(text)
+        assert [(ln, col, got) for ln, col, got, _ in findings] == [(2, 2, cp)], f"U+{cp:04X}"
+
+
+def test_only_lf_advances_the_line_counter():
+    # A U+2028 must not shift later findings onto a phantom line.
+    text = "x" + chr(0x2028) + "y\nz" + RLO + "\n"
+    lines = [ln for ln, _, _, _ in check_unicode.find_disallowed(text)]
+    assert lines == [1, 2]
+
+
+# Every space separator other than U+0020 renders as (or near) a plain space,
+# so a reviewer cannot tell it apart from one. U+1680 is the one that beat the
+# testigo SVG logo check.
+NON_ASCII_SPACES = [0x00A0, 0x1680, 0x2002, 0x2009, 0x200A, 0x202F, 0x205F, 0x3000]
+
+
+def test_non_ascii_spaces_are_flagged():
+    for cp in NON_ASCII_SPACES:
+        assert check_unicode.category(cp) == "space", f"U+{cp:04X}"
+
+
+# Code points that render as nothing (or nearly nothing) but fall outside the
+# old hand-kept sets.
+INVISIBLE_OTHERS = [
+    (0x115F, "hangul-filler"),
+    (0x1160, "hangul-filler"),
+    (0x3164, "hangul-filler"),
+    (0xFFA0, "hangul-filler"),
+    (0x034F, "invisible"),               # COMBINING GRAPHEME JOINER
+    (0x180E, "format"),                  # MONGOLIAN VOWEL SEPARATOR
+    (0x2061, "format"),                  # FUNCTION APPLICATION
+    (0x2064, "format"),                  # INVISIBLE PLUS
+    (0xFFF9, "interlinear-annotation"),
+    (0xFFFB, "interlinear-annotation"),
+    (0x001B, "control"),                 # ESC: terminal escape sequences
+    (0x0000, "control"),
+    (0x007F, "control"),                 # DELETE
+    (0x009B, "control"),                 # C1 CONTROL SEQUENCE INTRODUCER
+]
+
+
+def test_other_invisibles_and_controls_are_flagged():
+    for cp, expected in INVISIBLE_OTHERS:
+        assert check_unicode.category(cp) == expected, f"U+{cp:04X}"
+
+
+def test_unassigned_code_point_is_flagged():
+    # U+0378 has never been assigned; a future assignment would show up here as
+    # a test failure on a newer Python, which is the cue to pick another.
+    assert check_unicode.category(0x0378) == "unassigned"
+
+
+def test_tab_lf_crlf_pass_and_bare_cr_is_flagged():
+    assert check_unicode.find_disallowed("a\tb\r\nc\n") == []
+    # A bare CR returns a terminal's cursor to column 1, so text after it
+    # overprints text before it in `cat` and in CI logs.
+    assert check_unicode.find_disallowed("safe\rEVIL\n") == [(1, 5, 0x0D, "control")]
+
+
+def test_main_fails_on_non_utf8_text(tmp_path, capsys):
+    # Latin-1 bytes with no NUL: text, but not UTF-8. The old scanner skipped
+    # it, so anything at all could hide inside.
+    (tmp_path / "latin1.txt").write_bytes(b"caf\xe9\n")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+    out = capsys.readouterr().out
+    assert "latin1.txt" in out
+    assert "not valid UTF-8" in out
+
+
+def test_main_scans_large_files(tmp_path):
+    # The old 2 MiB cap made "pad the file" a bypass.
+    big = "x = 1\n" * (3 * 1024 * 1024 // 6) + "y = '" + RLO + "'\n"
+    (tmp_path / "big.py").write_text(big, encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+
+
+def _git(cwd, *args):
+    import subprocess
+    subprocess.run(["git", "-C", str(cwd), *args], check=True, capture_output=True)
+
+
+def test_git_repo_scan_uses_ls_files(tmp_path):
+    # Inside a work tree the scan covers what git tracks plus untracked files
+    # that are not ignored, and nothing else. An ignored scratch file holding a
+    # payload is not the repo's content, and an untracked new file is, since it
+    # is one `git add` away from a commit.
+    _git(tmp_path, "init", "-q")
+    (tmp_path / ".gitignore").write_text("scratch/\n", encoding="utf-8")
+    (tmp_path / "scratch").mkdir()
+    (tmp_path / "scratch" / "notes.txt").write_text(RLO + "\n", encoding="utf-8")
+    (tmp_path / "tracked.py").write_text("a = 1\n", encoding="utf-8")
+    _git(tmp_path, "add", ".gitignore", "tracked.py")
+    (tmp_path / "new.py").write_text("b = 2\n", encoding="utf-8")
+    names = {p.name for p in check_unicode.iter_files([tmp_path])}
+    assert names == {".gitignore", "tracked.py", "new.py"}
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 0
+    (tmp_path / "new.py").write_text("b = '" + RLO + "'\n", encoding="utf-8")
+    assert check_unicode.main(["check_unicode.py", str(tmp_path)]) == 1
+
+
+def test_this_repo_passes_its_own_gate():
+    # The gate is only worth something if the tree it guards is clean, so a
+    # regression here (a pasted NBSP, an emoji with U+FE0F) fails locally,
+    # before CI does.
+    root = _SCANNER.parent.parent
+    assert check_unicode.main(["check_unicode.py", str(root)]) == 0

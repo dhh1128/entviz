@@ -3537,6 +3537,26 @@ Entviz = goal:
         removed (they rendered identically without them), so the gate is clean
         on the tree with no exclusion holes.
 
+        (1b) Hardened 2026-11-03, after a Tessera land review watched an SVG
+        logo check get bypassed three times running by non-ASCII XML prefixes
+        (U+00E9, then U+1680 OGHAM SPACE MARK), and an audit found the same
+        holes here. The gate now classifies by Unicode general category instead
+        of hand-kept sets: it refuses Cc (except TAB, LF and CRLF), Cf, Co, Cs,
+        Cn, Zl, Zp and every Zs except U+0020, plus variation selectors, Hangul
+        fillers, U+034F and U+FFF9-FFFB by name. It walks characters itself
+        rather than calling str.splitlines(), which had silently consumed
+        U+2028, U+2029, U+0085, VT, FF and U+001C-001E as line breaks. It fails
+        on text that is not UTF-8 and has no size cap, since both skips were
+        bypasses. Inside git it scans `git ls-files --cached --others
+        --exclude-standard`, so ignored scratch is out and an unstaged new file
+        is in. A bare CR is refused because it overprints a terminal line.
+        Cost: an emoji newer than CI's Python Unicode database reads as Cn and
+        fails, which is the right direction to fail. The stricter rule caught
+        HAIR SPACE and EN SPACE in the palette figures' L* labels; the
+        generators now spell them as \u escapes and figlib.esc() emits
+        non-ASCII spaces as numeric character references, so the figures render
+        identically and the committed SVGs are ASCII where it matters.
+
         (2) GitHub Actions pinned to full commit SHAs (was mutable @vN tags),
         with least-privilege top-level permissions and persist-credentials:false
         on checkout, so a retargeted tag (tj-actions class) can't inject code.
