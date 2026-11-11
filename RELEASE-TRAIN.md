@@ -189,10 +189,7 @@ It changes rendered output for every bech32-family value and moves four golden r
 All four counts were re-verified centrally against the corpus, not taken from the ports' own
 reports. Nothing is pushed.
 
-**This machine's JVM toolchain is incomplete** and both facts cost an agent time: `mvn` is not
-on `PATH` (user-space Maven at `~/opt/apache-maven-3.9.16/bin/mvn`), and the system JDK is a
-*JRE* — there is no `javac` anywhere, so Maven fails with "release version 21 not supported".
-A Temurin JDK 21 sits at `~/opt/jdk-21.0.12+8`; export `JAVA_HOME` to it.
+**JVM toolchain.** When this train ran, kelun had only a JRE and no `mvn`, so agents used hand-unpacked copies under `~/opt`. Those are gone. Since 2026-11-10 `~/code/me/devenv/box/17-java.sh` installs Maven and a full JDK from apt (`mvn` 3.9.12, default JDK 25, which compiles `entviz-java`'s `--release 21`), and plain `mvn` on `PATH` builds the port.
 
 **Two ports had no Cardano parser at all.** `entviz-go` and `entviz-java` fell through to the
 generic bech32 parser for `addr1…`, so it characterized as scheme `bech32` rather than `ada` —
