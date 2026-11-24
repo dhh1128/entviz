@@ -3,7 +3,7 @@ name = "entviz"
 dynamic = ["version"]
 description = "Visualize high-entropy values (keys, signatures, UUIDs, addresses) as SVG diagrams a human can compare at a glance."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Daniel Hardman", email = "daniel@provenant.net" }]
@@ -15,7 +15,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Security :: Cryptography",

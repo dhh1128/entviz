@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.11", "3.12"]
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -58,7 +58,7 @@ jobs:
         # --locked fails if uv.lock is out of date with pyproject.toml, so CI
         # also proves the lockfile is current. --python pins the matrix version
         # (uv fetches a standalone interpreter as needed), so this is the proof
-        # that the >=3.10 floor actually holds. --group render installs the
+        # that the >=3.11 floor actually holds. --group render installs the
         # cairosvg/numpy/pillow rasterizer stack so the conformance suite's
         # Tier B (golden-raster) comparison runs in CI instead of skipping.
         run: uv run --locked --group render --python ${{ matrix.python-version }} pytest

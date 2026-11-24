@@ -81,7 +81,7 @@ red. On these entvizes:
 ## Developer Quickstart
 
 ### Prerequisites
-- [uv](https://docs.astral.sh/uv/) (manages the Python interpreter, virtualenv, and dependencies). uv will fetch a suitable Python (>=3.10) for you.
+- [uv](https://docs.astral.sh/uv/) (manages the Python interpreter, virtualenv, and dependencies). uv will fetch a suitable Python (>=3.11) for you.
 
 ### Installation
 
@@ -102,10 +102,10 @@ red. On these entvizes:
 uv run pytest
 ```
 
-To prove the supported Python floor locally (CI runs the full 3.10/3.11/3.12 matrix):
+To prove the supported Python floor locally (CI runs the full 3.11/3.12 matrix):
 
 ```bash
-uv run --python 3.10 pytest
+uv run --python 3.11 pytest
 ```
 
 ### Running the CLI
