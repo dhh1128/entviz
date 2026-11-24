@@ -70,7 +70,7 @@ A release is the one artifact that escapes the repo, so a broken or divergent co
 ### CI gating (`ci.yml`)
 
 - **Does it gate merges?** Are `push` and `pull_request` triggers on `main` (and `master`) present, so the suite runs as a first-class gate on every PR rather than only as a side effect of another workflow? (This is also what gives the README CI badge a real run history.)
-- **Matrix:** Is the Python version matrix (3.10/3.11/3.12) the floor the project claims to support? Does `uv run --locked --python <ver> pytest` actually pin each interpreter (so the `>=3.10` floor is *proven*, not assumed)?
+- **Matrix:** Is the Python version matrix (3.11/3.12) the floor the project claims to support? Does `uv run --locked --python <ver> pytest` actually pin each interpreter (so the `>=3.11` floor is *proven*, not assumed)?
 - **Frozen install:** Is `--locked` (or `--frozen`) used so CI fails on a stale lockfile rather than silently resolving fresh dependencies?
 - **The unicode guard:** `ci.yml` runs `scripts/check_unicode.py` as a gate against invisible / Trojan-Source / bidi-reorder Unicode. Confirm it still runs and isn't dead. Its absence (or a no-op) is a supply-chain finding, not a nicety.
 

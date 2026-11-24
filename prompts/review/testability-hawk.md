@@ -25,7 +25,7 @@ false confidence.
 ## entviz context you must internalize
 
 This is a `uv`-managed Python library + CLI (`entviz`), tested with `pytest`,
-on a Python 3.10/3.11/3.12 matrix. It is **not a service**: there are no HTTP
+on a Python 3.11/3.12 matrix. It is **not a service**: there are no HTTP
 endpoints, no controllers, no database, no message bus, no Spring/JUnit/Mockito
 layering. The classic unit/web-slice/data-slice/integration taxonomy does not
 map here; do not import it. Use pytest idioms: fixtures, `parametrize`,

@@ -35,7 +35,7 @@ ordering constraint is load-bearing. The dominant maintainability risk is a
 future developer "cleaning up" something that was deliberate.
 
 - It is a `uv`-managed Python library + CLI (`entviz`), tested with `pytest`,
-  on a Python 3.10/3.11/3.12 matrix. Python floor is **3.10** (see
+  on a Python 3.11/3.12 matrix. Python floor is **3.11** (see
   `pyproject.toml`).
 - **The Intent Layer (`this.i`) is the heart of this project and of this
   review.** `AGENTS.md` mandates that every major decision, tradeoff, and
@@ -262,7 +262,7 @@ transliterated into Python syntax.
   threads through `render()`? Do they match what is actually passed?
 - Are structured values modeled as `dataclass`es or `NamedTuple`s rather than
   ad-hoc tuples or dicts that callers must remember the shape of?
-- On the 3.10+ floor, is structural pattern matching (`match`/`case`) used where
+- On the 3.11+ floor, is structural pattern matching (`match`/`case`) used where
   it would clarify dispatch (e.g. over parsed-value kinds), and is `pathlib`
   preferred over `os.path` string munging?
 - Non-idiomatic Python is a maintainability risk: a fluent maintainer will be
@@ -271,11 +271,11 @@ transliterated into Python syntax.
 
 ### Python-version evolution
 
-- `pyproject.toml` declares the supported floor (3.10) and matrix. Is the code
+- `pyproject.toml` declares the supported floor (3.11) and matrix. Is the code
   written as if to a much older baseline (string `%` formatting everywhere,
   `os.path` over `pathlib`, manual `__init__` boilerplate where a dataclass
   fits, `if/elif` ladders where `match` reads better)? Note where adopting a
-  3.10+ feature would materially simplify the code — but only where it genuinely
+  3.11+ feature would materially simplify the code — but only where it genuinely
   improves clarity, not as churn.
 
 ### The `render()` monolith and separation of concerns

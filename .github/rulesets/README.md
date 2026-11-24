@@ -10,7 +10,7 @@ the shape accepted by the [rulesets REST API][api].
 - **`require-review-contributors.json`** — protects the default branch (`main`):
   blocks deletion and force-pushes (`non_fast_forward`), requires a pull request
   with 1 approving review (stale reviews dismissed on push, last-push approval
-  required), and requires the CI checks `unicode-guard` and `test (3.10|3.11|3.12)`
+  required), and requires the CI checks `unicode-guard` and `test (3.11|3.12)`
   to pass with the strict (up-to-date-branch) policy. The repository **Write**
   role (`bypass_actors`, role id 2) may bypass, so the solo maintainer can still
   push directly — tighten this when more contributors join.
