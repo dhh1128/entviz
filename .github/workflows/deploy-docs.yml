@@ -8,8 +8,8 @@
 # Actions pinned to full commit SHAs (a mutable @vN tag can be silently
 # retargeted — the tj-actions class of attack); the # vN.N.N comment is what
 # humans and Dependabot read. All resolve to node24 / composite runtimes
-# (verified): checkout@v6.0.3, astral-sh/setup-uv@v7.6.0, configure-pages@v6.0.0,
-# upload-pages-artifact@v5.0.0 (composite), deploy-pages@v5.0.0.
+# (verified): checkout@v7.0.1, astral-sh/setup-uv@v10.3.3, configure-pages@v6.0.0,
+# upload-pages-artifact@v5.0.0 (composite), deploy-pages@v5.0.1.
 name: Deploy Docs
 
 on:
