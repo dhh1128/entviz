@@ -9,11 +9,14 @@ the shape accepted by the [rulesets REST API][api].
 
 - **`require-review-contributors.json`** — protects the default branch (`main`):
   blocks deletion and force-pushes (`non_fast_forward`), requires a pull request
-  with 1 approving review (stale reviews dismissed on push, last-push approval
-  required), and requires the CI checks `unicode-guard` and `test (3.11|3.12)`
-  to pass with the strict (up-to-date-branch) policy. The repository **Write**
-  role (`bypass_actors`, role id 2) may bypass, so the solo maintainer can still
-  push directly — tighten this when more contributors join.
+  but no approving review, and requires the CI checks `unicode-guard` and
+  `test (3.11|3.12)` to pass with the strict (up-to-date-branch) policy. The
+  repository **Write** role (`bypass_actors`, role id 2) may bypass, so the solo
+  maintainer can still push directly. The approval count is 0 because with one
+  maintainer an approval requirement only forces `--admin` merges: GitHub won't
+  let the author approve their own PR, and last-push approval blocks any PR the
+  maintainer's tooling has pushed to. Raise `required_approving_review_count`
+  (and restore `require_last_push_approval`) when more contributors join.
 - **`protect-release-tags.json`** — protects release tags (`refs/tags/v*`,
   consumed by `release.yml`) from deletion and from being moved
   (`non_fast_forward`). Creating a *new* `v*` tag (the normal release flow) is
